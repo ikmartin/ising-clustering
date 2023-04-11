@@ -1,18 +1,17 @@
 from abc import ABC, abstractmethod
+from typing import Callable, Optional
 
 
 class Cluster:
     """
-    A class representing a single cluster in a clustering
-
-    ...
+    A class representing a single cluster in a clustering.
 
     Attributes
     ----------
     indices : list[int]
         the indices of the data in this cluster.
     id_num : int
-        the id_number of this cluster. Set to -1 by default.
+        the id_number of this cluster. Is the hash of the indices.
     self.size : int
         the number of data points in this cluster.
 
@@ -30,7 +29,7 @@ class Cluster:
         generates Cluster from a json string (NOT IMPLEMENTED)
     """
 
-    def __init__(self, indices: list[int], id_num: int = -1, center: int = -1):
+    def __init__(self, indices: list[int]):
         """
         Parameters
         ----------
@@ -40,10 +39,9 @@ class Cluster:
             the id_number of this cluster. Set to -1 by default.
 
         """
-        self.id_num = id_num
+        self.id_num = hash(tuple(indices))
         self.indices = indices
         self.size = len(indices)
-        self.center = center
 
     def info(self):
         """Gerenate an info string for this cluster
@@ -80,31 +78,6 @@ class Cluster:
             a single Cluster
         """
         pass
-
-
-class RefinedCluster(Cluster):
-    """
-    A class representing a single cluster representing part of a refined clustering structure. Points to the parent cluster.
-
-    ...
-
-    Attributes
-    ----------
-    data : list
-        the data contained in cluster
-    size : int
-        the number of elements in this cluster
-    kind : str
-        a description of the cluster type
-    parent : RefinedCluster
-        a pointer to the cluster from which this is refined
-
-    """
-
-    def __init__(self, indices, id_num: int, parent: Cluster):
-        super().__init__(id_num=id_num, indices=indices)
-        self.parent = parent
-        self.parent_id = self.parent.id_num if parent != None else None
 
 
 class Clustering:
@@ -150,6 +123,41 @@ class Clustering:
         return self.clusters[index]
 
 
+class RefinedCluster(Cluster):
+    """
+    A class representing a single cluster representing part of a refined clustering structure. Points to the parent cluster.
+
+    ...
+
+    Attributes
+    ----------
+    data : list
+        the data contained in cluster
+    size : int
+        the number of elements in this cluster
+    kind : str
+        a description of the cluster type
+    parent : RefinedCluster
+        a pointer to the cluster from which this is refined
+    is_leaf : bool
+        indicates whether this is
+
+    """
+
+    def __init__(self, indices, generation: int, parent: Optional[Cluster] = None):
+        """Initializes a refined cluster
+        Parameters
+        ----------
+        indices : list[int]
+            the indices of the data points in this cluster
+        """
+
+        super().__init__(indices=indices)
+        self.parent = parent
+        self.generation = generation
+        self.top = True if parent == None else False
+
+
 class Model:
     """
     An implementation of a clustering model
@@ -172,6 +180,13 @@ class Model:
     """
 
     def __init__(self, data, size):
+        """Initilizes a model.
+
+        Notes
+        -----
+        - create a model by inheriting from this class and implementing the listed methods.
+        - size is not computed from data as data may be not be an array-like data structure.
+        """
         self.data = data
         self.size = size
 
@@ -179,7 +194,7 @@ class Model:
         raise NotImplementedError
 
 
-class RefinedClustering(Model):
+class RefinementClustering(Model):
     """
     Clustering model which refines clusters one at a time
 
@@ -187,12 +202,21 @@ class RefinedClustering(Model):
 
     Attributes
     ----------
-    data :
+    data
+        the data to be modeled
+    size : int
+        the number of data points
+    clustering : list[RefinedCluster]
+        the final clustering achieved by the model
+    generations : list[list[RefinedCluster]]
+        a record of the generations in the refinement
 
     Methods
     -------
-    verify() -> str
-        verify that this is a valid clustering and return status
+    refine(cluster: Cluster) -> list[RefinedCluster]:
+        refines the provided cluster
+    model() -> NoReturn:
+        performs the refinement clustering
 
     """
 
@@ -209,51 +233,53 @@ class RefinedClustering(Model):
 
         """
         super().__init__(data=data, size=size)
+        self.generations = []
+        self.clusters = []
+
+    @property
+    def gen_num(self) -> int:
+        return len(self.generations)
 
     @abstractmethod
-    def refine_criterion(self, cluster: Cluster) -> bool:
+    def refine_criterion(self, cluster: RefinedCluster) -> bool:
         pass
 
     @abstractmethod
-    def refine(
-        self, cluster: Cluster, current_id: int
-    ) -> tuple[RefinedCluster, RefinedCluster]:
+    def refine(self, cluster: RefinedCluster) -> list[RefinedCluster]:
         pass
+
+    def initialize(self):
+        indices = list(range(self.size))  # indices of all data points
+        print(indices)
+        self.generations = [
+            [RefinedCluster(indices=indices, generation=0, parent=None)]
+        ]
 
     def model(self):
         """
         Performs the refined clustering.
         """
         # set up the clustering
-        indices = list(range(self.size))  # indices of all data points
-        print(indices)
-        basecluster = Clustering([Cluster(id_num=0, indices=indices)])
-        clusterings = [basecluster]
-        current_count = 1
+        self.initialize()
 
         done = False
         while done == False:
             done = True
-            # iterate through the most recent clustering
-            newlayer = []
-            for cluster in clusterings[-1]:
-                # if refine_criterion is met, then refine the cluster
-                if self.refine_criterion(cluster):
-                    # if this is the first refinement thus far, set 'done' to False
+            # treat the most recent generation
+            for cluster in self.generations[-1]:
+                condition = self.refine_criterion(cluster)
+                # if refinement needed
+                if condition:
+                    # if this is true, then this is the first refinement of the generation
+                    # hence need to add a new generation
                     if done == True:
                         done = False
+                        self.generations.append([])
 
-                    # refine the cluster
-                    clust1, clust2 = self.refine(cluster, current_count)
-                    newlayer += [clust1, clust2]
-                    current_count += 2
+                    self.generations[-1] += self.refine(cluster)
 
-                # if we don't need to refine, preserve cluster
+                # if refinement not needed
                 else:
-                    newlayer.append(cluster)
-                    current_count += 1
+                    self.clusters.append(cluster)
 
-            if done == False:
-                clusterings.append(Clustering(clusters=newlayer))
-
-        return clusterings
+        return self.clusters

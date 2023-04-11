@@ -1,3 +1,5 @@
+# Refining using level satisfaction first, then normal clustering second
+
 import numpy as np
 import spinspace as ss
 from abc import ABC, abstractmethod
@@ -177,15 +179,22 @@ class TopDownBreakTies(TopDown):
             else:
                 ties.append(i)
 
+        print(f"Generation {self.gen_num}")
+        print(f"bin1: {bin1}")
+        print(f"bin2: {bin2}")
+        print(f"ties {ties}")
+
         for i in ties:
             d1 = sum([self.dist(i, j) for j in bin1]) / len(bin1)
             d2 = sum([self.dist(i, j) for j in bin2]) / len(bin2)
 
+            """
             print(
                 f"  spin {i} is tied between {i1} and {i2} for distance {self.dist(i,i1)} = {self.dist(i,i2)}"
             )
             print(f"    bin1 average distance: {d1}")
             print(f"    bin1 average distance: {d2}")
+            """
             if d1 > d2:
                 bin2.append(i)
             elif d1 < d2:
@@ -251,87 +260,14 @@ def refine_with_sgn(model: TopDown, cluster: IsingCluster):
 ############################################
 ### Implementations of different models
 ############################################
-class TopDownQvecRandInit(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
-
-    def refine_criterion(self, cluster: Cluster):
-        return refine_with_qvec(model=self, cluster=cluster)
-
-    def new_centers(self, cluster: Cluster) -> tuple[int, int]:
-        import random
-
-        return tuple(random.sample(cluster.indices, 2))
 
 
-class TopDownSgnRandInit(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
-
-    def refine_criterion(self, cluster: IsingCluster):
-        return refine_with_sgn(model=self, cluster=cluster)
-
-    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
-        import random
-
-        return tuple(random.sample(cluster.indices, 2))
-
-
-class TopDownQvecFarthestPair(TopDown):
+class MyModel(TopDownBreakTies):
     def __init__(self, circuit: PICircuit):
         super().__init__(circuit=circuit)
 
     def refine_criterion(self, cluster: IsingCluster):
         return refine_with_qvec(model=self, cluster=cluster)
-
-    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
-        indices = cluster.indices
-
-        # compute pairwise distances
-        dist = {}
-        for l1 in range(len(indices)):
-            for l2 in range(l1 + 1, len(indices)):
-                i, j = indices[l1], indices[l2]
-                spin1 = self.circuit.inout(self.data[i])
-                spin2 = self.circuit.inout(self.data[j])
-                dist[(i, j)] = self.circuit.spinspace.vdist(spin1, spin2)
-
-        # get maximum distance key
-        i1, i2 = max(dist, key=dist.get)
-        return i1, i2
-
-
-class TopDownSgnFarthestPair(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
-
-    def refine_criterion(self, cluster: IsingCluster):
-        return refine_with_sgn(model=self, cluster=cluster)
-
-    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
-        indices = cluster.indices
-
-        # compute pairwise distances
-        dist = {}
-        for l1 in range(len(indices)):
-            for l2 in range(l1 + 1, len(indices)):
-                i, j = indices[l1], indices[l2]
-                spin1 = self.circuit.inout(self.data[i])
-                spin2 = self.circuit.inout(self.data[j])
-                dist[(i, j)] = self.circuit.spinspace.vdist(spin1, spin2)
-                # print(f"{i}, {j}:", dist[(i, j)])
-
-        # get maximum distance key
-        i1, i2 = max(dist, key=dist.get)
-        return i1, i2
-
-
-class TopDownSgnBreakTies(TopDownBreakTies):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
-
-    def refine_criterion(self, cluster: IsingCluster):
-        return refine_with_sgn(model=self, cluster=cluster)
 
     def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
         indices = cluster.indices
@@ -348,173 +284,7 @@ class TopDownSgnBreakTies(TopDownBreakTies):
         return i1, i2
 
 
-class TopDownOg(Model):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(data=circuit.inspace, size=circuit.inspace.size)
-        self.circuit = circuit
-
-    def refine_criterion(self, cluster: Cluster):
-        refine = False
-
-        # convert cluster into an array of spins of shape
-        inspins = [self.circuit.inspace.getspin(i) for i in cluster.indices]
-        spins = [self.circuit.inout(s) for s in inspins]
-        qvec = ss.qvec(spins)
-        for s in inspins:
-            if self.circuit.level(inspin=s, ham_vec=qvec) == False:
-                refine = True
-
-        return refine
-
-    def model(self):
-        data = self.circuit.generate_graph()
-        allindices = list(range(len(data)))
-        clusterings = [[Cluster(id_num=0, indices=allindices)]]
-        current_count = 1
-
-        def split(indices) -> tuple[list[int], list[int]]:
-            """
-            Splits a cluster
-            """
-            import random
-
-            # initialize new centers
-            i1, i2 = random.sample(indices, 2)
-            s1, s2 = data[i1], data[i2]
-
-            # create containers for new clusters
-            bin1, bin2 = [i1], [i2]
-
-            for i in indices:
-                # skip over the chosen centers
-                if i == i1 or i == i2:
-                    continue
-
-                d1 = ss.vdist(data[i], s1)
-                d2 = ss.vdist(data[i], s2)
-                # place index in bin2
-                if d1 > d2:
-                    bin2.append(i)
-                elif d1 < d2:
-                    bin1.append(i)
-                else:
-                    bin1.append(i) if bool(random.getrandbits(1)) else bin2.append(i)
-
-            return bin1, bin2
-
-        done = False
-        while done == False:
-            done = True
-            # iterate through the most recent clustering
-            newlayer = []
-            for cluster in clusterings[-1]:
-                # check if the refine criterion is met
-                if self.refine_criterion(cluster):
-                    # if this is the first refinement
-                    if done == True:
-                        # set done to False
-                        done = False
-
-                    # refine the cluster
-                    bin1, bin2 = split(cluster.indices)
-                    clust1 = RefinedCluster(
-                        id_num=current_count, indices=bin1, parent=cluster
-                    )
-                    newlayer.append(clust1)
-                    current_count += 1
-                    clust2 = RefinedCluster(
-                        id_num=current_count, indices=bin2, parent=cluster
-                    )
-                    newlayer.append(clust2)
-                    current_count += 1
-
-                # if we don't need to refine, preserve cluster
-                else:
-                    newlayer.append(cluster)
-
-            if done == False:
-                clusterings.append(newlayer)
-
-        return clusterings
-
-
-def example1():
-    circuit = IMul(N1=2, N2=2)
-    model = TopDown(circuit=circuit)
-    clusterings = model.model()
-
-    for clustering in clusterings:
-        print(len(clustering))
-        for cluster in clustering:
-            print("  ", cluster.indices)
-    print(f"Number of refinements: {len(clusterings)}")
-    print(f"Final number of clusters: {len(clusterings[-1])}")
-
-    for i, cluster in enumerate(clusterings[-1]):
-        print(f"cluster {i}:", cluster.indices)
-
-
-def example2():
-    circuit = IMul(N1=2, N2=2)
-    model = TopDownQvecRandInit(circuit=circuit)
-    clusterings = model.model()
-
-    for clustering in clusterings:
-        print(len(clustering.clusters))
-        for cluster in clustering:
-            print("  ", cluster.indices)
-
-    print(f"Number of refinements: {len(clusterings)}")
-    print(f"Final number of clusters: {len(clusterings[-1].clusters)}")
-
-    for i, cluster in enumerate(clusterings[-1]):
-        print(f"cluster {i}:", cluster.indices)
-
-
-def example3():
-    circuit = IMul(N1=2, N2=2)
-    model = TopDownQvecFarthestPair(circuit=circuit)
-    clusterings = model.model()
-
-    print(
-        "RESULT OF TopDownFarthestPair on Mul2x2\n---------------------------------------"
-    )
-    for clustering in clusterings:
-        print(len(clustering.clusters))
-        for cluster in clustering:
-            print("  ", cluster.indices, "  center:", cluster.center)
-
-    print(f"Number of generations: {len(clusterings)}")
-    print(f"Final number of clusters: {len(clusterings[-1].clusters)}")
-
-    for i, cluster in enumerate(clusterings[-1]):
-        print(f"cluster {i}:", cluster.indices)
-
-
-def example4():
-    success = "\u2713"
-    failure = "x"
-    circuit = IMul(N1=2, N2=2)
-    model = TopDownSgnFarthestPair(circuit=circuit)
-    clusters = model.model()
-    print(
-        "RESULT OF TopDownFarthestPair on Mul2x2\n---------------------------------------"
-    )
-    print(f"Number of generations: {model.gen_num}")
-    print(f"Final number of clusters: {len(model.clusters)}")
-
-    for i, cluster in enumerate(clusters):
-        print(f" cluster {i}:", cluster.indices)
-
-    print("Generation progression:\n----------------------")
-    for gen in model.generations:
-        print(" ", len(gen))
-        for cluster in gen:
-            print("   ", cluster.indices, "  center:", cluster.center, end="")
-            print("   ", success if cluster.satisfied else failure)
-
-
-def example5():
+def example7():
     """NOTES
     This method of clustering breaks ties between clusters by attempting to minimize the average distance between points within clusters. It uses sgn as its ham_vec rather than qvec.
 
@@ -523,10 +293,10 @@ def example5():
     success = "\u2713"
     failure = "x"
     circuit = IMul(N1=2, N2=2)
-    model = TopDownSgnBreakTies(circuit=circuit)
+    model = MyModel(circuit=circuit)
     clusters = model.model()
     print(
-        "RESULT OF TopDownFarthestPair on Mul2x2\n---------------------------------------"
+        "RESULT OF TopDownBreakTies on Mul2x2 Example 7\n--------------------------------------------------"
     )
     print(f"Number of generations: {model.gen_num}")
     print(f"Final number of clusters: {len(model.clusters)}")
@@ -543,4 +313,4 @@ def example5():
 
 
 if __name__ == "__main__":
-    example5()
+    example7()
