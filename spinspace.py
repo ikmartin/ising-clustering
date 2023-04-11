@@ -304,6 +304,10 @@ class Spinspace:
 
         return spin
 
+    def tolist(self):
+        """Returns a list of integers representing this spin space"""
+        return list(range(self.size))
+
     def rand(self):
         """Returns a random spin from this spinspace, sampled uniformly"""
         from random import randint

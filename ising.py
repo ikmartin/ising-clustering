@@ -1,5 +1,6 @@
 from spinspace import Spinspace, Spinmode, Spin
 from abc import ABC, abstractmethod
+from typing import Callable, Optional
 import spinspace as ss
 import numpy as np
 import math
@@ -183,9 +184,12 @@ class PICircuit:
     def f(self, inspin: Spin) -> Spin:
         pass
 
-    def inout(self, inspin: Spin):
-        """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s"""
-        return Spin.catspin((inspin, self.f(inspin)))
+    def inout(self, inspin: Spin | list[Spin]):
+        """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s. If a list of Spins is provided instead then a list of (in, out) pairs returned."""
+        if isinstance(inspin, Spin):
+            return Spin.catspin((inspin, self.f(inspin)))
+        else:
+            return [Spin.catspin((s, self.f(s))) for s in inspin]
 
     def generate_graph(self):
         graph = [self.inout(s) for s in self.inspace]
