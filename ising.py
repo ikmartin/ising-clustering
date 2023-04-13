@@ -195,8 +195,17 @@ class PICircuit:
         graph = [self.inout(s) for s in self.inspace]
         return graph
 
-    def level(self, inspin, ham_vec, more_info=False):
-        """Returns information about the level"""
+    def level(self, inspin, ham_vec, more_info=False, weak=False):
+        """Returns information about the level
+
+        Parameters
+        ----------
+        inspin : Spin
+            an input spin
+        weak : bool
+            check for weak satisfaction of constraints (<=) rather than satisfaction (<)
+
+        """
 
         # bool describing whether this level is satisfied by ham_vec
         satisfied = True
@@ -216,10 +225,18 @@ class PICircuit:
             spin = Spin.catspin((s, t))
             energy = self.energy(spin=spin, ham_vec=ham_vec)
 
-            if energy < correct_energy:
-                satisfied = False
-                if more_info == False:
-                    break
+            # satisfied
+            if weak == False:
+                if energy < correct_energy:
+                    satisfied = False
+                    if more_info == False:
+                        break
+
+            elif weak == True:
+                if energy <= correct_energy:
+                    satisfied = False
+                    if more_info == False:
+                        break
 
             ham[spin.asint()] = energy
 
@@ -228,18 +245,18 @@ class PICircuit:
         else:
             return satisfied
 
-    def levels(self, inspins: list[Spin], ham_vec, list_fails=False):
+    def levels(self, inspins: list[Spin], ham_vec, list_fails=False, weak=False):
         """Returns information about the levels of a list of spins. By default, returns True if all levels are satisfied by ham_vec, False otherwise. If list_fails = True, then it returns a list of the input spins whose levels are not satisfied by ham_vec"""
         if list_fails:
             fails = []
             for s in inspins:
-                if self.level(inspin=s, ham_vec=ham_vec) == False:
+                if self.level(inspin=s, ham_vec=ham_vec, weak=weak) == False:
                     fails.append(s)
             return fails
 
         else:
             for s in inspins:
-                if self.level(inspin=s, ham_vec=ham_vec) == False:
+                if self.level(inspin=s, ham_vec=ham_vec, weak=weak) == False:
                     return False
 
             return True

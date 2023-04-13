@@ -38,7 +38,7 @@ def save_clusters(G: PICircuit, k: int, file_name: str, ham_vec: HamVec = HamVec
 
         if satisfied:
             print(partition, " is viable")
-            file.write(str(partition))
+            file.write(str(partition) + "\n")
 
     file.close()
 
