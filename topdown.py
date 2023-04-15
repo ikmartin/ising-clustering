@@ -93,6 +93,93 @@ class TopDown(RefinementClustering):
                 IsingCluster(
                     indices=indices,
                     circuit=self.circuit,
+                    center=0,
+                    generation=0,
+                    parent=None,
+                )
+            ]
+        ]
+
+    def refine(self, cluster: IsingCluster) -> tuple[IsingCluster, IsingCluster]:
+        """
+        Splits a cluster, randomly breaks ties
+        """
+        import random
+
+        # get maximum distance key
+        i1, i2 = self.new_centers(cluster=cluster)
+
+        # get new centers and create containers for new clusters
+        s1, s2 = self.data[i1], self.data[i2]
+        bin1, bin2 = [i1], [i2]
+
+        # refine the cluster
+        for i in cluster.indices:
+            # skip over the chosen centers
+            if i == i1 or i == i2:
+                continue
+
+            d1 = self.dist(i, s1)
+            d2 = self.dist(i, s2)
+            # place index in bin2
+            if d1 > d2:
+                bin2.append(i)
+            elif d1 < d2:
+                bin1.append(i)
+            else:
+                bin1.append(i) if bool(random.getrandbits(1)) else bin2.append(i)
+
+        clust1 = IsingCluster(
+            indices=bin1,
+            parent=cluster,
+            circuit=self.circuit,
+            center=i1,
+            generation=self.gen_num,
+        )
+        clust2 = IsingCluster(
+            indices=bin2,
+            parent=cluster,
+            circuit=self.circuit,
+            center=i2,
+            generation=self.gen_num,
+        )
+
+        return clust1, clust2
+
+
+class TopDownLvec(RefinementClustering):
+    """Class implementing the topdown refine algorithm. Must inherit from this and implement both refine_criterion and new_centers in order to complete model."""
+
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(data=circuit.inspace, size=circuit.inspace.size)
+        self.weak = weak
+        self.circuit = circuit
+        self._dist = {}
+
+    def dist(self, i1: int, i2: int):
+        try:
+            return self._dist[i2, i2]
+        except KeyError:
+            lvec1 = self.circuit.lvec(self.data[i1])
+            lvec2 = self.circuit.lvec(self.data[i2])
+            self._dist[i1, i2] = ss.hamming(lvec1, lvec2)
+            return self._dist[i1, i2]
+
+    @abstractmethod
+    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
+        pass
+
+    @abstractmethod
+    def refine_criterion(self, cluster: IsingCluster, weak: bool = False) -> bool:
+        pass
+
+    def initialize(self):
+        indices = list(range(self.size))  # indices of all data points
+        self.generations = [
+            [
+                IsingCluster(
+                    indices=indices,
+                    circuit=self.circuit,
                     center=None,
                     generation=0,
                     parent=None,
@@ -219,6 +306,37 @@ class TopDownBreakTies(TopDown):
 ############################################
 
 
+def refine_with_lvec(model: TopDownLvec, cluster: IsingCluster, weak=False):
+    """Refine the cluster only if the vector of the cluster doesn't satisfy one of the input levels in the cluster"""
+    refine = False
+
+    # avoid computing this again if the value already set
+    if cluster.satisfied != None:
+        return not cluster.satisfied
+
+    # get the spins in the cluster
+    print(cluster.center)
+    center_spin = model.data[cluster.center]
+    lvec = model.circuit.lvec(center_spin)
+
+    return not cluster.check_satisfied(vec=lvec, weak=model.weak)
+
+
+def refine_with_avglvec(model: TopDownLvec, cluster: IsingCluster, weak=False):
+    """Refine the cluster only if the vector of the cluster doesn't satisfy one of the input levels in the cluster"""
+    refine = False
+
+    # avoid computing this again if the value already set
+    if cluster.satisfied != None:
+        return not cluster.satisfied
+
+    # get the spins in the cluster
+    inspins = [model.data[i] for i in cluster.indices]
+    avg_lvec = sum(model.circuit.lvec(s) for s in inspins)
+
+    return not cluster.check_satisfied(vec=avg_lvec, weak=model.weak)
+
+
 def refine_with_qvec(model: TopDown, cluster: IsingCluster, weak=False):
     """Refine the cluster only if the qvector of the cluster doesn't satisfy one of the input levels in the cluster"""
     refine = False
@@ -280,6 +398,53 @@ class TopDownSgnRandInit(TopDown):
         return tuple(random.sample(cluster.indices, 2))
 
 
+class TopDownLvecFarthestPair(TopDownLvec):
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
+
+    def refine_criterion(self, cluster: IsingCluster):
+        return refine_with_avglvec(model=self, cluster=cluster, weak=self.weak)
+
+    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
+        indices = cluster.indices
+
+        # compute pairwise distances
+        dist = {}
+        for l1 in range(len(indices)):
+            for l2 in range(l1 + 1, len(indices)):
+                i, j = indices[l1], indices[l2]
+                dist[(i, j)] = self.dist(i, j)
+                # print(f"{i}, {j}:", dist[(i, j)])
+
+        # get maximum distance key
+        print(cluster.indices)
+        i1, i2 = max(dist, key=dist.get)
+        return i1, i2
+
+
+class TopDownLvecMain(TopDownLvec):
+    """The canonical Lvec clustering. Centers randomly chosen, then the lvecs of those centers are used as the refine_criterion."""
+
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
+
+    def refine_criterion(self, cluster: IsingCluster):
+        return refine_with_lvec(model=self, cluster=cluster, weak=self.weak)
+
+    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
+        indices = cluster.indices
+
+        # compute pairwise distances
+        lvec_counts = {}
+        # for l1 in range(len(indices)):
+        # print(f"{i}, {j}:", dist[(i, j)])
+
+        # get maximum distance key
+        print(cluster.indices)
+        i1, i2 = max(dist, key=dist.get)
+        return i1, i2
+
+
 class TopDownQvecFarthestPair(TopDown):
     def __init__(self, circuit: PICircuit, weak=False):
         super().__init__(circuit=circuit, weak=weak)
@@ -329,7 +494,7 @@ class TopDownSgnFarthestPair(TopDown):
         return i1, i2
 
 
-class TopDownSgnBreakTies(TopDownBreakTies):
+class TopDownSgnBreakTies(TopDownLvec):
     def __init__(self, circuit: PICircuit):
         super().__init__(circuit=circuit)
 
@@ -345,6 +510,31 @@ class TopDownSgnBreakTies(TopDownBreakTies):
             for l2 in range(l1 + 1, len(indices)):
                 i, j = indices[l1], indices[l2]
                 dist[i, j] = self.dist(i, j)
+
+        # get maximum distance key
+        i1, i2 = max(dist, key=dist.get)
+        return i1, i2
+
+
+class TopDownLvecBreakTies(TopDownBreakTies):
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
+
+    def refine_criterion(self, cluster: IsingCluster):
+        return refine_with_avglvec(model=self, cluster=cluster, weak=self.weak)
+
+    def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
+        indices = cluster.indices
+
+        # compute pairwise distances
+        dist = {}
+        for l1 in range(len(indices)):
+            for l2 in range(l1 + 1, len(indices)):
+                i, j = indices[l1], indices[l2]
+                spin1 = self.circuit.inout(self.data[i])
+                spin2 = self.circuit.inout(self.data[j])
+                dist[(i, j)] = self.circuit.spinspace.vdist(spin1, spin2)
+                # print(f"{i}, {j}:", dist[(i, j)])
 
         # get maximum distance key
         i1, i2 = max(dist, key=dist.get)
@@ -545,5 +735,86 @@ def example5():
             print("   ", success if cluster.satisfied else failure)
 
 
+def example6():
+    """NOTES
+    This uses lvec as its refine_criterion
+    """
+
+    success = "\u2713"
+    failure = "x"
+    circuit = IMul(N1=2, N2=2)
+    model = TopDownLvecFarthestPair(circuit=circuit, weak=True)
+    clusters = model.model()
+    print(
+        "RESULT OF TopDownLvecFarthestPair on Mul2x2\n---------------------------------------"
+    )
+    print(f"Number of generations: {model.gen_num}")
+    print(f"Final number of clusters: {len(model.clusters)}")
+
+    for i, cluster in enumerate(clusters):
+        print(f" cluster {i}:", cluster.indices)
+
+    print("Generation progression:\n----------------------")
+    for gen in model.generations:
+        print(" ", len(gen))
+        for cluster in gen:
+            print("   ", cluster.indices, "  center:", cluster.center, end="")
+            print("   ", success if cluster.satisfied else failure)
+
+
+def example7():
+    """NOTES
+    This uses lvec as its refine_criterion
+    """
+
+    success = "\u2713"
+    failure = "x"
+    circuit = IMul(N1=2, N2=2)
+    model = TopDownLvecBreakTies(circuit=circuit, weak=True)
+    clusters = model.model()
+    print(
+        "RESULT OF TopDownLvecFarthestPair on Mul2x2\n---------------------------------------"
+    )
+    print(f"Number of generations: {model.gen_num}")
+    print(f"Final number of clusters: {len(model.clusters)}")
+
+    for i, cluster in enumerate(clusters):
+        print(f" cluster {i}:", cluster.indices)
+
+    print("Generation progression:\n----------------------")
+    for gen in model.generations:
+        print(" ", len(gen))
+        for cluster in gen:
+            print("   ", cluster.indices, "  center:", cluster.center, end="")
+            print("   ", success if cluster.satisfied else failure)
+
+
+def example8():
+    """NOTES
+    This uses lvec as its refine_criterion
+    """
+
+    success = "\u2713"
+    failure = "x"
+    circuit = IMul(N1=2, N2=2)
+    model = TopDownLvec(circuit=circuit, weak=True)
+    clusters = model.model()
+    print(
+        "RESULT OF TopDownLvecFarthestPair on Mul2x2\n---------------------------------------"
+    )
+    print(f"Number of generations: {model.gen_num}")
+    print(f"Final number of clusters: {len(model.clusters)}")
+
+    for i, cluster in enumerate(clusters):
+        print(f" cluster {i}:", cluster.indices)
+
+    print("Generation progression:\n----------------------")
+    for gen in model.generations:
+        print(" ", len(gen))
+        for cluster in gen:
+            print("   ", cluster.indices, "  center:", cluster.center, end="")
+            print("   ", success if cluster.satisfied else failure)
+
+
 if __name__ == "__main__":
-    example5()
+    example8()

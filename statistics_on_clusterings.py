@@ -11,10 +11,12 @@ run_clustering_wrapper (ModelType, aux_array) -> Model:
 """
 
 import numpy as np
+import spinspace as ss
 from topdown import TopDown, TopDownBreakTies, IsingCluster
 from ising import PICircuit, IMul
 from clustering import Cluster, Model
 from spinspace import Spin
+
 
 ############################################
 ### Various refine criterion
@@ -34,7 +36,7 @@ def refine_with_qvec(model: TopDown, cluster: IsingCluster, weak=False):
     spins = [model.circuit.inout(s) for s in inspins]
     qvec = ss.qvec(spins)
 
-    return not cluster.check_satisfied(vec=qvec)
+    return not cluster.check_satisfied(vec=qvec, weak=weak)
 
 
 def refine_with_sgn(model: TopDown, cluster: IsingCluster, weak=False):
@@ -83,7 +85,7 @@ class TopDownSgnRandInit(TopDown):
 
 
 class TopDownQvecFarthestPair(TopDown):
-    def __init__(self, circuit: PICircuit, weak=False):
+    def __init__(self, circuit: PICircuit, weak=True):
         super().__init__(circuit=circuit, weak=weak)
 
     def refine_criterion(self, cluster: IsingCluster):
@@ -189,7 +191,18 @@ def run_clustering_wrapper(ModelType, aux_array=[]):
     if aux_array != []:
         circuit.set_aux(aux_array)
 
-    return ModelType(circuit=circuit, weak=True)
+    model = ModelType(circuit=circuit, weak=True)
+    model.model()
+    return model
+
+
+def histoAnalysis(ModelType):
+    circuit = IMul(2, 2)
+    results = []
+    for i in range(2):
+        model = ModelType(circuit=circuit, weak=True)
+        model.model()
+        print(cluster.indices for cluster in model.clusters)
 
 
 if __name__ == "__main__":
@@ -200,11 +213,12 @@ if __name__ == "__main__":
     ModelType = TopDownQvecFarthestPair
     name = "TopDownQvecFarthestPair"
 
+    histoAnalysis(ModelType)
     # run the model, get the results. Optionally provide an auxiliary array
     model = run_clustering_wrapper(ModelType=ModelType, aux_array=aux_array)
 
     # print the results
-    print_cluster_results(model, typename=name)
+    # print_cluster_results(model, typename=name)
 
     # print the number of clusters
     print(f"\n\nThe clustering achieved has {len(model.clusters)} clusters")

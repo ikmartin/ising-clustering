@@ -410,6 +410,10 @@ def sgn(spins):
     return np.sign(qvec(spins))
 
 
+def hamming(arr1, arr2):
+    return sum([1 if arr1[i] == arr2[i] else 0 for i in range(len(arr1))])
+
+
 def multiply(s: Spin, t: Spin):
     """Multiplies two spins of equal length
 

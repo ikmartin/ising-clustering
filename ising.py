@@ -168,12 +168,18 @@ class PICircuit:
         self.A = 0
         self.inspace = Spinspace(tuple([self.N]))
         self.outspace = Spinspace(tuple([self.M]))
-        self.spinspace = Spinspace((self.N, self.M))
+        self.auxspace = None
+        self.spinspace = Spinspace((self.N, self.M, self.A))
         self._graph = None
         self._aux_array = []
 
     #############################################
-    # properties
+    # Properties
+    #############################################
+    @property
+    def G(self):
+        return self.N + self.M + self.A
+
     @property
     def graph(self):
         if self._graph == None:
@@ -210,6 +216,7 @@ class PICircuit:
             aux_array = aux_array.T
 
         self.A = len(aux_array[0])
+        self.auxspace = Spinspace(shape=(self.A,))
         self._outauxspace = Spinspace(shape=(self.M, self.A))
 
         # check for consistent length and store aux_array as list of Spins
@@ -228,7 +235,7 @@ class PICircuit:
         pass
 
     def faux(self, inspin: Spin) -> None | Spin:
-        if self._aux_array is []:
+        if self.A == 0:
             return None
         else:
             return self._aux_array[inspin.asint()]
@@ -255,6 +262,16 @@ class PICircuit:
     def generate_graph(self):
         graph = [self.inout(s) for s in self.inspace]
         return graph
+
+    def lvec(self, inspin):
+        """Returns the sign of the average normal vector for all constraints in the given input level"""
+        s = inspin
+        normal = np.zeros(int(self.G * (self.G + 1) / 2))
+        for t in self.outspace:
+            inout = Spin.catspin((s, t))
+            normal += inout.vspin().spin()
+
+        return np.sign(normal - self.M * self.inout(s).vspin().spin())
 
     def level(self, inspin, ham_vec, more_info=False, weak=False):
         """Returns information about the level
@@ -288,13 +305,13 @@ class PICircuit:
 
             # satisfied
             if weak == False:
-                if energy < correct_energy:
+                if energy <= correct_energy:
                     satisfied = False
                     if more_info == False:
                         break
 
             elif weak == True:
-                if energy <= correct_energy:
+                if energy < correct_energy:
                     satisfied = False
                     if more_info == False:
                         break
