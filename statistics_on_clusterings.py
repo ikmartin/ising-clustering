@@ -1,3 +1,15 @@
+"""
+A script to make running statistical tests on the various clustering models more straightforward. Note that none of the models in this file incorporate The Bug. To add the bug, changes will need to be made in the TopDown class (found in topdown.py).
+
+Methods
+-------
+print_cluster_results (model, typename) -> NoReturn:
+    pass this a model which has already been run and a typename to include in the display. It will print the results of the provided clustering model in the terminal.
+
+run_clustering_wrapper (ModelType, aux_array) -> Model:
+    this clusters the IMul2x2 circuit. If provided with an auxiliary array (aux_array) it will incorporate it into the circuit. It returns the completed model.
+"""
+
 import numpy as np
 from topdown import TopDown, TopDownBreakTies, IsingCluster
 from ising import PICircuit, IMul
