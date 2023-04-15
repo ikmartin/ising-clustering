@@ -50,10 +50,12 @@ class IsingCluster(RefinedCluster):
         self.satisfied = None
         self.vec = None
 
-    def check_satisfied(self, vec) -> bool:
+    def check_satisfied(self, vec, weak=False) -> bool:
         self.vec = vec
         self.satisfied = self.circuit.levels(
-            inspins=[self.circuit.inspace[i] for i in self.indices], ham_vec=vec
+            inspins=[self.circuit.inspace[i] for i in self.indices],
+            ham_vec=vec,
+            weak=weak,
         )
         return self.satisfied
 
@@ -61,8 +63,9 @@ class IsingCluster(RefinedCluster):
 class TopDown(RefinementClustering):
     """Class implementing the topdown refine algorithm. Must inherit from this and implement both refine_criterion and new_centers in order to complete model."""
 
-    def __init__(self, circuit: PICircuit):
+    def __init__(self, circuit: PICircuit, weak=False):
         super().__init__(data=circuit.inspace, size=circuit.inspace.size)
+        self.weak = weak
         self.circuit = circuit
         self._dist = {}
 
@@ -145,8 +148,8 @@ class TopDown(RefinementClustering):
 
 
 class TopDownBreakTies(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
 
     def refine(self, cluster: IsingCluster) -> tuple[IsingCluster, IsingCluster]:
         """
@@ -216,7 +219,7 @@ class TopDownBreakTies(TopDown):
 ############################################
 
 
-def refine_with_qvec(model: TopDown, cluster: IsingCluster):
+def refine_with_qvec(model: TopDown, cluster: IsingCluster, weak=False):
     """Refine the cluster only if the qvector of the cluster doesn't satisfy one of the input levels in the cluster"""
     refine = False
 
@@ -232,8 +235,8 @@ def refine_with_qvec(model: TopDown, cluster: IsingCluster):
     return not cluster.check_satisfied(vec=qvec)
 
 
-def refine_with_sgn(model: TopDown, cluster: IsingCluster):
-    """Refine the cluster only if the sgn of the qvector doesn't satisfy all input levels in the cluster"""
+def refine_with_sgn(model: TopDown, cluster: IsingCluster, weak=False):
+    """Refine the cluster only if the sgn of the vector doesn't satisfy all input levels in the cluster"""
     refine = False
 
     # avoid computing this again if the value already set
@@ -278,11 +281,11 @@ class TopDownSgnRandInit(TopDown):
 
 
 class TopDownQvecFarthestPair(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
 
     def refine_criterion(self, cluster: IsingCluster):
-        return refine_with_qvec(model=self, cluster=cluster)
+        return refine_with_qvec(model=self, cluster=cluster, weak=self.weak)
 
     def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
         indices = cluster.indices
@@ -302,11 +305,11 @@ class TopDownQvecFarthestPair(TopDown):
 
 
 class TopDownSgnFarthestPair(TopDown):
-    def __init__(self, circuit: PICircuit):
-        super().__init__(circuit=circuit)
+    def __init__(self, circuit: PICircuit, weak=False):
+        super().__init__(circuit=circuit, weak=weak)
 
     def refine_criterion(self, cluster: IsingCluster):
-        return refine_with_sgn(model=self, cluster=cluster)
+        return refine_with_sgn(model=self, cluster=cluster, weak=self.weak)
 
     def new_centers(self, cluster: IsingCluster) -> tuple[int, int]:
         indices = cluster.indices

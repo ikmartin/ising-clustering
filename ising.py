@@ -165,11 +165,14 @@ class PICircuit:
     def __init__(self, N: int, M: int):
         self.N = N
         self.M = M
+        self.A = 0
         self.inspace = Spinspace(tuple([self.N]))
         self.outspace = Spinspace(tuple([self.M]))
         self.spinspace = Spinspace((self.N, self.M))
         self._graph = None
+        self._aux_array = []
 
+    #############################################
     # properties
     @property
     def graph(self):
@@ -177,12 +180,70 @@ class PICircuit:
             self._graph = self.generate_graph()
         return self._graph
 
+    @property
+    def fulloutspace(self):
+        if self.A == 0 or self.A == None:
+            return self.outspace
+        else:
+            return self._outauxspace
+
+    #############################################
+
+    def set_aux(self, aux_array: list[list]):
+        """
+        Sets the auxiliary array. Expects a list of lists. Intelligently converts provided input into a list of Spins.
+
+        Parameters
+        ----------
+        aux_array : list[list]
+            the auxiliary array to use for this PICircuit. Must be of consistent shape, either (2^N, A) or (A, 2^N) (in numpy notation).
+        """
+        # convert to numpy array
+        aux_array = np.array(aux_array)
+
+        # check to ensure either rows or columns matches 2^N
+        if aux_array.shape[0] != 2 ** self.N and aux_array.shape[1] != 2**self.N:
+            raise ValueError("The aux_array must have one auxiliary state per input!")
+
+        # we want the first index to correspond to the input, not to the coordinate of the aux state
+        if aux_array.shape[1] == 2**self.N:
+            aux_array = aux_array.T
+
+        self.A = len(aux_array[0])
+        self._outauxspace = Spinspace(shape=(self.M, self.A))
+
+        # check for consistent length and store aux_array as list of Spins
+        for i in range(aux_array.shape[0]):
+            row = aux_array[i]
+            if len(row) != self.A:
+                raise ValueError("Not all auxiliary states are the same length!")
+
+            self._aux_array.append(Spin(spin=row, shape=(self.A,)))
+
     def energy(self, spin: Spin, ham_vec: np.ndarray):
         return np.dot(spin.vspin().spin(), ham_vec)
 
     @abstractmethod
-    def f(self, inspin: Spin) -> Spin:
+    def fout(self, inspin: Spin) -> Spin:
         pass
+
+    def faux(self, inspin: Spin) -> None | Spin:
+        if self._aux_array is []:
+            return None
+        else:
+            return self._aux_array[inspin.asint()]
+
+    def f(self, inspin: Spin | int) -> Spin:
+        # ensure is of type Spin
+        if isinstance(inspin, int):
+            inspin = self.inspace.getspin(inspin)
+
+        out = self.fout(inspin)
+        aux = self.faux(inspin)
+        if aux is None:
+            return out
+        else:
+            return Spin.catspin(spins=(out, aux))
 
     def inout(self, inspin: Spin | list[Spin]):
         """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s. If a list of Spins is provided instead then a list of (in, out) pairs returned."""
@@ -221,7 +282,7 @@ class PICircuit:
         ham = {correct_key: correct_energy}
 
         # iterate through the level
-        for t in self.outspace:
+        for t in self.fulloutspace:
             spin = Spin.catspin((s, t))
             energy = self.energy(spin=spin, ham_vec=ham_vec)
 
@@ -271,9 +332,9 @@ class IMul(PICircuit):
         self.N1 = N1
         self.N2 = N2
 
-    def f(self, spin: Spin):
+    def fout(self, inspin: Spin):
         # get the numbers corresponding to the input spin
-        num1, num2 = spin.splitint()
+        num1, num2 = inspin.splitint()
 
         # multiply spins as integers and convert into spin format
         result = Spin(spin=num1 * num2, shape=(self.M,))

@@ -14,7 +14,9 @@ class HamVec(Enum):
         return self.value(spins)
 
 
-def save_clusters(G: PICircuit, k: int, file_name: str, ham_vec: HamVec = HamVec.SGN):
+def save_clusters(
+    G: PICircuit, k: int, file_name: str, ham_vec: HamVec = HamVec.SGN, weak=False
+):
     """
     Saves all viable k-clusterings using the refine criterion specified.
     """
@@ -27,7 +29,7 @@ def save_clusters(G: PICircuit, k: int, file_name: str, ham_vec: HamVec = HamVec
         satisfied = True
         for part in partition:
             inspins = [G.inspace.getspin(i) for i in part]
-            satisfied = G.levels(inspins, ham_vec=ham_vec(G.inout(inspins)))
+            satisfied = G.levels(inspins, ham_vec=ham_vec(G.inout(inspins)), weak=weak)
 
             if satisfied == False:
                 break
@@ -47,7 +49,7 @@ if __name__ == "__main__":
     N1 = 2
     N2 = 2
     G = IMul(N1, N2)
-    k = 3
+    k = 2
     ham_vec = HamVec.SGN
     vecname = "sgn" if ham_vec == HamVec.SGN else "qvec"
     filename = f"all_viable_{vecname}_{k}-clusters_IMul{N1}x{N2}.dat"
