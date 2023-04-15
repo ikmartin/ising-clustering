@@ -52,7 +52,7 @@ def refine_with_sgn(model: TopDown, cluster: IsingCluster, weak=False):
     spins = [model.circuit.inout(s) for s in inspins]
     sgn = ss.sgn(spins)
 
-    return not cluster.check_satisfied(vec=sgn)
+    return not cluster.check_satisfied(vec=sgn, weak=weak)
 
 
 ############################################
