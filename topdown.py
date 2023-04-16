@@ -60,6 +60,55 @@ class IsingCluster(RefinedCluster):
         return self.satisfied
 
 
+class IsingCluster(RefinedCluster):
+    """An implementation of Refined Cluster used specifically for clustering Ising Circuits.
+
+    Notes
+    -----
+
+    Atributes
+    ---------
+    self.indices : list[int]
+        The indices of the data in the cluster. We store only the indices, not references to the data itself.
+    self.id_num : int
+        An identification number for this cluster. Is the hash of the indices.
+    self.parent : Cluster
+        A reference to the parent of this cluster.
+    self.vec : numpy.ndarray
+        The vector in real virtual space associated to this cluster. Likely either a qvec or the sign of a qvec. Depends on the implementation of TopDown. Must be of dimension equal to the dimension of virtual spin space.
+    self.diameter : int
+        The maximum distance between points in this cluster.
+    self.satisfied : bool
+        True if the center satisfies all input levels in the cluster, false otherwise.
+    """
+
+    def __init__(
+        self,
+        indices,
+        circuit,
+        center,
+        generation: int,
+        parent: Optional[Cluster] = None,
+    ):
+        super().__init__(indices=indices, parent=parent, generation=generation)
+        self.circuit = circuit
+        self.center = center
+        self.diameter = ss.diameter(circuit.graph)
+
+        # these are set on check_satisfied
+        self.satisfied = None
+        self.vec = None
+
+    def check_satisfied(self, vec, weak=False) -> bool:
+        self.vec = vec
+        self.satisfied = self.circuit.levels(
+            inspins=[self.circuit.inspace.getspin(i) for i in self.indices],
+            ham_vec=self.vec,
+            weak=weak,
+        )
+        return self.satisfied
+
+
 class TopDown(RefinementClustering):
     """Class implementing the topdown refine algorithm. Must inherit from this and implement both refine_criterion and new_centers in order to complete model."""
 
