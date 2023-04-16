@@ -273,7 +273,7 @@ class PICircuit:
 
         return np.sign(normal - self.M * self.inout(s).vspin().spin())
 
-    def level(self, inspin, ham_vec, more_info=False, weak=False):
+    def level(self, inspin, ham_vec, weak=False, more_info=False, print_energies=False):
         """Returns information about the level
 
         Parameters
@@ -290,7 +290,7 @@ class PICircuit:
 
         # store info about the correct in/out pair
         s = inspin
-        fs = self.f(inspin)
+        correct_int = self.f(inspin).asint()
         correct_spin = self.inout(s)
         correct_key = correct_spin.asint()
         correct_energy = self.energy(correct_spin, ham_vec)
@@ -298,19 +298,27 @@ class PICircuit:
         # dictionary to store hamiltonian values
         ham = {correct_key: correct_energy}
 
+        if print_energies:
+            print(f"Correct output {correct_int} had energy {correct_energy}")
+
         # iterate through the level
-        for t in self.fulloutspace:
+        for i in range(self.fulloutspace.size):
+            t = self.fulloutspace.getspin(i)
+            if t.asint() == correct_int:
+                continue
+
             spin = Spin.catspin((s, t))
             energy = self.energy(spin=spin, ham_vec=ham_vec)
+            if print_energies:
+                print(f"Output {t.asint()} had energy {energy}")
 
             # satisfied
             if weak == False:
                 if energy <= correct_energy:
                     satisfied = False
                     if more_info == False:
-                        break
-
-            elif weak == True:
+                        return satisfied
+            else:
                 if energy < correct_energy:
                     satisfied = False
                     if more_info == False:
@@ -323,21 +331,30 @@ class PICircuit:
         else:
             return satisfied
 
-    def levels(self, inspins: list[Spin], ham_vec, list_fails=False, weak=False):
+    def levels(
+        self,
+        inspins: list[Spin],
+        ham_vec,
+        list_fails=False,
+        weak=False,
+        print_energies=False,
+        flag=False,
+    ):
         """Returns information about the levels of a list of spins. By default, returns True if all levels are satisfied by ham_vec, False otherwise. If list_fails = True, then it returns a list of the input spins whose levels are not satisfied by ham_vec"""
+        fails = []
+        for s in inspins:
+            condition = self.level(
+                inspin=s, ham_vec=ham_vec, weak=weak, print_energies=print_energies
+            )
+            if condition == False:
+                if list_fails == False:
+                    return False
+                fails.append(s)
+
         if list_fails:
-            fails = []
-            for s in inspins:
-                if self.level(inspin=s, ham_vec=ham_vec, weak=weak) == False:
-                    fails.append(s)
             return fails
 
-        else:
-            for s in inspins:
-                if self.level(inspin=s, ham_vec=ham_vec, weak=weak) == False:
-                    return False
-
-            return True
+        return True
 
 
 class IMul(PICircuit):

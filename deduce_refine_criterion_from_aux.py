@@ -45,16 +45,40 @@ def all_lvecs():
         )
 
 
-def test_0_lvec_on_other_levels():
+def test_i_lvec_on_other_levels(i: int):
     circuit = ising.IMul(2, 2)
-    lvec0 = circuit.lvec(circuit.inspace.getspin(0))
+    lvec = circuit.lvec(circuit.inspace.getspin(i))
 
     for s in circuit.inspace:
         print(
-            f"{s.asint()}: 0's lvec satisfies? {circuit.level(inspin=s, ham_vec=lvec0, weak=True)}"
+            f"{s.asint()}: 0's lvec satisfies? {circuit.level(inspin=s, ham_vec=lvec, weak=True)}"
         )
+
+
+def compare_lvecs_on_other_levels():
+    circuit = ising.IMul(2, 2)
+
+    table = []
+    for i in range(circuit.inspace.size):
+        s = circuit.inspace.getspin(i)
+        lvec = circuit.lvec(circuit.inspace.getspin(i))
+        arr = []
+        for j in range(circuit.inspace.size):
+            t = circuit.inspace.getspin(j)
+            arr.append(int(circuit.level(inspin=t, ham_vec=lvec, weak=True)))
+
+        table.append(arr)
+
+    return table
 
 
 if __name__ == "__main__":
     # all_lvecs()
-    test_0_lvec_on_other_levels()
+    i = 7
+    j = 14
+    table = compare_lvecs_on_other_levels()
+    print(np.arange(16))
+    for i, row in enumerate(table):
+        print(i, np.array(row))
+
+    test_i_lvec_on_other_levels(5)

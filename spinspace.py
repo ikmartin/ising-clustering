@@ -301,7 +301,6 @@ class Spinspace:
         """
         if isinstance(spin, Spin) == False:
             spin = Spin(spin=spin, shape=self.shape)
-
         return spin
 
     def tolist(self):
