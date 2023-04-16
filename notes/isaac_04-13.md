@@ -44,9 +44,9 @@ function topdown(spinspace) -> list[Cluster]:
 				complete = False # we need further refinement
 				
 				# replace the failed cluster with a refinement
-				clusters.remove(cluster)
-				cluster.append(refine(cluster))
-
+				remove cluster from clusters
+				append refine(cluster) to clusters
+				
 	return clusters
 ```
 
