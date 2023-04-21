@@ -1,41 +1,17 @@
 import numpy as np
-from enum import Enum
-from mathtools import trinum
 
 #########################################
 ### Spin Space Methods
 #########################################
 
 
-class Spinmode(Enum):
-    NONE = 0
-    INT = 1
-    SPIN = 2
-
-    @staticmethod
-    def checkmode(spin: tuple):
-        """Returns the Spinmode of the provided spin"""
-
-        # default mode
-        mode = Spinmode.NONE
-
-        # if in splitmode, check type of first element
-        test = spin[0] if isinstance(spin, tuple) else spin
-
-        # case that spin is int
-        if isinstance(test, int):
-            mode = Spinmode.INT
-        # case that test is spin
-        elif isinstance(test, np.ndarray):
-            mode = Spinmode.SPIN
-        else:
-            raise Exception(f"Unrecognized spin format of type {type(spin)}")
-
-        return mode
+def trinum(n):
+    """Returns the nth triangular number"""
+    return int(n * (n + 1) / 2)
 
 
-def int2spin(val: int, dim: int):
-    """Generate spin representation of integer.
+def int2spin(val: int, dim: int) -> np.ndarray:
+    """Generate spin representation as a numpy.ndarray of integer.
 
     Parameters
     ----------
@@ -409,7 +385,8 @@ def sgn(spins):
     return np.sign(qvec(spins))
 
 
-def hamming(arr1, arr2):
+def hamming(arr1: np.ndarray, arr2: np.ndarray):
+    """Returns hamming distance between two numpy.ndrray of equal length"""
     return sum([1 if arr1[i] == arr2[i] else 0 for i in range(len(arr1))])
 
 

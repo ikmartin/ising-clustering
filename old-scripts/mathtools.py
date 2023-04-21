@@ -1,7 +1,3 @@
-def trinum(n):
-    return int(n * (n + 1) / 2)
-
-
 """
                                         [a1, b1, b2, b3]
 [a1,a2,a3,a4], [b1,b2,b3,b4,b5,b6] ~~>  [0,  a2, b4, b5] ~~> [a1,b1,b2,b3,a2,b4,b5,a3,b6,a4]
