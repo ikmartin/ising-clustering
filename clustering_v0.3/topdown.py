@@ -71,7 +71,7 @@ class TopDown(RefinementClustering):
 
     def dist(self, i1: int, i2: int):
         try:
-            return self._dist[i2, i2]
+            return self._dist[i1, i2]
         except KeyError:
             self._dist[i1, i2] = ss.vdist(
                 self.circuit.inout(self.data[i1]), self.circuit.inout(self.data[i2])
