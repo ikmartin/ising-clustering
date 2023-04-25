@@ -7,24 +7,31 @@ from ising import PICircuit, IMul
 import numpy as np
 
 class FlexNode(Node):
+    """
+    For some reason, the binarytree package prevents you from creating nodes with values which are not
+    int, str, or float. This is probably because ordering of nodes is necessary for some binary tree
+    algorithms, but those are not necessarily relevant here. This class is a wrapper for Node which overrides
+    the type protection. We want this in order to store binary trees where the values are sets of spins
+    (representing clusters).
+    
+    Be warned that it may not be compatible with some algorithms.
+    """
     def __init__(self, value: NodeValue, left: Optional["Node"] = None, right: Optional["Node"] = None,) -> None:
         super().__init__(value, left, right)
 
     def __setattr__(self, attr: str, obj: Any) -> None:
         object.__setattr__(self, attr, obj)
-    
-class HierarchicalClustering:
-    def __init__(self, refine_criterion: Callable, refine_method: Callable) -> None:
-        self.refine_criterion = refine_criterion
-        self.refine_method = refine_method
 
-    def __call__(self, node: FlexNode) -> FlexNode:
-        if self.refine_criterion(node.value):
-            cluster1, cluster2 = self.refine_method(node.value)
-            node.left, node.right = self(FlexNode(cluster1)), self(FlexNode(cluster2))
+def iterative_clustering(refine_criterion: Callable, refine_method: Callable) -> Callable:
+    def run(node: FlexNode) -> FlexNode:
+        if refine_criterion(node.value):
+            cluster1, cluster2 = refine_method(node.value)
+            node.left, node.right = run(FlexNode(cluster1)), run(FlexNode(cluster2))
 
         return node
- 
+    
+    return run
+        
 ## EXAMPLE FUNCTIONS: TEST FUNCTIONALITY OF CLUSTERING CLASS
 
 def test_refine_criterion(data: Spinspace, indices: Tuple) -> bool:
@@ -39,7 +46,7 @@ def test_clustering():
     root = FlexNode(tuple(range(spinspace.size)))
 
     # Curry functions with the appropriate values
-    operator = HierarchicalClustering(
+    operator = iterative_clustering(
         refine_criterion = lambda cluster: test_refine_criterion(spinspace, cluster),
         refine_method = lambda cluster: test_refine_method(spinspace, cluster)
         )
@@ -53,18 +60,18 @@ def break_tie(val1, val2):
     return np.random.randint(2) == 0 if val1 == val2 else val1 > val2
 
 
-def vector_refine_criterion(circuit: PICircuit, vector_method : Callable, weak = False) -> bool:
+def vector_refine_criterion(circuit: PICircuit, vector_method : Callable, weak = False) -> Callable:
     """
     Currying function to produce a vector-based refinement function based on a certain vector-finding
     method passed by the user.
     """
-    def criterion(cluster: Set[Spin]):
+    def criterion(cluster: Set[Spin]) -> bool:
         vector = vector_method(cluster, circuit)
         return not circuit.levels(inspins = list(cluster), ham_vec = vector, weak = weak)
     
     return criterion
 
-def general_refine_method(distance: Callable, find_centers_method: Callable) -> Tuple[Set[Spin], Set[Spin]]:
+def general_refine_method(distance: Callable, find_centers_method: Callable) -> Callable:
     """
     Currying function to produce a refinement method with the specified methods.
 
@@ -73,16 +80,16 @@ def general_refine_method(distance: Callable, find_centers_method: Callable) -> 
     grouping each element with the center that it is closest to. Random tie-breaking is used in the 
     case of equal distances.
     """
-    def method(cluster: Set[Spin]):
+    def method(cluster: Set[Spin]) -> Tuple[Set[Spin], Set[Spin]]:
         center1, center2 = find_centers_method(distance, cluster)
         child = set(filter(lambda index: break_tie(distance(index, center1), distance(index, center2)), cluster))
         return child, cluster.difference(child)
 
     return method
 
-def virtual_hamming_distance(circuit: PICircuit) -> int:
+def virtual_hamming_distance(circuit: PICircuit) -> Callable:
     @cache
-    def distance(spin1: Spin, spin2: Spin):
+    def distance(spin1: Spin, spin2: Spin) -> int:
         return vdist(circuit.inout(spin1), circuit.inout(spin2))
     
     return distance
@@ -111,7 +118,7 @@ def main():
     refine_criterion = vector_refine_criterion(circuit, vector_method)
     refine_method = general_refine_method(distance, find_centers_method)
 
-    clustering = HierarchicalClustering(refine_criterion, refine_method)
+    clustering = iterative_clustering(refine_criterion, refine_method)
 
     root = FlexNode(set(circuit.inspace))
     tree = clustering(root)
