@@ -178,6 +178,12 @@ class Spin:
         s = self.spin()
         return Spin(spin=np.array([-1 * si for si in s]), shape=self.shape)
 
+    def __str__(self):
+        return str(self.val)
+
+    def __repr__(self):
+        return self.__str__()
+
     ############################################
     ### Static Methods
     ############################################
