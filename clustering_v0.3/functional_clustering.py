@@ -39,6 +39,7 @@ def iterative_clustering(
 ) -> Callable:
     def run(node: FlexNode) -> FlexNode:
         if refine_criterion(node.value):
+            print(f'Refining: {node.value}')
             cluster1, cluster2 = refine_method(node.value)
             node.left, node.right = run(FlexNode(cluster1)), run(FlexNode(cluster2))
 
@@ -169,6 +170,14 @@ def hebbian(cluster: Set[Spin], circuit: PICircuit) -> np.ndarray:
     return sum([hebbian_stored_memory(circuit.inout(s)) for s in cluster])
 
 def all_incorrect_rows(s: Spin, circuit: PICircuit) -> list[np.ndarray]:
+    """
+    This method is simply used as a helper to generate the M matrix in the
+    Carver refinement criterion. Given an input spin and a circuit model, it
+    will give a list of virtual differences v(a) - v(b) (which are rows in the
+    M matrix) for all wrong answers to the circuit given the input value s.
+    These rows are then concatenated together to obtain the full M matrix.
+    """
+
     correct_answer = circuit.f(s)
     correct_vspin = circuit.inout(s).vspin().spin()
     rows = [correct_vspin - Spin.catspin(spins = (s, y)).vspin().spin()
@@ -199,30 +208,11 @@ def carver(circuit: PICircuit) -> Callable:
         approx_solution = linprog(-np.ones(M.shape[0]),
                 A_eq = M.T,
                 b_eq = np.zeros(M.shape[1]),
-                bounds = (0, 1)
+                bounds = (0, 1),
+                #options = {'maxiter': 30000,}
                 )
         return np.any(approx_solution.x > 0)
 
     return criterion
 
 
-def main():
-    # As an example, run an qvec clustering on 2x2 multiplication:
-
-    circuit = IMul(N1=2, N2=2)
-    vector_method = hebbian
-    find_centers_method = farthest_centers
-    distance = virtual_hamming_distance(circuit)
-    #refine_criterion = vector_refine_criterion(circuit, vector_method)
-    refine_criterion = carver(circuit)
-    refine_method = general_refine_method(distance, find_centers_method)
-
-    clustering = iterative_clustering(refine_criterion, refine_method)
-
-    root = FlexNode(set(circuit.inspace))
-    tree = clustering(root)
-    print(tree)
-
-
-if __name__ == "__main__":
-    main()
