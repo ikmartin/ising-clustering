@@ -139,7 +139,7 @@ class Spin:
 
     def pairspin(self):
         """Returns the spin corresponding to the pairwise interactions of spin."""
-        # ensure the spin is an instance of Spin
+        # TODO: ensure the spin is an instance of Spin
 
         # store the spin representation
         a = self.spin()

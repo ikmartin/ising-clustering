@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 from binarytree import Node, NodeValue
 from functools import cache
 from itertools import combinations
 from spinspace import Spinspace, Spin, vdist, qvec
 from typing import Callable, Optional, Tuple, Set, Any
 from ising import PICircuit, IMul
+from scipy.optimize import linprog
 import numpy as np
 
 
@@ -86,6 +89,9 @@ def vector_refine_criterion(
     """
 
     def criterion(cluster: Set[Spin]) -> bool:
+        if len(cluster) < 2:
+            return False
+
         vector = vector_method(cluster, circuit)
         return not circuit.levels(inspins=list(cluster), ham_vec=vector, weak=weak)
 
@@ -135,6 +141,8 @@ def farthest_centers(distance: Callable, cluster: Set[Spin]) -> tuple[Spin, Spin
     return max(pairwise_distances, key=pairwise_distances.get)
 
 
+## Some various ways of guessing the right interaction strength vector
+
 def get_avglvec(cluster: Set[Spin], circuit: PICircuit):
     return sum(circuit.lvec(s) for s in cluster)
 
@@ -142,15 +150,71 @@ def get_avglvec(cluster: Set[Spin], circuit: PICircuit):
 def get_qvec(cluster: Set[Spin], circuit: PICircuit):
     return qvec([circuit.inout(s) for s in cluster])
 
+def hebbian_stored_memory(pattern: Spin) -> np.ndarray:
+    """
+    Helper function for the Hebbian learning rule: creates the proper (h, J) interaction
+    vector for the stored memory of a single pattern.
+    """
+    
+    zero_bias = np.zeros(pattern.dim(), dtype=np.int8)
+    outer_product = pattern.pairspin().spin()
+    return np.concatenate([zero_bias, -outer_product])
+
+
+def hebbian(cluster: Set[Spin], circuit: PICircuit) -> np.ndarray:
+    """
+    Attempts to create an interaction vector using the Hebbian learning rule.
+    """
+
+    return sum([hebbian_stored_memory(circuit.inout(s)) for s in cluster])
+
+def all_incorrect_rows(s: Spin, circuit: PICircuit) -> list[np.ndarray]:
+    correct_answer = circuit.f(s)
+    correct_vspin = circuit.inout(s).vspin().spin()
+    rows = [correct_vspin - Spin.catspin(spins = (s, y)).vspin().spin()
+            if y.asint() != correct_answer.asint()
+            else None
+            for y in circuit.outspace]
+    return list(filter(lambda x : x is not None, rows))
+
+def carver(circuit: PICircuit) -> Callable:
+    """
+    Refinement criterion based on Carver's criterion for the solvability
+    of a system of strict inequalities.
+
+    Note that since H(a) - H(b) = < v(a) - v(b), x > where x is the
+    interaction vector [h, J], we can write the system of inequalities
+    defining the feasibility of the cluster as Mx < 0 where the rows of M
+    are v(a) - v(b) for each correct pattern a and each incorrect
+    variation b. By Carver's criterion, this system is feasible if and only
+    if y=0 is the only solution to y >= 0, M^T y = 0. This alternative
+    LP is useful because it is very easy to detect insolvability. We will
+    use the scipy LP solver to get an approximate answer.
+    """
+
+    def criterion(cluster: Set[Spin]) -> bool:
+        M = np.array(sum([
+                all_incorrect_rows(s, circuit) for s in cluster
+            ], start = []))
+        approx_solution = linprog(-np.ones(M.shape[0]),
+                A_eq = M.T,
+                b_eq = np.zeros(M.shape[1]),
+                bounds = (0, 1)
+                )
+        return np.any(approx_solution.x > 0)
+
+    return criterion
+
 
 def main():
     # As an example, run an qvec clustering on 2x2 multiplication:
 
     circuit = IMul(N1=2, N2=2)
-    vector_method = get_avglvec
+    vector_method = hebbian
     find_centers_method = farthest_centers
     distance = virtual_hamming_distance(circuit)
-    refine_criterion = vector_refine_criterion(circuit, vector_method)
+    #refine_criterion = vector_refine_criterion(circuit, vector_method)
+    refine_criterion = carver(circuit)
     refine_method = general_refine_method(distance, find_centers_method)
 
     clustering = iterative_clustering(refine_criterion, refine_method)
