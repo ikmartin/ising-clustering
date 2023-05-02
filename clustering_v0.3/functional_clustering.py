@@ -39,7 +39,6 @@ def iterative_clustering(
 ) -> Callable:
     def run(node: FlexNode) -> FlexNode:
         if refine_criterion(node.value):
-            print(f'Refining: {node.value}')
             cluster1, cluster2 = refine_method(node.value)
             node.left, node.right = run(FlexNode(cluster1)), run(FlexNode(cluster2))
 

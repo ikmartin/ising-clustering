@@ -11,8 +11,8 @@ from ising import (
         )
 import pickle
 
-def main():
-    circuit = IMul(N1 = 2, N2 = 2)
+def cluster_carver(N1, N2):
+    circuit = IMul(N1, N2)
     find_centers_method = farthest_centers
     distance = virtual_hamming_distance(circuit)
     refine_criterion = carver(circuit)
@@ -24,6 +24,11 @@ def main():
     tree = clustering(root)
 
     result_clusters = [leaf.value for leaf in tree.leaves]
+    return result_clusters
+
+def main():
+    result_clusters = cluster_carver(2,3)
+
     for leaf in result_clusters:
         print(leaf)
 

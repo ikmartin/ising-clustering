@@ -218,6 +218,7 @@ class IMul(PICircuit):
         self.inspace = Spinspace(shape=(N1, N2))
         self.N1 = N1
         self.N2 = N2
+        self.N = N1 + N2
 
     def fout(self, inspin: Spin):
         # get the numbers corresponding to the input spin
