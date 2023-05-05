@@ -8,6 +8,7 @@ from typing import Callable, Optional, Tuple, Set, Any
 from ising import PICircuit, IMul
 from scipy.optimize import linprog
 import numpy as np
+import heapq
 
 
 class FlexNode(Node):
@@ -125,6 +126,13 @@ def general_refine_method(
     return method
 
 
+def hamming_distance(circuit: PICircuit) -> Callable:
+    @cache
+    def distance(spin1: Spin, spin2: Spin) -> int:
+        return Spinspace.dist(circuit.inout(spin1), circuit.inout(spin2))
+
+    return distance
+
 def virtual_hamming_distance(circuit: PICircuit) -> Callable:
     @cache
     def distance(spin1: Spin, spin2: Spin) -> int:
@@ -139,6 +147,15 @@ def farthest_centers(distance: Callable, cluster: Set[Spin]) -> tuple[Spin, Spin
     """
     pairwise_distances = {(i, j): distance(i, j) for i, j in combinations(cluster, 2)}
     return max(pairwise_distances, key=pairwise_distances.get)
+
+def outlier_centers(distance: Callable, cluster: Set[Spin]) -> tuple[Spin,Spin]:
+    """
+    Takes a cluster and picks the two elements which maximize the average distance from all other elements, based on a user-defined distance metric.
+    """
+    pairwise_distance_sums = {i : sum([distance(i, j) for j in cluster]) for i in cluster}
+    twolargest = heapq.nlargest(2, pairwise_distance_sums, key=pairwise_distance_sums.get)
+    return twolargest
+
 
 
 ## Some various ways of guessing the right interaction strength vector

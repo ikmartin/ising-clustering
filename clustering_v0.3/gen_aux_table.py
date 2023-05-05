@@ -15,7 +15,7 @@ spins specified in clusters.dat
 """
 
 n1 = 2
-n2 = 3
+n2 = 2
 
 class ParallelProgress(Parallel):
     def __call__(self, *args, **kwargs):

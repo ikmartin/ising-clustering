@@ -32,7 +32,7 @@ def main():
     for leaf in result_clusters:
         print(leaf)
 
-    print(len(tree.leaves))
+    print(len(result_clusters))
 
     with open('clusters.dat', 'wb') as FILE:
         pickle.dump(result_clusters, FILE)

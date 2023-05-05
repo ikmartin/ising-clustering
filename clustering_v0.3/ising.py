@@ -1,6 +1,6 @@
 from spinspace import Spinspace, Spin
 from abc import abstractmethod
-import ortools.linear_solver.pywraplp as lp
+from ortools.linear_solver import pywraplp
 import spinspace as ss
 import numpy as np
 
@@ -27,6 +27,10 @@ class PICircuit:
         return self.N + self.M + self.A
 
     @property
+    def hJ_num(self):
+        return int(self.G*(self.G + 1)/2)
+
+    @property
     def graph(self):
         if self._graph == None:
             self._graph = self.generate_graph()
@@ -48,6 +52,9 @@ class PICircuit:
         aux_array : list[list]
             the auxiliary array to use for this PICircuit. Must be of consistent shape, either (2^N, A) or (A, 2^N) (in numpy notation).
         """
+        # reinitialize _aux_array
+        self._aux_array = []
+
         # convert to numpy array
         aux_array = np.array(aux_array)
 
@@ -209,6 +216,53 @@ class PICircuit:
 
         return True
 
+    def build_solver(self, input_spins=[]):
+        """Builds the lp solver for this circuit, returns solver"""
+
+        if input_spins == []:
+            input_spins = [s for s in self.inspace]
+
+        solver = pywraplp.Solver.CreateSolver("GLOP")
+        inf = solver.infinity()
+
+        # set all the variables
+        params = {}
+        for i in range(self.G):
+            params[i,i] = solver.NumVar(-inf, inf, f'h_{i}')
+            for j in range(i+1, self.G):
+                params[i,j] = solver.NumVar(-inf,inf, f'J_{i},{j}')
+
+        # add the constraints without iterating through spinspace
+        tally = 0
+        constraints = []
+        for inspin in self.inspace:
+            correct_out = self.fout(inspin)
+            correct_aux = self.faux(inspin)
+            correct_inout_pair = self.inout(inspin)
+            for outspin in self.fulloutspace:
+                inout_pair = Spin.catspin(spins=(inspin, outspin)) 
+                out, aux = outspin.splitint()
+                
+                if inout_pair == correct_inout_pair:
+                    tally += 1
+                    continue
+                elif out == correct_out.asint() and aux != correct_aux.asint():
+                    tally += 1
+                    continue
+
+                # build the constraint corresponding the difference of correct and incorrect output
+                constraints.append(solver.Constraint(0.001, inf))
+                s = correct_inout_pair.spin()
+                t = inout_pair.spin()
+                for i in range(self.G):
+                    constraints[-1].SetCoefficient(params[i,i], float(t[i] - s[i]))
+                    for j in range(i+1, self.G):
+                        constraints[-1].SetCoefficient(params[i,j], float(t[i]*t[j] - s[i]*s[j]))
+                
+
+        #print(f"skipped {tally}")
+        return solver
+
 
 class IMul(PICircuit):
     """Ising Multiply Circuit"""
@@ -228,6 +282,26 @@ class IMul(PICircuit):
         result = Spin(spin=num1 * num2, shape=(self.M,))
         return result
 
+
+class AND(PICircuit):
+    """Ising Multiply Circuit"""
+
+    def __init__(self):
+        super().__init__(N=2, M=1)
+        self.inspace = Spinspace(shape=(1, 1))
+
+    def fout(self, inspin: Spin):
+        # get the numbers corresponding to the input spin
+        num1, num2 = inspin.splitint()
+
+        output = 1 if (num1 == 1 and num2 == 1) else 0
+        # multiply spins as integers and convert into spin format
+        result = Spin(spin=output, shape=(self.M,))
+        return result
+
+#####################################
+### Methods to run as tests
+#####################################
 
 def example():
     G = IMul(2, 2)

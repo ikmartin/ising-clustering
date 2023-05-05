@@ -133,6 +133,10 @@ class Spin:
         tempspin = self.splitspin()
         return tuple(spin2int(s) for s in tempspin)
 
+    def split(self):
+        vals = self.splitint()
+        return tuple([Spin(spin=vals[i], shape=self.shape[i]) for i in range(len(shape))])
+        
     def dim(self):
         """Returns the dimension of the spin space in which this Spin lives"""
         return sum(self.shape)
@@ -177,6 +181,22 @@ class Spin:
         """
         s = self.spin()
         return Spin(spin=np.array([-1 * si for si in s]), shape=self.shape)
+
+    def __eq__(self, other):
+        if isinstance(other, Spin):
+            if self.shape != other.shape:
+                return False
+
+            if self.val != other.val:
+                return False
+
+            return True
+
+        else:
+            return NotImplemented
+
+    def __hash__(self):
+       return hash(tuple(self.spin()))
 
     def __str__(self):
         return str(self.val)
