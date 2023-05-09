@@ -1,15 +1,14 @@
 from functional_clustering import (
-        farthest_centers,
-        virtual_hamming_distance,
-        carver,
-        general_refine_method,
-        iterative_clustering,
-        FlexNode
-        )
-from ising import (
-        IMul
-        )
+    farthest_centers,
+    virtual_hamming_distance,
+    carver,
+    general_refine_method,
+    iterative_clustering,
+    FlexNode,
+)
+from ising import IMul
 import pickle
+
 
 def cluster_carver(N1, N2):
     circuit = IMul(N1, N2)
@@ -26,16 +25,18 @@ def cluster_carver(N1, N2):
     result_clusters = [leaf.value for leaf in tree.leaves]
     return result_clusters
 
+
 def main():
-    result_clusters = cluster_carver(2,3)
+    result_clusters = cluster_carver(2, 3)
 
     for leaf in result_clusters:
         print(leaf)
 
     print(len(result_clusters))
 
-    with open('clusters.dat', 'wb') as FILE:
+    with open("clusters.dat", "wb") as FILE:
         pickle.dump(result_clusters, FILE)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

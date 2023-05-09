@@ -6,8 +6,9 @@ from functools import cache
 import numpy as np
 from copy import deepcopy
 
+
 class MLPoly:
-    def __init__(self, coeffs = None):
+    def __init__(self, coeffs=None):
         self.coeffs = coeffs if coeffs else {}
         self.clean()
 
@@ -17,7 +18,7 @@ class MLPoly:
     def get_coeff(self, term: tuple) -> float:
         term = tuple(sorted(term))
         return self.coeffs[term] if term in self.coeffs else 0
-    
+
     def add_coeff(self, term: tuple, value: float) -> None:
         term = tuple(sorted(term))
         self.coeffs[term] = self.coeffs[term] + value if term in self.coeffs else value
@@ -36,22 +37,29 @@ class MLPoly:
 
     @cache
     def __call__(self, args: tuple) -> float:
-        return sum([
+        return sum(
+            [
                 self.coeffs[key] * prod([args[i] for i in key])
                 for key, value in self.coeffs.items()
-            ])
+            ]
+        )
 
     def __str__(self):
-        sorted_items = sorted(self.coeffs.items(), key = lambda pair: len(pair[0]))
-        terms = [[
-                    ' + ' if value > 0 else ' - ',
-                    str(abs(value)),
-                    ''.join([f'x_{i}' for i in key])
-                ] for key, value in sorted_items if value]
-        return ''.join(list(chain(*terms))[1:])
+        sorted_items = sorted(self.coeffs.items(), key=lambda pair: len(pair[0]))
+        terms = [
+            [
+                " + " if value > 0 else " - ",
+                str(abs(value)),
+                "".join([f"x_{i}" for i in key]),
+            ]
+            for key, value in sorted_items
+            if value
+        ]
+        return "".join(list(chain(*terms))[1:])
 
     def __repr__(self):
         return self.__str__()
+
 
 def generate_polynomial(f: Callable, n: int) -> MLPoly:
     """
@@ -70,24 +78,28 @@ def generate_polynomial(f: Callable, n: int) -> MLPoly:
 
     return poly
 
-def max_common_key(poly: MLPoly, size: int, criterion = lambda factor, key, value: True):
+
+def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value: True):
     """
     Helper function for multi-term reduction methods. Iterates through the terms of the polynomial and attempts to find the term of length size which is the factor of the most terms which satisfy the criterion function. Returns the key for the common term and the list of keys for the monomials that it factorizes.
 
-    Note that this algorithm has been written with simplicity in mind and will scale horribly to polynomials with larger numbers of variables. 
+    Note that this algorithm has been written with simplicity in mind and will scale horribly to polynomials with larger numbers of variables.
     """
 
     n = poly.num_variables()
 
     term_table = {
-            tuple(sorted(factor)) : [key for key, value in poly.coeffs.items()
-                 if criterion(factor, key, value)      # monomial satisfies filter criterion
-                 ]
-            for factor in combinations(range(n), size)
-            }
+        tuple(sorted(factor)): [
+            key
+            for key, value in poly.coeffs.items()
+            if criterion(factor, key, value)  # monomial satisfies filter criterion
+        ]
+        for factor in combinations(range(n), size)
+    }
 
-    factor = max(term_table, key = lambda i : len(term_table[i]))
+    factor = max(term_table, key=lambda i: len(term_table[i]))
     return factor, term_table[factor]
+
 
 def get_common_key(poly: MLPoly, criterion: Callable):
     """
@@ -95,10 +107,10 @@ def get_common_key(poly: MLPoly, criterion: Callable):
     """
 
     d = poly.degree()
-    options = [max_common_key(poly, i, criterion)
-        for i in range(ceil(d/2)+1)]
+    options = [max_common_key(poly, i, criterion) for i in range(ceil(d / 2) + 1)]
 
-    return max(options, key = lambda pair: len(pair[1]) * len(pair[0]))
+    return max(options, key=lambda pair: len(pair[1]) * len(pair[0]))
+
 
 def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     """
@@ -115,7 +127,7 @@ def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     # Now, execute the algorithm by extracting C
     sum_alpha_H = sum([poly.get_coeff(key) for key in H])
     poly.add_coeff(tuple(set(C) | {n}), sum_alpha_H)
-    
+
     for key in H:
         term1 = tuple(set(key) - set(C))
         term2 = tuple(set(key) - set(C) | {n})
@@ -126,6 +138,7 @@ def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
         poly.set_coeff(key, 0)
 
     return poly
+
 
 def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     """
@@ -141,7 +154,7 @@ def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     sum_alpha_H = sum([poly.get_coeff(key) for key in H])
     poly.add_coeff((n,), -sum_alpha_H)
     poly.add_coeff(tuple(set(C) | {n}), sum_alpha_H)
-    
+
     for key in H:
         term = tuple(set(key) - set(C) | {n})
         alpha_H = poly.get_coeff(key)
@@ -151,13 +164,14 @@ def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
 
     return poly
 
+
 def Rosenberg(poly: MLPoly, C: tuple, H: tuple, M: float) -> MLPoly:
     """
     Old standard pair-reduction algorithm.
     """
 
     assert len(C) == 2
-    
+
     poly = MLPoly(deepcopy(poly.coeffs))
 
     n = poly.num_variables()
@@ -167,7 +181,7 @@ def Rosenberg(poly: MLPoly, C: tuple, H: tuple, M: float) -> MLPoly:
         term = tuple(set(key) - set(C) | {n})
         poly.add_coeff(term, poly.get_coeff(key))
         poly.set_coeff(key, 0)
-    
+
     # add the penalty term M(xy - 2xa - 2ya + 3a)
     poly.add_coeff(C, M)
     poly.add_coeff((C[0], n), -2 * M)
@@ -175,7 +189,8 @@ def Rosenberg(poly: MLPoly, C: tuple, H: tuple, M: float) -> MLPoly:
     poly.add_coeff((n,), 3 * M)
 
     return poly
-    
+
+
 def FreedmanDrineas(poly: MLPoly) -> MLPoly:
     """
     Simple algorithm which reduces a single higher-order term with a negative coefficient to a sum of quadratic and linear terms at the cost of one extra variable. This method will apply the algorithm to every negative-coefficient higher-order term in the given polynomial.
@@ -189,10 +204,10 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
     n = poly.num_variables()
 
     reducible_terms = [
-            (key, value) for key, value in poly.coeffs.items()
-            if value < 0         # negative coefficient
-            and len(key) > 2     # higher-order monomial
-            ]
+        (key, value)
+        for key, value in poly.coeffs.items()
+        if value < 0 and len(key) > 2  # negative coefficient  # higher-order monomial
+    ]
 
     for key, value in reducible_terms:
         order = len(key)
@@ -207,12 +222,11 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
 
     return poly
 
+
 def full_Rosenberg(poly: MLPoly) -> MLPoly:
     rosenberg_criterion = lambda factor, key, value: (
-            set(factor).issubset(key)
-            and len(factor) == 2
-            and len(key) > 2
-            )
+        set(factor).issubset(key) and len(factor) == 2 and len(key) > 2
+    )
 
     M = sum([value for key, value in poly.coeffs.items() if value > 0])
     while poly.degree() > 2:
@@ -221,62 +235,53 @@ def full_Rosenberg(poly: MLPoly) -> MLPoly:
             break
 
         poly = Rosenberg(poly, C, H, M)
-    
+
     return poly
+
 
 def FGBZ_FD(poly: MLPoly) -> MLPoly:
     """
     Uses positive FGBZ to reduce positive monomials until there are no more left. Then eliminates all negative monomials using FD. Returns a quadratic form.
     """
 
-
     positive_FGBZ_criterion = lambda factor, key, value: (
-            set(factor).issubset(key)
-            and len(factor) < len(key) - 1
-            and len(key) > 2
-            and len(factor) >= 1
-            and value > 0
-            )
+        set(factor).issubset(key)
+        and len(factor) < len(key) - 1
+        and len(key) > 2
+        and len(factor) >= 1
+        and value > 0
+    )
 
     negative_FGBZ_criterion = lambda factor, key, value: (
-            set(factor).issubset(key)
-            and len(factor) < len(key) - 1
-            and len(key) > 3
-            and len(factor) >= 2
-            and value < 0
-            )
-
-    
+        set(factor).issubset(key)
+        and len(factor) < len(key) - 1
+        and len(key) > 3
+        and len(factor) >= 2
+        and value < 0
+    )
 
     while True:
         C, H = get_common_key(poly, positive_FGBZ_criterion)
         if not len(H):
             break
-        
+
         poly = PositiveFGBZ(poly, C, H)
         print(poly)
         print("")
 
-    print('no positives:')
+    print("no positives:")
     print(poly)
-    
-    
+
     while True:
         C, H = get_common_key(poly, negative_FGBZ_criterion)
         if not len(H):
             break
-        
+
         poly = NegativeFGBZ(poly, C, H)
         print(poly)
         print("")
-    
-    print('no large negatives:')
+
+    print("no large negatives:")
     print(poly)
 
     return FreedmanDrineas(poly)
-
-
-
-
-
-
