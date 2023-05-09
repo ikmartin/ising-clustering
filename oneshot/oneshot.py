@@ -11,9 +11,9 @@ class MLPoly:
         self.coeffs = coeffs if coeffs else {}
         self.clean()
 
-    def clean(self):
-        self.coeffs = {key: value for key, value in self.coeffs.items() if value}
-
+    def clean(self, threshold = 0):
+        self.coeffs = {key: value for key, value in self.coeffs.items() if abs(value) > threshold}
+    
     def get_coeff(self, term: tuple) -> float:
         term = tuple(sorted(term))
         return self.coeffs[term] if term in self.coeffs else 0
@@ -254,8 +254,6 @@ def FGBZ_FD(poly: MLPoly) -> MLPoly:
             break
         
         poly = PositiveFGBZ(poly, C, H)
-        print(poly)
-        print("")
 
     print('no positives:')
     print(poly)
@@ -267,11 +265,10 @@ def FGBZ_FD(poly: MLPoly) -> MLPoly:
             break
         
         poly = NegativeFGBZ(poly, C, H)
-        print(poly)
-        print("")
     
     print('no large negatives:')
     print(poly)
+    print("")
 
     return FreedmanDrineas(poly)
 
