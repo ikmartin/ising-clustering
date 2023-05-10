@@ -4,7 +4,6 @@ Performs iterative_clustering using
   - centers-based refine_method, where distance is computed via Euclidean distance between lvecs
 """
 
-import pickle
 
 from functional_clustering import (
     farthest_centers,
@@ -62,9 +61,6 @@ def main_pop():
 
     print(len(clusters))
 
-    with open(f"lvec_clustering_for_MUL{N1}x{N2}.dat", "wb") as FILE:
-        pickle.dump(clusters, FILE)
-
 
 def main_out():
     N1, N2 = 2, 3
@@ -74,9 +70,6 @@ def main_out():
         print(sorted(leaf))
 
     print(len(clusters))
-
-    with open(f"lvec_clustering_for_MUL{N1}x{N2}.dat", "wb") as FILE:
-        pickle.dump(clusters, FILE)
 
 
 if __name__ == "__main__":

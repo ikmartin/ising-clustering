@@ -1,4 +1,5 @@
 import numpy as np
+import functools
 
 #########################################
 ### Spin Space Methods
@@ -71,6 +72,7 @@ def spin2int(spin: np.ndarray):
     return sum(num)
 
 
+@functools.total_ordering
 class Spin:
     """Represents a single element of a Spinspace
 
@@ -225,6 +227,19 @@ class Spin:
                 return False
 
             return True
+
+        else:
+            return NotImplemented
+
+    def __lt__(self, other):
+        if isinstance(other, Spin):
+            if self.shape != other.shape:
+                return NotImplemented
+
+            if self.val < other.val:
+                return True
+
+            return False
 
         else:
             return NotImplemented
