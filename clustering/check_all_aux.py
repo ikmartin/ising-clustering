@@ -36,7 +36,7 @@ def test_aux_array(aux_array):
     circuit.set_aux(aux_array)
     solver = circuit.build_solver()
     status = solver.Solve()
-
+    print(aux_array)
     return status == solver.OPTIMAL
 
 
@@ -75,12 +75,12 @@ def brute_force_aux_assignment(
 
 
 def test_lvec_clustering():
-    from experiment_lvec_clustering import lvec_cluster_carver
+    from experiment_lvec_clustering import lvec_cluster_popular
 
     for i in range(100):
         # reset the
         circuit = IMul(n1, n2)
-        data = lvec_cluster_carver(circuit)
+        data = lvec_cluster_popular(circuit)
         if len(data) > 2:
             continue
 

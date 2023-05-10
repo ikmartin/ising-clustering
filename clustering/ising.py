@@ -235,7 +235,7 @@ class PICircuit:
         return True
 
     def build_solver(self, input_spins=[]):
-        """Builds the lp solver for this circuit, returns solver"""
+        """Builds the lp solver for this circuit, returns solver. Made purposefully verbose/explicit to aid in debugging, should be shortened eventually however."""
 
         if input_spins == []:
             input_spins = [s for s in self.inspace]
@@ -250,34 +250,55 @@ class PICircuit:
             for j in range(i + 1, self.G):
                 params[i, j] = solver.NumVar(-inf, inf, f"J_{i},{j}")
 
-        # add the constraints without iterating through spinspace
-        tally = 0
-        constraints = []
-        for inspin in self.inspace:
-            correct_out = self.fout(inspin)
-            correct_aux = self.faux(inspin)
-            correct_inout_pair = self.inout(inspin)
-            for outspin in self.fulloutspace:
-                inout_pair = Spin.catspin(spins=(inspin, outspin))
-                out, aux = outspin.splitint()
+        # we treat case with and without aux separately
+        if self.A == 0:
+            for inspin in input_spins:
+                correct_out = self.fout(inspin)
+                correct_inout_pair = self.inout(inspin)
+                for outspin in self.outspace:
+                    inout_pair = Spin.catspin(spins=(inspin, outspin))
 
-                if inout_pair == correct_inout_pair:
-                    tally += 1
-                    continue
-                elif out == correct_out.asint() and aux != correct_aux.asint():
-                    tally += 1
-                    continue
+                    # if there isn't an auxiliary added, then splitint() will throw an error
+                    out = outspin.asint()
 
-                # build the constraint corresponding the difference of correct and incorrect output
-                constraints.append(solver.Constraint(0.001, inf))
-                s = correct_inout_pair.spin()
-                t = inout_pair.spin()
-                for i in range(self.G):
-                    constraints[-1].SetCoefficient(params[i, i], float(t[i] - s[i]))
-                    for j in range(i + 1, self.G):
-                        constraints[-1].SetCoefficient(
-                            params[i, j], float(t[i] * t[j] - s[i] * s[j])
-                        )
+                    if inout_pair == correct_inout_pair:
+                        continue
+
+                    # build the constraint corresponding the difference of correct and incorrect output
+                    constraint = solver.Constraint(0.001, inf)
+                    s = correct_inout_pair.spin()
+                    t = inout_pair.spin()
+                    for i in range(self.G):
+                        constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                        for j in range(i + 1, self.G):
+                            constraint.SetCoefficient(
+                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
+                            )
+        else:
+            for inspin in input_spins:
+                correct_out = self.fout(inspin)
+                correct_aux = self.faux(inspin)
+                correct_inout_pair = self.inout(inspin)
+                for outspin in self.fulloutspace:
+                    inout_pair = Spin.catspin(spins=(inspin, outspin))
+
+                    out, aux = outspin.splitint()
+
+                    if inout_pair == correct_inout_pair:
+                        continue
+                    elif out == correct_out.asint() and aux != correct_aux.asint():
+                        continue
+
+                    # build the constraint corresponding the difference of correct and incorrect output
+                    constraints = solver.Constraint(0.001, inf)
+                    s = correct_inout_pair.spin()
+                    t = inout_pair.spin()
+                    for i in range(self.G):
+                        constraints.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                        for j in range(i + 1, self.G):
+                            constraints.SetCoefficient(
+                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
+                            )
 
         # print(f"skipped {tally}")
         return solver
