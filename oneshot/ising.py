@@ -28,7 +28,7 @@ class PICircuit:
 
     @property
     def hJ_num(self):
-        return int(self.G*(self.G + 1)/2)
+        return int(self.G * (self.G + 1) / 2)
 
     @property
     def graph(self):
@@ -103,12 +103,9 @@ class PICircuit:
         else:
             return Spin.catspin(spins=(out, aux))
 
-    def inout(self, inspin: Spin | list[Spin]):
+    def inout(self, inspin: Spin):
         """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s. If a list of Spins is provided instead then a list of (in, out) pairs returned."""
-        if isinstance(inspin, Spin):
-            return Spin.catspin((inspin, self.f(inspin)))
-        else:
-            return [Spin.catspin((s, self.f(s))) for s in inspin]
+        return Spin.catspin((inspin, self.f(inspin)))
 
     def generate_graph(self):
         graph = [self.inout(s) for s in self.inspace]
@@ -123,6 +120,22 @@ class PICircuit:
             normal += inout.vspin().spin()
 
         return np.sign(normal - self.M * self.inout(s).vspin().spin())
+
+    def normlvec(self, inspin):
+        """Returns the sign of the average normal vector for all constraints in the given input level"""
+        s = inspin
+        correct_out = self.fout(s)
+        correct_vspin = self.inout(s).vspin().spin()
+        normal = np.zeros(int(self.G * (self.G + 1) / 2))
+        for t in self.outspace:
+            if t == correct_out:
+                continue
+
+            inout = Spin.catspin((s, t))
+            diff = inout.vspin().spin() - correct_vspin
+            normal += diff / np.linalg.norm(diff)
+
+        return normal
 
     #############################################
     # Solver
@@ -193,31 +206,36 @@ class PICircuit:
 
     def levels(
         self,
-        inspins: list[Spin],
         ham_vec,
-        list_fails=False,
+        inspins: list[Spin] = None,
+        detailed=False,
         weak=False,
         print_energies=False,
-        flag=False,
     ):
-        """Returns information about the levels of a list of spins. By default, returns True if all levels are satisfied by ham_vec, False otherwise. If list_fails = True, then it returns a list of the input spins whose levels are not satisfied by ham_vec"""
+        """Returns information about the levels of a list of spins. By default, returns True if all levels are satisfied by ham_vec, False otherwise. If list_fails = True, then it returns a list of the input spins whose levels are not satisfied by ham_vec. If detailed = True, returns a 1d numpy.ndarray whose ith entry is 0 if input i is not satisfied, 1 otherwise."""
+
+        if inspins == None:
+            inspins = self.inspace.tospinlist()
+
         fails = []
+        passlist = np.zeros(self.inspace.size)
+
         for s in inspins:
             condition = self.level(
                 inspin=s, ham_vec=ham_vec, weak=weak, print_energies=print_energies
             )
+            passlist[s.asint()] = int(condition)
             if condition == False:
-                if list_fails == False:
+                if detailed == False:
                     return False
-                fails.append(s)
 
-        if list_fails:
-            return fails
+        if detailed == True:
+            return passlist
 
         return True
 
     def build_solver(self, input_spins=[]):
-        """Builds the lp solver for this circuit, returns solver"""
+        """Builds the lp solver for this circuit, returns solver. Made purposefully verbose/explicit to aid in debugging, should be shortened eventually however."""
 
         if input_spins == []:
             input_spins = [s for s in self.inspace]
@@ -228,39 +246,61 @@ class PICircuit:
         # set all the variables
         params = {}
         for i in range(self.G):
-            params[i,i] = solver.NumVar(-inf, inf, f'h_{i}')
-            for j in range(i+1, self.G):
-                params[i,j] = solver.NumVar(-inf,inf, f'J_{i},{j}')
+            params[i, i] = solver.NumVar(-inf, inf, f"h_{i}")
+            for j in range(i + 1, self.G):
+                params[i, j] = solver.NumVar(-inf, inf, f"J_{i},{j}")
 
-        # add the constraints without iterating through spinspace
-        tally = 0
-        constraints = []
-        for inspin in self.inspace:
-            correct_out = self.fout(inspin)
-            correct_aux = self.faux(inspin)
-            correct_inout_pair = self.inout(inspin)
-            for outspin in self.fulloutspace:
-                inout_pair = Spin.catspin(spins=(inspin, outspin)) 
-                out, aux = outspin.splitint()
-                
-                if inout_pair == correct_inout_pair:
-                    tally += 1
-                    continue
-                elif out == correct_out.asint() and aux != correct_aux.asint():
-                    tally += 1
-                    continue
+        # we treat case with and without aux separately
+        if self.A == 0:
+            for inspin in input_spins:
+                correct_out = self.fout(inspin)
+                correct_inout_pair = self.inout(inspin)
+                for outspin in self.outspace:
+                    inout_pair = Spin.catspin(spins=(inspin, outspin))
 
-                # build the constraint corresponding the difference of correct and incorrect output
-                constraints.append(solver.Constraint(0.001, inf))
-                s = correct_inout_pair.spin()
-                t = inout_pair.spin()
-                for i in range(self.G):
-                    constraints[-1].SetCoefficient(params[i,i], float(t[i] - s[i]))
-                    for j in range(i+1, self.G):
-                        constraints[-1].SetCoefficient(params[i,j], float(t[i]*t[j] - s[i]*s[j]))
-                
+                    # if there isn't an auxiliary added, then splitint() will throw an error
+                    out = outspin.asint()
 
-        #print(f"skipped {tally}")
+                    if inout_pair == correct_inout_pair:
+                        continue
+
+                    # build the constraint corresponding the difference of correct and incorrect output
+                    constraint = solver.Constraint(0.001, inf)
+                    s = correct_inout_pair.spin()
+                    t = inout_pair.spin()
+                    for i in range(self.G):
+                        constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                        for j in range(i + 1, self.G):
+                            constraint.SetCoefficient(
+                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
+                            )
+        else:
+            for inspin in input_spins:
+                correct_out = self.fout(inspin)
+                correct_aux = self.faux(inspin)
+                correct_inout_pair = self.inout(inspin)
+                for outspin in self.fulloutspace:
+                    inout_pair = Spin.catspin(spins=(inspin, outspin))
+
+                    out, aux = outspin.splitint()
+
+                    if inout_pair == correct_inout_pair:
+                        continue
+                    elif out == correct_out.asint() and aux != correct_aux.asint():
+                        continue
+
+                    # build the constraint corresponding the difference of correct and incorrect output
+                    constraints = solver.Constraint(0.001, inf)
+                    s = correct_inout_pair.spin()
+                    t = inout_pair.spin()
+                    for i in range(self.G):
+                        constraints.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                        for j in range(i + 1, self.G):
+                            constraints.SetCoefficient(
+                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
+                            )
+
+        # print(f"skipped {tally}")
         return solver
 
 
@@ -299,9 +339,11 @@ class AND(PICircuit):
         result = Spin(spin=output, shape=(self.M,))
         return result
 
+
 #####################################
 ### Methods to run as tests
 #####################################
+
 
 def example():
     G = IMul(2, 2)

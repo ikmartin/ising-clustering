@@ -1,4 +1,5 @@
 import numpy as np
+import functools
 
 #########################################
 ### Spin Space Methods
@@ -31,6 +32,25 @@ def int2spin(val: int, dim: int) -> np.ndarray:
     return np.array(a).astype(np.int8)  # return as a numpy array
 
 
+def int2bin(val: int, dim: int) -> np.ndarray:
+    """Generate binary representation as a numpy.ndarray of integer.
+
+    Parameters
+    ----------
+    val : int
+        the integer value to convert
+    dim : int
+        the dimension of the spinspace where this spin lives
+
+    Returns
+    -------
+    numpy.ndarray
+        a 1-d array consisting of 0 and 1 representing a spin
+    """
+
+    return np.array(list(np.binary_repr(val).zfill(dim)))
+
+
 def spin2int(spin: np.ndarray):
     """Generate integer representation of a spin
 
@@ -52,6 +72,7 @@ def spin2int(spin: np.ndarray):
     return sum(num)
 
 
+@functools.total_ordering
 class Spin:
     """Represents a single element of a Spinspace
 
@@ -116,14 +137,9 @@ class Spin:
         """Return this spin as an array of 1's and -1's"""
         return int2spin(val=self.val, dim=sum(self.shape))
 
-    def splitspin(self):
-        """Get this spin in split-spin format"""
-
-        # convenience variables
-        dim = sum(self.shape)
-        indices = [sum(self.shape[:i]) for i in range(1, len(self.shape))]
-
-        return np.split(int2spin(self.val, dim=dim), indices)
+    def binary(self):
+        """Return this spin as an array of 1's and -1's"""
+        return int2bin(val=self.val, dim=sum(self.shape))
 
     def splitint(self):
         # convenience variables
@@ -133,10 +149,30 @@ class Spin:
         tempspin = self.splitspin()
         return tuple(spin2int(s) for s in tempspin)
 
+    def splitspin(self):
+        """Get this spin in split-spin format"""
+
+        # convenience variables
+        dim = sum(self.shape)
+        indices = [sum(self.shape[:i]) for i in range(1, len(self.shape))]
+
+        return np.split(int2spin(self.val, dim=dim), indices)
+
+    def splitbin(self):
+        """Get this spin in split-binary format"""
+
+        # convenience variables
+        dim = sum(self.shape)
+        indices = [sum(self.shape[:i]) for i in range(1, len(self.shape))]
+
+        return np.split(int2bin(self.val, dim=dim), indices)
+
     def split(self):
         vals = self.splitint()
-        return tuple([Spin(spin=vals[i], shape=self.shape[i]) for i in range(len(shape))])
-        
+        return tuple(
+            [Spin(spin=vals[i], shape=(self.shape[i],)) for i in range(len(self.shape))]
+        )
+
     def dim(self):
         """Returns the dimension of the spin space in which this Spin lives"""
         return sum(self.shape)
@@ -195,8 +231,21 @@ class Spin:
         else:
             return NotImplemented
 
+    def __lt__(self, other):
+        if isinstance(other, Spin):
+            if self.shape != other.shape:
+                return NotImplemented
+
+            if self.val < other.val:
+                return True
+
+            return False
+
+        else:
+            return NotImplemented
+
     def __hash__(self):
-       return hash(tuple(self.spin()))
+        return hash(tuple(self.spin()))
 
     def __str__(self):
         return str(self.val)
@@ -210,7 +259,7 @@ class Spin:
 
     @staticmethod
     def catspin(spins: tuple):
-        shape = sum(tuple(s.shape for s in spins), ())
+        shape = sum([s.shape for s in spins], ())
         val = sum(tuple(s.splitint() for s in spins), ())
         return Spin(spin=val, shape=shape)
 
@@ -308,6 +357,10 @@ class Spinspace:
     def tolist(self):
         """Returns a list of integers representing this spin space"""
         return list(range(self.size))
+
+    def tospinlist(self):
+        """Returns a list of integers representing this spin space"""
+        return [Spin(spin=i, shape=self.shape) for i in self.tolist()]
 
     def rand(self):
         """Returns a random spin from this spinspace, sampled uniformly"""
