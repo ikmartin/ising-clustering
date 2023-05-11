@@ -97,6 +97,8 @@ class Spin:
 
     def __init__(self, spin, shape: tuple):
         """Initializer"""
+        if isinstance(shape, int):
+            shape = (shape,)
         # store the shape first
         self.shape = shape
 
@@ -170,7 +172,7 @@ class Spin:
     def split(self):
         vals = self.splitint()
         return tuple(
-            [Spin(spin=vals[i], shape=self.shape[i]) for i in range(len(shape))]
+            [Spin(spin=vals[i], shape=(self.shape[i],)) for i in range(len(self.shape))]
         )
 
     def dim(self):

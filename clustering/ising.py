@@ -6,15 +6,65 @@ import numpy as np
 
 
 class PICircuit:
-    """Base class for Pre Ising Circuits"""
+    """Base class for Pre Ising Circuits.
 
-    def __init__(self, N: int, M: int):
+    Comments
+    --------
+    Regarding auxiliary spins: There are two use-cases for auxiliary spins depending on whether you are attempting to check constraints equations or model dynamis;
+        (1) Checking global constraint equations: in this case, auxiliary states are tied to specific inputs, and one is likely curious whether the choice of auxiliary state at each input level yields a solvable Ising circuit. This should be done by setting a feasible auxiliary array after initializing a circuit using the `set_aux` method.
+        (2) Modeling dynamics: in this case, one likely wishes to include auxiliary vertices in an Ising graph without specifying which states correspond to each input. Indeed, there need not be a consistent `correct` auxiliary state at each input level since it is ignored in the final output. In this situation, one should set the optional parameter `A` in class initialization.
+    Use case (1) is handled by the circuit logic in the functions `f` and `faux`. The latter function will raise an Attribute Use case (2) is handled by the attribute `auxspace`,
+
+    IMPORTANT NOTE: Calling set_aux will not overwrite auxspace UNLESS the provided feasible auxiliary array is of shape larger than the current auxspace. The ambient auxspace can be larger than the set auxspins. For example,
+        circuit.PICircuit(N=2,M=2,A=2)
+        circuit.set_aux([[-1],[-1],[1],[1]])
+    will result in a circuit whose auxspace has dimension 2, but whose `faux` method will return auxiliary spins of dimension 1.
+
+    Attributes
+    ----------
+    self.N : int
+        the number of input vertices in this circuit
+    self.M : int
+        the number of output vertices in this circuit
+    self.A : int
+        the number of auxiliary vertices in this circuit
+    self.inspace : Spinspace
+        a Spinspace of shape (N), contains all the input states of the circuit
+    self.outspace : Spinspace
+        a Spinspace of shape (M), contains all the output states of the circuit
+    self.auxspace : Spinspace
+        a Spinspace of shape (A), contains all the auxiliary states of the circuit.
+        NOTE: does not necessarily match the dimension of spins returned by `faux`.
+    self.spinspace : Spinspace
+        the total spinspace of the graph, has shape (N, M, A).
+
+    Properties
+    ----------
+    self.G : int
+        returns the total number of vertices in this circuit, N + M + A
+    self.G : int
+        returns the total number of `set` vertices in this circuit, N + M + Aset
+    self.hJ_num : int
+        returns the #(h coordinates) + #(J coordinates) for this circuit. Equal to the Gth triangular number.
+    self.graph : list[Spin]
+        this is the `graph` of the logic of G, i.e. a list of Spins (input, fout(input), faux(input)).
+    self.fulloutspace : Spinspace
+        a spinspace of shape (M, A') where A' is the shape of the set feasible auxiliary states. Is called 'fulloutspace' since it contains output spins together with those auxiliary spins with a 'correct' value at each input.
+
+    Methods
+    -------
+
+    """
+
+    def __init__(self, N: int, M: int, A: int = 0):
         self.N = N
         self.M = M
-        self.A = 0
-        self.inspace = Spinspace(tuple([self.N]))
-        self.outspace = Spinspace(tuple([self.M]))
-        self.auxspace = None
+        self.A = A
+        self.Aset = 0
+        self.inspace = Spinspace((self.N,))
+        self.outspace = Spinspace((self.M,))
+        self.auxspace = Spinspace((self.A,))
+        self.set_auxspace = Spinspace((self.Aset,))
         self.spinspace = Spinspace((self.N, self.M, self.A))
         self._graph = None
         self._aux_array = []
@@ -27,23 +77,39 @@ class PICircuit:
         return self.N + self.M + self.A
 
     @property
+    def Gset(self):
+        return self.N + self.M + self.Aset
+
+    @property
     def hJ_num(self):
         return int(self.G * (self.G + 1) / 2)
 
     @property
     def graph(self):
         if self._graph == None:
-            self._graph = self.generate_graph()
+            self._graph = self._generate_graph()
         return self._graph
 
     @property
     def fulloutspace(self):
-        if self.A == 0 or self.A == None:
+        if self._aux_array == []:
             return self.outspace
         else:
             return self._outauxspace
 
-    def set_aux(self, aux_array: list[list]):
+    #################################
+    ### Private methods
+    #################################
+
+    def _generate_graph(self):
+        graph = [self.inout(s) for s in self.inspace]
+        return graph
+
+    #################################
+    ### CIRCUIT LOGIC METHODS
+    #################################
+
+    def set_aux(self, aux_array):
         """
         Sets the auxiliary array. Expects a list of lists. Intelligently converts provided input into a list of Spins.
 
@@ -66,9 +132,15 @@ class PICircuit:
         if aux_array.shape[1] == 2**self.N:
             aux_array = aux_array.T
 
-        self.A = len(aux_array[0])
-        self.auxspace = Spinspace(shape=(self.A,))
-        self._outauxspace = Spinspace(shape=(self.M, self.A))
+        # record the number of set auxiliary spins and construct the necessary spinspaces
+        self.Aset = len(aux_array[0])
+        self.set_auxspace = Spinspace(shape=(self.Aset,))
+        self._outauxspace = Spinspace(shape=(self.M, self.Aset))
+
+        # update self.auxspace if necessary
+        if self.Aset > self.A:
+            self.A = self.Aset
+            self.auxspace = Spinspace(shape=(self.A,))
 
         # check for consistent length and store aux_array as list of Spins
         for i in range(aux_array.shape[0]):
@@ -78,9 +150,7 @@ class PICircuit:
 
             self._aux_array.append(Spin(spin=row, shape=(self.A,)))
 
-    def energy(self, spin: Spin, ham_vec: np.ndarray):
-        return np.dot(spin.vspin().spin(), ham_vec)
-
+    # this method required to be overwritten in inherited classes
     @abstractmethod
     def fout(self, inspin: Spin) -> Spin:
         pass
@@ -101,16 +171,41 @@ class PICircuit:
         if aux is None:
             return out
         else:
-            return Spin.catspin(spins=(out, aux))
+            return Spin(spin=(out.asint(), aux.asint()), shape=(self.M, self.Aset))
 
     def inout(self, inspin: Spin):
         """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s. If a list of Spins is provided instead then a list of (in, out) pairs returned."""
         return Spin.catspin((inspin, self.f(inspin)))
 
-    def generate_graph(self):
-        graph = [self.inout(s) for s in self.inspace]
-        return graph
+    #################################
+    ### GENERATORS
+    #################################
 
+    def allwrong(self, inspin):
+        """Generator returning all 'wrong' outaux spins corresponding to a given input.
+
+        If a feasible auxiliary array has been set, then both (correct_out, correct_aux) AND (correct_out, wrong_aux) are considered correct, as both contain the correct output. Hence neither is returned.
+        """
+
+        for i in range(self.fulloutspace.size):
+            outaux = self.fulloutspace.getspin(i)
+
+            # outaux either has shape (M) or (M, A') depending on whether or not
+            # a feasible auxiliary array has been set
+            if self._aux_array == []:
+                out = outaux
+            else:
+                out, _ = outaux.split()
+
+            # we only check the output component
+            if out == self.fout(inspin):
+                continue
+
+            yield outaux
+
+    ############################################
+    ### VECTOR METHODS
+    ############################################
     def lvec(self, inspin):
         """Returns the sign of the average normal vector for all constraints in the given input level"""
         s = inspin
@@ -124,13 +219,10 @@ class PICircuit:
     def normlvec(self, inspin):
         """Returns the sign of the average normal vector for all constraints in the given input level"""
         s = inspin
-        correct_out = self.fout(s)
+        correct_out = self.f(s)
         correct_vspin = self.inout(s).vspin().spin()
         normal = np.zeros(int(self.G * (self.G + 1) / 2))
-        for t in self.outspace:
-            if t == correct_out:
-                continue
-
+        for t in self.allwrong(inspin):
             inout = Spin.catspin((s, t))
             diff = inout.vspin().spin() - correct_vspin
             normal += diff / np.linalg.norm(diff)
@@ -138,101 +230,8 @@ class PICircuit:
         return normal
 
     #############################################
-    # Solver
+    ### SOLVER METHODS
     #############################################
-
-    def init_solver(self):
-        """Initialize the linear solver from ortools"""
-        pass
-
-    # old level checkers
-    def level(self, inspin, ham_vec, weak=False, more_info=False, print_energies=False):
-        """Returns information about the level
-
-        Parameters
-        ----------
-        inspin : Spin
-            an input spin
-        weak : bool
-            check for weak satisfaction of constraints (<=) rather than satisfaction (<)
-
-        """
-
-        # bool describing whether this level is satisfied by ham_vec
-        satisfied = True
-
-        # store info about the correct in/out pair
-        s = inspin
-        correct_int = self.f(inspin).asint()
-        correct_spin = self.inout(s)
-        correct_key = correct_spin.asint()
-        correct_energy = self.energy(correct_spin, ham_vec)
-
-        # dictionary to store hamiltonian values
-        ham = {correct_key: correct_energy}
-
-        if print_energies:
-            print(f"Correct output {correct_int} had energy {correct_energy}")
-
-        # iterate through the level
-        for i in range(self.fulloutspace.size):
-            t = self.fulloutspace.getspin(i)
-            if t.asint() == correct_int:
-                continue
-
-            spin = Spin.catspin((s, t))
-            energy = self.energy(spin=spin, ham_vec=ham_vec)
-            if print_energies:
-                print(f"Output {t.asint()} had energy {energy}")
-
-            # satisfied
-            if weak == False:
-                if energy <= correct_energy:
-                    satisfied = False
-                    if more_info == False:
-                        return satisfied
-            else:
-                if energy < correct_energy:
-                    satisfied = False
-                    if more_info == False:
-                        break
-
-            ham[spin.asint()] = energy
-
-        if more_info:
-            return satisfied, dict(sorted(ham.items(), key=lambda x: x[1]))
-        else:
-            return satisfied
-
-    def levels(
-        self,
-        ham_vec,
-        inspins: list[Spin] = None,
-        detailed=False,
-        weak=False,
-        print_energies=False,
-    ):
-        """Returns information about the levels of a list of spins. By default, returns True if all levels are satisfied by ham_vec, False otherwise. If list_fails = True, then it returns a list of the input spins whose levels are not satisfied by ham_vec. If detailed = True, returns a 1d numpy.ndarray whose ith entry is 0 if input i is not satisfied, 1 otherwise."""
-
-        if inspins == None:
-            inspins = self.inspace.tospinlist()
-
-        fails = []
-        passlist = np.zeros(self.inspace.size)
-
-        for s in inspins:
-            condition = self.level(
-                inspin=s, ham_vec=ham_vec, weak=weak, print_energies=print_energies
-            )
-            passlist[s.asint()] = int(condition)
-            if condition == False:
-                if detailed == False:
-                    return False
-
-        if detailed == True:
-            return passlist
-
-        return True
 
     def build_solver(self, input_spins=[]):
         """Builds the lp solver for this circuit, returns solver. Made purposefully verbose/explicit to aid in debugging, should be shortened eventually however."""
@@ -245,74 +244,122 @@ class PICircuit:
 
         # set all the variables
         params = {}
-        for i in range(self.G):
+        for i in range(self.Gset):
             params[i, i] = solver.NumVar(-inf, inf, f"h_{i}")
-            for j in range(i + 1, self.G):
+            for j in range(i + 1, self.Gset):
                 params[i, j] = solver.NumVar(-inf, inf, f"J_{i},{j}")
 
         # we treat case with and without aux separately
-        if self.A == 0:
-            for inspin in input_spins:
-                correct_out = self.fout(inspin)
-                correct_inout_pair = self.inout(inspin)
-                for outspin in self.outspace:
-                    inout_pair = Spin.catspin(spins=(inspin, outspin))
+        for inspin in input_spins:
+            correct_inout_pair = self.inout(inspin)
+            for wrong in self.allwrong(inspin):
+                inout_pair = Spin.catspin(spins=(inspin, wrong))
 
-                    # if there isn't an auxiliary added, then splitint() will throw an error
-                    out = outspin.asint()
-
-                    if inout_pair == correct_inout_pair:
-                        continue
-
-                    # build the constraint corresponding the difference of correct and incorrect output
-                    constraint = solver.Constraint(0.001, inf)
-                    s = correct_inout_pair.spin()
-                    t = inout_pair.spin()
-                    for i in range(self.G):
-                        constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
-                        for j in range(i + 1, self.G):
-                            constraint.SetCoefficient(
-                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
-                            )
-        else:
-            for inspin in input_spins:
-                correct_out = self.fout(inspin)
-                correct_aux = self.faux(inspin)
-                correct_inout_pair = self.inout(inspin)
-                for outspin in self.fulloutspace:
-                    inout_pair = Spin.catspin(spins=(inspin, outspin))
-
-                    out, aux = outspin.splitint()
-
-                    if inout_pair == correct_inout_pair:
-                        continue
-                    elif out == correct_out.asint() and aux != correct_aux.asint():
-                        continue
-
-                    # build the constraint corresponding the difference of correct and incorrect output
-                    constraints = solver.Constraint(0.001, inf)
-                    s = correct_inout_pair.spin()
-                    t = inout_pair.spin()
-                    for i in range(self.G):
-                        constraints.SetCoefficient(params[i, i], float(t[i] - s[i]))
-                        for j in range(i + 1, self.G):
-                            constraints.SetCoefficient(
-                                params[i, j], float(t[i] * t[j] - s[i] * s[j])
-                            )
+                # build the constraint corresponding the difference of correct and incorrect output
+                constraint = solver.Constraint(0.001, inf)
+                s = correct_inout_pair.spin()
+                t = inout_pair.spin()
+                for i in range(self.Gset):
+                    constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                    for j in range(i + 1, self.Gset):
+                        constraint.SetCoefficient(
+                            params[i, j], float(t[i] * t[j] - s[i] * s[j])
+                        )
 
         # print(f"skipped {tally}")
         return solver
+
+    #############################################
+    ### CHECK SPECIFIC hJ_vecs ON INPUT LEVELS
+    #############################################
+
+    def energy(self, spin: Spin, hvec: np.ndarray):
+        return np.dot(spin.vspin().spin(), hvec)
+
+    def level(self, hvec, inspin, weak=False):
+        """Checks whether a given input level is satisfied by hvec
+
+        Parameters
+        ----------
+            hvec : np.ndarray
+                the hamiltonian vector/hJ_vector to test
+            inspin : Spin
+                the input to examine
+            weak : bool (default=False)
+                check for strong satisfaction of the constraints ( correct < incorrect ) or weak satisfaction ( correct <= incorrect )
+
+        Returns: (bool) True if input level satisfied by hvec, False otherwise
+        """
+
+        # bool describing whether this level is satisfied by ham_vec
+        satisfied = True
+
+        # store info about the correct in/out pair
+        correct_energy = self.energy(self.inout(inspin), hvec)
+
+        for outspin in self.allwrong(inspin):
+            energy = self.energy(outspin, hvec)
+
+            if weak == False and energy <= correct_energy:
+                return False
+            elif weak == True and energy < correct_energy:
+                return False
+        return True
+
+    def passlist(self, hvec, inspin, weak=False):
+        """Returns a list with one entry per input with 1 if the input level is satsified and 0 otherwise.
+
+        Parameters
+        ----------
+            hvec : np.ndarray
+                the hamiltonian vector/hJ_vector to test
+            inspin : Spin
+                the input to examine
+            weak : bool (default=False)
+                check for strong satisfaction of the constraints ( correct < incorrect ) or weak satisfaction ( correct <= incorrect )
+
+        Returns
+        -------
+            passlist : list[int]
+                one entry per input spin; 1 if input level satisfied, 0 otherwise
+        """
+
+        return [int(self.level(hvec, inspin, weak)) for inspin in self.inspace]
+
+    def levels(self, hvec, inspins: list[Spin] = [], weak=False, list_fails=False):
+        """Checks whether a list of spins are satisfied by hvec.
+
+        Parameters
+        ----------
+            hvec : np.ndarray
+                the hamiltonian vector/hJ_vector to test
+            inspins : list[Spin] (default=[])
+                the list of inputs to examine. If no list provided, then checks all inputs.
+            weak : bool (default=False)
+                check for strong satisfaction of the constraints ( correct < incorrect ) or weak satisfaction ( correct <= incorrect )
+
+        Returns: (bool) True if input levels all satisfied by hvec, False otherwise
+
+        """
+        if inspins == []:
+            inspins = self.inspace.tospinlist()
+
+        for inspin in inspins:
+            condition = self.level(hvec, inspin, weak=weak)
+            if condition == False:
+                return False
+
+        return True
 
 
 class IMul(PICircuit):
     """Ising Multiply Circuit"""
 
-    def __init__(self, N1: int, N2: int):
-        super().__init__(N=N1 + N1, M=N1 + N2)
+    def __init__(self, N1: int, N2: int, A: int = 0):
+        super().__init__(N=N1 + N1, M=N1 + N2, A=A)
         self.inspace = Spinspace(shape=(N1, N2))
         self.N1 = N1
         self.N2 = N2
-        self.N = N1 + N2
 
     def fout(self, inspin: Spin):
         # get the numbers corresponding to the input spin
@@ -347,7 +394,6 @@ class AND(PICircuit):
 
 def example():
     G = IMul(2, 2)
-    G.generate_graph()
 
     spin1 = G.inspace.rand()
     spin2 = G.inspace.rand()
