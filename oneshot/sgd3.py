@@ -52,10 +52,9 @@ class BoltzmannModel(nn.Module):
         right_sums = torch.sum(right_aux_factors, dim = -2) # shape (batch_size)
         wrong_sums = total_sums - right_sums # shape (batch_size)
 
-
-        scaled_log_diff = self.skew * (torch.log(wrong_sums) - torch.log(total_sums))
-        shifted_log_diff = scaled_log_diff - torch.max(scaled_log_diff)
-        return scaled_log_diff
+        # just set the SGD to trying to lower all failure probabilities, no fancy tricks or maximization
+        ans = wrong_sums / total_sums
+        return ans
         
 class VirtualSpinDataset(Dataset):
     def __init__(self, circuit, A, degree=2):
@@ -150,21 +149,19 @@ def train(device, model, optimizer, dataloader, scheduler, epoch):
     losses = []
     loop = tqdm(dataloader, leave = True)
     for input_levels, answers in loop: 
-        with torch.autograd.detect_anomaly():
-            input_levels, answers = input_levels.to(device), answers.to(device)
-            out = model(input_levels, answers)
-            #loss = (torch.max(out_real) + torch.log(sum(out)))/model.skew
-            loss = torch.max(out)
-            losses.append(out.cpu())
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        input_levels, answers = input_levels.to(device), answers.to(device)
+        out = model(input_levels, answers)
+        loss = sum(out) / len(out)
+        losses.append(out.cpu())
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            loop.set_postfix(epoch = epoch, loss = loss.item())
+        loop.set_postfix(loss = mean(torch.cat(losses).tolist()), epoch = epoch)
 
-    all_loss_tensor = torch.cat(losses) / model.skew
-    max_failure_prob = torch.exp(torch.max(all_loss_tensor))
+    all_loss_tensor = torch.cat(losses)
+    max_failure_prob = torch.max(all_loss_tensor)
 
     #scheduler.step(max_failure_prob)
     print(f'max failure probability = {max_failure_prob}')
@@ -180,13 +177,13 @@ def main(n1: int, n2: int, aux: int, degree: int):
         print(f'Warning: Running without CUDA support! Current device is {device}')
 
     # Hyperparameters
-    NUM_EPOCHS = 10000
-    BATCH_SIZE = 8
+    NUM_EPOCHS = 1000
+    BATCH_SIZE = 2
     LEARNING_RATE = 1e-1
     WEIGHT_DECAY = 1e-5
     MOMENTUM = 0.9
     NESTEROV = True
-    LAMBDA = 1
+    LAMBDA = 10
     BETA = 1
 
     # Set up the model
@@ -216,14 +213,14 @@ def main(n1: int, n2: int, aux: int, degree: int):
         nesterov = NESTEROV
     )
 
-    optimizer = torch.optim.RMSprop(model.parameters())
+    #optimizer = torch.optim.RMSprop(model.parameters())
 
-    #optimizer = torch.optim.Adam(model.parameters())
+    #optimizer = torch.optim.Adam(H.parameters())
 
     # LR Scheduler (annealing)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer = optimizer,
-        patience = 20,
+        patience = 5,
         threshold = 1e-3,
         verbose = True
     )

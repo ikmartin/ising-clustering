@@ -1,0 +1,23 @@
+\documentclass{article}
+\usepackage{geometry}[1in]
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\newcommand{\R}{{\mathbb{R}}}
+\newcommand{\Z}{{\mathbb{Z}}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\softmax}{soft\,max}
+
+\title{Sparse Fitting of Higher-Degree Ising Hamiltonians}
+\author{Andrew Moore}
+\date{Summer 2023}
+\begin{document}
+\maketitle
+
+Consider an Ising circuit $f$ with $N$ inputs, $M$ outputs, and no auxilliaries. The total spin space is thus $\Sigma := \Sigma^N \times \Sigma^M \cong \Z_2^{N+M}$. Now, we would like to design and optimization problem that searches for the Hamiltonian polynomial on $\Sigma$ of maximum sparsity and minimum degree, subject to the ``hypercube'' constraint set 
+\begin{align}
+		\mathcal{H} := \{H(\xi_1) - H(\xi_0) > 0 : \xi_0, \xi_1 \in I_\sigma, L(\xi_1, [\sigma, f(\sigma)]) = 1+L(\xi_0, [\sigma, f(\sigma)]), \sigma \in \Sigma^M\}
+\end{align}
+(i.e. each correct answer is the only optima of its input level) where $L$ is the Hamming distance function. Because we know that the degree is likely small and we have the computing resources to brute force it, we will ignore optimizing over the degree. Instead, we will fix the degree at $d$ and consider the problem of minimizing the zero-norm of the coefficients $t$ of a degree $d$ Hamiltonian polynomial on $\Sigma$, subject to the constraint set $Mt > 0$ where $M = \{v(\xi_1) - v(\xi_0)\}$ is modeled on $\mathcal{H}$ and $v$ is the degree $d$ virtual spin state (note that $H(\xi) = \langle v(\xi), t\rangle$). It is worth noting that since $\xi_1$ and $\xi_0$ can only differ by a single bit, the matrix $M$ must be extremely sparse. 
+\end{document}
