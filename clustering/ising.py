@@ -1,3 +1,5 @@
+from functools import cache
+from copy import Error
 from spinspace import Spinspace, Spin
 from abc import abstractmethod
 from ortools.linear_solver import pywraplp
@@ -11,13 +13,13 @@ class PICircuit:
     Comments
     --------
     Regarding auxiliary spins: There are two use-cases for auxiliary spins depending on whether you are attempting to check constraints equations or model dynamis;
-        (1) Checking global constraint equations: in this case, auxiliary states are tied to specific inputs, and one is likely curious whether the choice of auxiliary state at each input level yields a solvable Ising circuit. This should be done by setting a feasible auxiliary array after initializing a circuit using the `set_aux` method.
+        (1) Checking global constraint equations: in this case, auxiliary states are tied to specific inputs, and one is likely curious whether the choice of auxiliary state at each input level yields a solvable Ising circuit. This should be done by setting a feasible auxiliary array after initializing a circuit using the `set_all_aux` method.
         (2) Modeling dynamics: in this case, one likely wishes to include auxiliary vertices in an Ising graph without specifying which states correspond to each input. Indeed, there need not be a consistent `correct` auxiliary state at each input level since it is ignored in the final output. In this situation, one should set the optional parameter `A` in class initialization.
     Use case (1) is handled by the circuit logic in the functions `f` and `faux`. The latter function will raise an Attribute Use case (2) is handled by the attribute `auxspace`,
 
-    IMPORTANT NOTE: Calling set_aux will not overwrite auxspace UNLESS the provided feasible auxiliary array is of shape larger than the current auxspace. The ambient auxspace can be larger than the set auxspins. For example,
+    IMPORTANT NOTE: Calling set_all_aux will not overwrite auxspace UNLESS the provided feasible auxiliary array is of shape larger than the current auxspace. The ambient auxspace can be larger than the set auxspins. For example,
         circuit.PICircuit(N=2,M=2,A=2)
-        circuit.set_aux([[-1],[-1],[1],[1]])
+        circuit.set_all_aux([[-1],[-1],[1],[1]])
     will result in a circuit whose auxspace has dimension 2, but whose `faux` method will return auxiliary spins of dimension 1.
 
     Attributes
@@ -42,8 +44,6 @@ class PICircuit:
     ----------
     self.G : int
         returns the total number of vertices in this circuit, N + M + A
-    self.G : int
-        returns the total number of `set` vertices in this circuit, N + M + Aset
     self.hJ_num : int
         returns the #(h coordinates) + #(J coordinates) for this circuit. Equal to the Gth triangular number.
     self.graph : list[Spin]
@@ -60,25 +60,20 @@ class PICircuit:
         self.N = N
         self.M = M
         self.A = A
-        self.Aset = 0
         self.inspace = Spinspace((self.N,))
         self.outspace = Spinspace((self.M,))
         self.auxspace = Spinspace((self.A,))
-        self.set_auxspace = Spinspace((self.Aset,))
         self.spinspace = Spinspace((self.N, self.M, self.A))
         self._graph = None
         self._aux_array = []
+        self._aux_dict = {}
 
     #############################################
-    # Properties
+    # Properties and property-like methods
     #############################################
     @property
     def G(self):
         return self.N + self.M + self.A
-
-    @property
-    def Gset(self):
-        return self.N + self.M + self.Aset
 
     @property
     def hJ_num(self):
@@ -90,12 +85,8 @@ class PICircuit:
             self._graph = self._generate_graph()
         return self._graph
 
-    @property
-    def fulloutspace(self):
-        if self._aux_array == []:
-            return self.outspace
-        else:
-            return self._outauxspace
+    def Gin(self, inspin):
+        return self.N + self.M + self.Ain(inspin)
 
     #################################
     ### Private methods
@@ -106,10 +97,28 @@ class PICircuit:
         return graph
 
     #################################
-    ### CIRCUIT LOGIC METHODS
+    ### AUXILIARY STATE METHODS
     #################################
 
-    def set_aux(self, aux_array):
+    def Ain(self, inspin):
+        """Returns the number of auxiliary spins set for the provided input"""
+        try:
+            return self._aux_dict[inspin].dim()
+        except KeyError:
+            return 0
+
+    def add_single_aux(self, inspin: Spin, auxval: int):
+        """Adds a single aux spin (either +1 or -1) to the specified input"""
+        try:
+            self._aux_dict[inspin] = Spin.append(self._aux_dict[inspin], auxval)
+        except KeyError:
+            self._aux_dict[inspin] = Spin(spin=int((auxval + 1) / 2), shape=(1,))
+
+    def set_aux(self, inspin: Spin, auxspin):
+        """Associates an auxiliary spin to the specified input"""
+        self._aux_dict[inspin] = auxspin
+
+    def set_all_aux(self, aux_array):
         """
         Sets the auxiliary array. Expects a list of lists. Intelligently converts provided input into a list of Spins.
 
@@ -134,7 +143,6 @@ class PICircuit:
 
         # record the number of set auxiliary spins and construct the necessary spinspaces
         self.Aset = len(aux_array[0])
-        self.set_auxspace = Spinspace(shape=(self.Aset,))
         self._outauxspace = Spinspace(shape=(self.M, self.Aset))
 
         # update self.auxspace if necessary
@@ -145,10 +153,25 @@ class PICircuit:
         # check for consistent length and store aux_array as list of Spins
         for i in range(aux_array.shape[0]):
             row = aux_array[i]
-            if len(row) != self.A:
+            if len(row) != self.Aset:
                 raise ValueError("Not all auxiliary states are the same length!")
 
-            self._aux_array.append(Spin(spin=row, shape=(self.A,)))
+            self._aux_dict[self.inspace[i]] = Spin(spin=row, shape=(self.A,))
+
+    def get_aux_array(self):
+        """Returns the aux array of this circuit"""
+        return [self._aux_dict[inspin].spin().tolist() for inspin in self.inspace]
+
+    def check_aux_all_set(self, inspins=[]):
+        if inspins == []:
+            inspins = self.inspace
+
+        first = self.Ain(list(inspins)[0])
+        return all(first == self.Ain(x) for x in inspins)
+
+    ##################################
+    ### CIRCUIT LOGIC METHODS
+    ##################################
 
     # this method required to be overwritten in inherited classes
     @abstractmethod
@@ -156,10 +179,10 @@ class PICircuit:
         pass
 
     def faux(self, inspin: Spin) -> None | Spin:
-        if self.A == 0:
+        if self.Ain(inspin) == 0:
             return None
         else:
-            return self._aux_array[inspin.asint()]
+            return self._aux_dict[inspin]
 
     def f(self, inspin: Spin | int) -> Spin:
         # ensure is of type Spin
@@ -171,7 +194,7 @@ class PICircuit:
         if aux is None:
             return out
         else:
-            return Spin(spin=(out.asint(), aux.asint()), shape=(self.M, self.Aset))
+            return Spin(spin=(out.asint(), aux.asint()), shape=(self.M, aux.dim()))
 
     def inout(self, inspin: Spin):
         """Returns the (in, out) pair corresponding to (s,f(s)) for an input spin s. If a list of Spins is provided instead then a list of (in, out) pairs returned."""
@@ -181,18 +204,28 @@ class PICircuit:
     ### GENERATORS
     #################################
 
-    def allwrong(self, inspin):
-        """Generator returning all 'wrong' outaux spins corresponding to a given input.
+    def inputlevelspace(self, inspin):
+        """Generator which spits out all input/output/aux pairs with a fixed input and auxiliary of the correct size for the given input"""
+        outauxspace = Spinspace(shape=(self.M, self.Ain(inspin)))
+        for outaux in outauxspace:
+            yield Spin.catspin((inspin, outaux))
+
+    def allwrong(self, inspin, tempaux=Spin(0, shape=(0,))):
+        """Generator returning all 'wrong' outaux spins corresponding to a given input. Lets you simulate the addition of an auxiliary spin of value tempaux.
 
         If a feasible auxiliary array has been set, then both (correct_out, correct_aux) AND (correct_out, wrong_aux) are considered correct, as both contain the correct output. Hence neither is returned.
         """
 
-        for i in range(self.fulloutspace.size):
-            outaux = self.fulloutspace.getspin(i)
-
+        numaux = self.Ain(inspin) + tempaux.dim()
+        iterator = (
+            Spinspace(shape=(self.M,))
+            if numaux == 0
+            else Spinspace(shape=(self.M, numaux))
+        )
+        for outaux in iterator:
             # outaux either has shape (M) or (M, A') depending on whether or not
             # a feasible auxiliary array has been set
-            if self._aux_array == []:
+            if numaux == 0:
                 out = outaux
             else:
                 out, _ = outaux.split()
@@ -206,28 +239,40 @@ class PICircuit:
     ############################################
     ### VECTOR METHODS
     ############################################
-    def lvec(self, inspin):
+
+    @cache
+    def lvec(self, inspin, tempaux=Spin(0, shape=(0,))):
         """Returns the sign of the average normal vector for all constraints in the given input level"""
         s = inspin
-        normal = np.zeros(int(self.G * (self.G + 1) / 2))
-        for t in self.outspace:
-            inout = Spin.catspin((s, t))
-            normal += inout.vspin().spin()
 
-        return np.sign(normal - self.M * self.inout(s).vspin().spin())
+        # Spinspace gets weird about empty shapes, this avoids it
+        if tempaux.dim() > 0:
+            correct_inout = Spin.catspin(self.inout(s).split() + (tempaux,))
+        else:
+            correct_inout = self.inout(s)
 
-    def normlvec(self, inspin):
-        """Returns the sign of the average normal vector for all constraints in the given input level"""
-        s = inspin
-        correct_out = self.f(s)
-        correct_vspin = self.inout(s).vspin().spin()
-        normal = np.zeros(int(self.G * (self.G + 1) / 2))
-        for t in self.allwrong(inspin):
+        # store the correct vspin
+        correct_vspin = correct_inout.vspin().spin()
+
+        # initialize the lvector as a numpy array of zeros
+        tempG = self.Gin(inspin) + tempaux.dim()
+        lvec = np.zeros(int(tempG * (tempG + 1) / 2))
+        for t in self.allwrong(inspin, tempaux):
             inout = Spin.catspin((s, t))
             diff = inout.vspin().spin() - correct_vspin
-            normal += diff / np.linalg.norm(diff)
+            lvec += diff / np.linalg.norm(diff)
 
-        return normal
+        return lvec
+
+    @cache
+    def poslvec(self, inspin):
+        """Returns the lvec of inspin with +1 added as a temporary auxiliary spin"""
+        return self.lvec(inspin, tempaux=Spin(1, (1,)))
+
+    @cache
+    def neglvec(self, inspin):
+        """Returns the lvec of inspin with -1 added as a temporary auxiliary spin"""
+        return self.lvec(inspin, tempaux=Spin(0, (1,)))
 
     #############################################
     ### SOLVER METHODS
@@ -236,6 +281,13 @@ class PICircuit:
     def build_solver(self, input_spins=[]):
         """Builds the lp solver for this circuit, returns solver. Made purposefully verbose/explicit to aid in debugging, should be shortened eventually however."""
 
+        # check that each input has same number of auxiliary states
+        if self.check_aux_all_set(input_spins) == False:
+            raise Error(
+                f"Not all auxiliary states are the same size! Cannot build constraints.\n { {s : self.Ain(s) for s in input_spins} }"
+            )
+
+        G = self.Gin(self.inspace[0])
         if input_spins == []:
             input_spins = [s for s in self.inspace]
 
@@ -244,9 +296,9 @@ class PICircuit:
 
         # set all the variables
         params = {}
-        for i in range(self.Gset):
+        for i in range(G):
             params[i, i] = solver.NumVar(-inf, inf, f"h_{i}")
-            for j in range(i + 1, self.Gset):
+            for j in range(i + 1, G):
                 params[i, j] = solver.NumVar(-inf, inf, f"J_{i},{j}")
 
         # we treat case with and without aux separately
@@ -259,9 +311,9 @@ class PICircuit:
                 constraint = solver.Constraint(0.001, inf)
                 s = correct_inout_pair.spin()
                 t = inout_pair.spin()
-                for i in range(self.Gset):
+                for i in range(G):
                     constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
-                    for j in range(i + 1, self.Gset):
+                    for j in range(i + 1, G):
                         constraint.SetCoefficient(
                             params[i, j], float(t[i] * t[j] - s[i] * s[j])
                         )
@@ -298,7 +350,7 @@ class PICircuit:
         correct_energy = self.energy(self.inout(inspin), hvec)
 
         for outspin in self.allwrong(inspin):
-            energy = self.energy(outspin, hvec)
+            energy = self.energy(Spin.catspin((inspin, outspin)), hvec)
 
             if weak == False and energy <= correct_energy:
                 return False
@@ -306,7 +358,8 @@ class PICircuit:
                 return False
         return True
 
-    def passlist(self, hvec, inspin, weak=False):
+    @cache
+    def passlist(self, hvec: tuple[float], weak=False):
         """Returns a list with one entry per input with 1 if the input level is satsified and 0 otherwise.
 
         Parameters
@@ -326,6 +379,7 @@ class PICircuit:
 
         return [int(self.level(hvec, inspin, weak)) for inspin in self.inspace]
 
+    @cache
     def levels(self, hvec, inspins: list[Spin] = [], weak=False, list_fails=False):
         """Checks whether a list of spins are satisfied by hvec.
 
@@ -356,7 +410,7 @@ class IMul(PICircuit):
     """Ising Multiply Circuit"""
 
     def __init__(self, N1: int, N2: int, A: int = 0):
-        super().__init__(N=N1 + N1, M=N1 + N2, A=A)
+        super().__init__(N=N1 + N2, M=N1 + N2, A=A)
         self.inspace = Spinspace(shape=(N1, N2))
         self.N1 = N1
         self.N2 = N2

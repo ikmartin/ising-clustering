@@ -21,7 +21,8 @@ def build_intersection(circuit: IMul, repetitions=50000, deg=2, filename=""):
         hvec = np.random.normal(mu, sigma, circuit.hJ_num)
 
         # get the results from levels and store length
-        results = circuit.levels(ham_vec=hvec, detailed=True)
+
+        results = circuit.passlist(hvec=tuple(hvec.tolist()))
 
         # recursively take outer products
         newres = results

@@ -128,9 +128,13 @@ class Spin:
         else:
             raise Exception("val not initialized")
 
-    def __getitem__(self, key):
-        return self.spin()[key]
+    def dim(self):
+        """Returns the dimension of the spin space in which this Spin lives"""
+        return sum(self.shape)
 
+    ########################
+    ### FORMAT METHODS
+    ########################
     def asint(self):
         """Return the integer value represented by this spin in binary"""
         return self.val
@@ -143,6 +147,9 @@ class Spin:
         """Return this spin as an array of 1's and -1's"""
         return int2bin(val=self.val, dim=sum(self.shape))
 
+    ########################
+    ### SPLIT METHODS
+    ########################
     def splitint(self):
         # convenience variables
         dim = sum(self.shape)
@@ -175,9 +182,9 @@ class Spin:
             [Spin(spin=vals[i], shape=(self.shape[i],)) for i in range(len(self.shape))]
         )
 
-    def dim(self):
-        """Returns the dimension of the spin space in which this Spin lives"""
-        return sum(self.shape)
+    ##########################
+    ### ASSOCIATED SPINS
+    ##########################
 
     def pairspin(self):
         """Returns the spin corresponding to the pairwise interactions of spin."""
@@ -206,6 +213,9 @@ class Spin:
             spin = Spin.catspin((self, pair))
             return Spin(spin=spin.asint(), shape=(self.dim() + pair.dim(),))
 
+    ##########################
+    ### SPIN OPERATIONS
+    ##########################
     def pspin(self, split=False):
         return self.vspin(split=split).inv()
 
@@ -219,6 +229,12 @@ class Spin:
         """
         s = self.spin()
         return Spin(spin=np.array([-1 * si for si in s]), shape=self.shape)
+
+    ##########################
+    ### PYTHONIC FUNCTIONALITY
+    ##########################
+    def __getitem__(self, key):
+        return self.spin()[key]
 
     def __eq__(self, other):
         if isinstance(other, Spin):
@@ -264,6 +280,23 @@ class Spin:
         shape = sum(tuple(s.shape for s in spins), ())
         val = sum(tuple(s.splitint() for s in spins), ())
         return Spin(spin=val, shape=shape)
+
+    @staticmethod
+    def append(spin, val: int, component=-1):
+        """Appends +1 or -1 to the end of this spin on the specified component. If no specified, last component used."""
+        if val * val != 1:
+            raise TypeError("Can only append a value of -1 or +1 to a Spin!")
+
+        # the index of the spin as a np.ndarry to insert the val
+        index = sum(spin.shape[:component]) + spin.shape[component]
+        array = np.insert(spin.spin(), index, val)
+
+        # update the shape of the spin
+        shape = list(spin.shape)
+        shape[component] += 1
+        shape = tuple(shape)
+
+        return Spin(spin=array, shape=shape)
 
     @staticmethod
     def lin_comb(spins: list):

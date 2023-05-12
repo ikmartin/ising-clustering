@@ -307,3 +307,18 @@ def carver(circuit: PICircuit) -> Callable:
         return np.any(approx_solution.x > 0)
 
     return criterion
+
+
+def lpsolver_criterion(circuit: PICircuit) -> Callable:
+    """Uses the ortools lp solver built in PICircuit as a refine criterion."""
+
+    print("Assigned lpsolver_criterion")
+
+    def criterion(cluster: Set[Spin]) -> bool:
+        solver = circuit.build_solver(input_spins=cluster)
+        print(f"solver built with {solver.NumConstraints()} constraints.")
+        status = solver.Solve()
+        print(f"refine? {status != solver.OPTIMAL}")
+        return status != solver.OPTIMAL
+
+    return criterion
