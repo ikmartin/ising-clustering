@@ -48,7 +48,7 @@ def int2bin(val: int, dim: int) -> np.ndarray:
         a 1-d array consisting of 0 and 1 representing a spin
     """
 
-    return np.array(list(np.binary_repr(val).zfill(dim)))
+    return np.array([int(x) for x in np.binary_repr(val).zfill(dim)])
 
 
 def spin2int(spin: np.ndarray):
@@ -97,6 +97,8 @@ class Spin:
 
     def __init__(self, spin, shape: tuple):
         """Initializer"""
+        if isinstance(shape, int):
+            shape = (shape,)
         # store the shape first
         self.shape = shape
 
@@ -259,7 +261,7 @@ class Spin:
 
     @staticmethod
     def catspin(spins: tuple):
-        shape = sum([s.shape for s in spins], ())
+        shape = sum(tuple(s.shape for s in spins), ())
         val = sum(tuple(s.splitint() for s in spins), ())
         return Spin(spin=val, shape=shape)
 
