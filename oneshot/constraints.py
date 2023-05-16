@@ -62,10 +62,6 @@ def get_constraint_matrix(circuit: PICircuit, degree: int) -> torch.Tensor:
 
     ## At this point, the constraint matrix is the `entire' constraint matrix, and still includes columns corresponding to the terms which are products only of the input spins. These are constant on every input level, and totally irrelevant to the behavior of the Hamiltonian. Therefore, we do not want to waste effort on fitting variables to these. We will determine which columns are useless and remove them from the constraint matrix.
     mask_tensor = torch.cat([torch.ones(circuit.N), torch.zeros(circuit.M)]).byte()
-    print(vspin(mask_tensor, degree))
     vspin_mask = (vspin(mask_tensor, degree) - 1).nonzero(as_tuple = True)[0]
-    print(vspin_mask)
-    print(constraint_matrix.shape)
     constraint_matrix = torch.index_select(constraint_matrix, dim=1, index=vspin_mask)
-    print(constraint_matrix.shape)
     return constraint_matrix
