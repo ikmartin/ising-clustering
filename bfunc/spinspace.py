@@ -26,6 +26,7 @@ def int2spin(val: int, dim: int) -> np.ndarray:
     numpy.ndarray
         a 1-d array consisting of -1 and 1 representing a spin
     """
+
     if 2**dim - 1 < val:
         raise ValueError(
             f"Cannot generate binary representation for {val} using {dim} bits"
@@ -52,8 +53,7 @@ def int2bin(val: int, dim: int) -> np.ndarray:
         a 1-d array consisting of 0 and 1 representing a spin
     """
 
-    b = np.array(list(np.binary_repr(val).zfill(dim)))
-    return np.array([int(x) for x in b])  # convert to spin representation
+    return np.array(list(np.binary_repr(val).zfill(dim)))
 
 
 def spin2int(spin: np.ndarray):
