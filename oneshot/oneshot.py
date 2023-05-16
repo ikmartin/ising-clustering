@@ -51,7 +51,7 @@ class MLPoly:
         terms = [
             [
                 " + " if value > 0 else " - ",
-                str(abs(value)),
+                f'{abs(value):.2f}',
                 "".join([f"x_{i}" for i in key]),
             ]
             for key, value in sorted_items
@@ -230,9 +230,9 @@ def full_Rosenberg(poly: MLPoly) -> MLPoly:
         set(factor).issubset(key) and len(factor) == 2 and len(key) > 2
     )
 
-    M = sum([value for key, value in poly.coeffs.items() if value > 0])
     while poly.degree() > 2:
         C, H = get_common_key(poly, rosenberg_criterion)
+        M = sum([max(0, poly.get_coeff(key)) for key in H])
         if not len(H):
             break
 
@@ -240,12 +240,7 @@ def full_Rosenberg(poly: MLPoly) -> MLPoly:
 
     return poly
 
-
-def FGBZ_FD(poly: MLPoly) -> MLPoly:
-    """
-    Uses positive FGBZ to reduce positive monomials until there are no more left. Then eliminates all negative monomials using FD. Returns a quadratic form.
-    """
-
+def full_positive_FGBZ(poly: MLPoly) -> MLPoly:
     positive_FGBZ_criterion = lambda factor, key, value: (
         set(factor).issubset(key)
         and len(factor) < len(key) - 1
@@ -253,7 +248,17 @@ def FGBZ_FD(poly: MLPoly) -> MLPoly:
         and len(factor) >= 1
         and value > 0
     )
+    
+    while True:
+        C, H = get_common_key(poly, positive_FGBZ_criterion)
+        if not len(H):
+            break
 
+        poly = PositiveFGBZ(poly, C, H)
+
+    return poly
+
+def full_negative_FGBZ(poly: MLPoly) -> MLPoly:
     negative_FGBZ_criterion = lambda factor, key, value: (
         set(factor).issubset(key)
         and len(factor) < len(key) - 1
@@ -263,24 +268,38 @@ def FGBZ_FD(poly: MLPoly) -> MLPoly:
     )
 
     while True:
-        C, H = get_common_key(poly, positive_FGBZ_criterion)
-        if not len(H):
-            break
-
-        poly = PositiveFGBZ(poly, C, H)
-
-    print("no positives:")
-    print(poly)
-
-    while True:
         C, H = get_common_key(poly, negative_FGBZ_criterion)
         if not len(H):
             break
 
         poly = NegativeFGBZ(poly, C, H)
+    
+    return poly
 
-    print("no large negatives:")
-    print(poly)
-    print("")
+def get_method(method):
+    """
+    Returns a function pointer for the named method
+    """
 
-    return FreedmanDrineas(poly)
+    if method == 'rosenberg':
+        return full_Rosenberg
+
+    if method == '+fgbz':
+        return full_positive_FGBZ
+
+    if method == '-fgbz':
+        return full_negative_FGBZ
+
+    if method == 'fd':
+        return FreedmanDrineas
+
+def reduce_poly(poly: MLPoly, methods) -> MLPoly:
+    """
+    Applies a sequence of reduction algorithms as defined by the argument.
+    """
+
+    for method in methods:
+        reduction_method = get_method(method)
+        poly = reduction_method(poly)
+
+    return poly

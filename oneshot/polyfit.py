@@ -1,6 +1,6 @@
 from ising import PICircuit
 from spinspace import Spin
-from oneshot import MLPoly
+from oneshot import MLPoly, reduce_poly
 from itertools import combinations, chain, product
 from math import prod
 from ortools.linear_solver.pywraplp import Solver
@@ -18,12 +18,14 @@ def search_polynomial(circuit: PICircuit) -> MLPoly:
 
     for degree in range(2, num_variables):
         solver, status, params = build_polynomial_fitter(circuit, degree)
-        print(f'degree={degree} status={status}')
+        #print(f'degree={degree} status={status}')
         if status == 2:
             continue 
 
         coeffs = {key: var.solution_value() for key, var in params.items()}
-        return MLPoly(coeffs = coeffs)
+        poly = MLPoly(coeffs = coeffs)
+        poly.clean(threshold = 0.1)
+        return reduce_poly(poly, ['rosenberg'])
 
 def binary_spin(spin: Spin):
     binstring = np.binary_repr(spin.asint()).zfill(spin.dim())
@@ -34,9 +36,11 @@ def prod_term(array: np.ndarray, key: tuple):
     
 def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
     """
-    Builds a linear programming solver for fitting a multilinear polynomial of a given degree to the constraint system of the input/output pairs of the given circuit.
+    Builds a linear programming solver for fitting a multilinear polynomial of a given degree to the constraint system of the input/output pairs of the given circuit. The objective is l1 minimization since it gives a good approximation of l0 optimization, or at least as good as can be done with linear programming.
 
-    The optimization objective is set to be the average of all the rows in the constraint matrix (an idea due to Teresa)
+    The theory is the following:
+    min_x ||x||_1           s.t. Mx >= 1
+    <-> min_{x,y} <1,y>     s.t. Mx >= 1 and x-y <= 0 and x+y >= 0
     """
 
     solver = Solver.CreateSolver("GLOP")
@@ -45,24 +49,29 @@ def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
     num_variables = circuit.N + circuit.M
 
     variable_keys = chain.from_iterable([combinations(range(num_variables), i) for i in range(1, degree+1)])
-    params = {key: solver.NumVar(-inf, inf, str(key))
-            for key in variable_keys}
+    variable_keys = [key for key in variable_keys
+                     if max(key) >= circuit.N]
+    params = {key: 
+        solver.NumVar(0, 0, str(key))
+        if np.random.randint(5) == 0 and len(key) > 2
+        else solver.NumVar(-inf, inf, str(key))
+        for key in variable_keys
+    }
     
     """
     old constraint method: enforce that the correct answer be the global min of the input level
-
     for inspin, outspin in product(circuit.inspace, circuit.outspace):
         if circuit.fout(inspin) == outspin:
             continue
 
-        constraint = solver.Constraint(1e-5, inf)
+        constraint = solver.Constraint(1, inf)
         correct_array = binary_spin(circuit.inout(inspin))
         wrong_array = binary_spin(Spin.catspin(spins = (inspin, outspin)))
         
         for key, var in params.items():
             constraint.SetCoefficient(var, prod_term(wrong_array, key) - prod_term(correct_array, key))
+    
     """
-
     # New constraint method: add a new constraint for each edge of the hypercube representing the possible output spins, thus enforcing convexity on the Hamiltonian restricted to this input level.
     for inspin in circuit.inspace:
         correct_out = circuit.fout(inspin)
@@ -74,7 +83,7 @@ def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
             # for each output state, we want to enforce that the hamiltonian be less than the other output states which are one further away from the correct output in Hamming distance. Thus we iterate through the bits of the output sate, and for each one that is equal to the correct output, we flip it and add a constraint. This is because only flipping a bit that is equal to the correct output will move us one further array in Hamming distance.
             for i, s in enumerate(out_array):
                 if s == correct_out_array[i]:
-                    constraint = solver.Constraint(1e-5, inf)
+                    constraint = solver.Constraint(1, inf)
 
                     current_binary = binary_spin(Spin.catspin(spins = (inspin, outspin)))
                     other_spin_array = out_array.copy()
@@ -83,16 +92,32 @@ def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
                     other_binary = binary_spin(Spin.catspin(spins = (inspin, other_spin)))
                     for key, var in params.items():
                         constraint.SetCoefficient(var, prod_term(other_binary, key) - prod_term(current_binary, key))
-
     
-    """
-    objective = solver.Objective()
-    for key, var in params.items():
-        if len(key) > 2:
-            objective.SetCoefficient(var, -1)
+    # Now that the hypercube constraints on x have been loaded, we need to create the new variables y and the constraints to force y to represent |x|.
+    
+    y_params = {key: solver.NumVar(-inf, inf, 'y_' + str(key))
+            for key in variable_keys}
 
-    objective.SetMaximization()
-    """
+    for key in variable_keys:
+        constraint1 = solver.Constraint(-inf, 0)
+        constraint2 = solver.Constraint(0, inf)
+
+        x_var = params[key]
+        y_var = y_params[key]
+        constraint1.SetCoefficient(x_var, 1)
+        constraint1.SetCoefficient(y_var, -1)
+        constraint2.SetCoefficient(x_var, 1)
+        constraint2.SetCoefficient(y_var, 1)
+
+    # the objective is then set to simply be the 1 vector on the y variables. But we only care about sparsity on the higher-order terms, quadratics can be whatever.
+    
+    objective = solver.Objective()
+    for key, var in y_params.items():
+        if len(key) > 2:
+            objective.SetCoefficient(var, 1)
+
+    objective.SetMinimization()
+    
 
     status = solver.Solve()
     return solver, status, params

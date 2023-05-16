@@ -4,7 +4,7 @@ from cvxpylayers.torch import CvxpyLayer
 
 from ising import IMul
 from spinspace import Spin
-from oneshot import MLPoly
+from oneshot import MLPoly, reduce_poly
 from itertools import chain, combinations
 
 DEGREE = 3
@@ -64,7 +64,7 @@ constraint_sets = [
 ]
 constraint_sets = list(filter(lambda x: x is not None, constraint_sets))
 constraint_matrix = torch.cat(constraint_sets)
-print(constraint_matrix)
+print(f'sparsity = {torch.sum(constraint_matrix == 0)/torch.numel(constraint_matrix)}')
 
 h = cp.Variable(constraint_matrix.shape[1])
 M = cp.Parameter(constraint_matrix.shape)
@@ -80,6 +80,5 @@ print(solution)
 
 poly = make_poly(circuit.G, solution.cpu())
 print(poly)
-from oneshot import FGBZ_FD
 
-print(FGBZ_FD(poly))
+print(reduce_poly(poly, ['rosenberg']))

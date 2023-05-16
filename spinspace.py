@@ -48,7 +48,8 @@ def int2bin(val: int, dim: int) -> np.ndarray:
         a 1-d array consisting of 0 and 1 representing a spin
     """
 
-    return np.array(list(np.binary_repr(val).zfill(dim)))
+    b = np.array(list(np.binary_repr(val).zfill(dim)))
+    return np.array([int(x) for x in b])  # convert to spin representation
 
 
 def spin2int(spin: np.ndarray):
