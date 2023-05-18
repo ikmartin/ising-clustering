@@ -1,7 +1,8 @@
-from polyfit import search_polynomial
+from polyfit import search_polynomial, gen_var_keys
 from spinspace import Spin, Spinspace
 from ising import IMul, PICircuit
-from oneshot import reduce_poly
+from oneshot import reduce_poly, MLPoly
+from l0_cpu import l0_fit
 
 class IMulBit(PICircuit):
     def __init__(self, N1, N2, bit):
@@ -18,18 +19,30 @@ class IMulBit(PICircuit):
         result_int = 0 if result_spin == -1 else 1
         return Spin(spin = result_int, shape = (self.M,))
 
-n1 = 4
-n2 = 4
+n1 = 3
+n2 = 3
 for i in range(0,n1+n2):    
-    circuit = IMulBit(n1,n2,i)
-    aux_nums = []
-    for j in range(100):
-        poly = search_polynomial(circuit)
-        # print(f'output {i}: {poly}')
-        if poly is not None:
-            aux_nums.append(poly.num_variables() - n1 - n2 - 1)
-
-    print(f'bit {i} min {min(aux_nums)}')
+    #circuit = IMulBit(n1,n2,i)
+    circuit = IMul(3,3)
+    poly = search_polynomial(circuit)
+    num_aux_l1 = poly.num_variables() - n1 - n2 - 1
+    for degree in range(2, circuit.G): 
+        coeffs_l0 = l0_fit(circuit, degree)
+        if coeffs_l0 is None:
+            continue
+        keys = gen_var_keys(degree, circuit)
+        coeff_dict = {
+            key: val
+            for key, val in zip(keys, coeffs_l0)
+        }
+        poly2 = MLPoly(coeff_dict)
+        poly2.clean(threshold = 0.01)
+        poly2 = reduce_poly(poly2, ['rosenberg'])
+        num_aux_l0 = poly2.num_variables() - n1 - n2 - 1
+        print(poly)
+        print(poly2)
+        print(f'l1: {num_aux_l1} l0: {num_aux_l0}')
+        break
 
 circuit = IMul(n1, n2)
 poly = search_polynomial(circuit)

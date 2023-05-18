@@ -34,6 +34,15 @@ def binary_spin(spin: Spin):
 def prod_term(array: np.ndarray, key: tuple):
     return prod([array[i] for i in key])
     
+def gen_var_keys(degree, circuit):
+    dimension = circuit.G
+    input_length = circuit.N
+    variable_keys = chain.from_iterable([combinations(range(dimension), i) for i in range(1, degree+1)])
+    variable_keys = [key for key in variable_keys
+                     if max(key) >= input_length]
+    return variable_keys
+    
+
 def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
     """
     Builds a linear programming solver for fitting a multilinear polynomial of a given degree to the constraint system of the input/output pairs of the given circuit. The objective is l1 minimization since it gives a good approximation of l0 optimization, or at least as good as can be done with linear programming.
@@ -48,13 +57,10 @@ def build_polynomial_fitter(circuit: PICircuit, degree: int) -> Solver:
 
     num_variables = circuit.N + circuit.M
 
-    variable_keys = chain.from_iterable([combinations(range(num_variables), i) for i in range(1, degree+1)])
-    variable_keys = [key for key in variable_keys
-                     if max(key) >= circuit.N]
+    variable_keys = gen_var_keys(degree, circuit)
+
     params = {key: 
-        solver.NumVar(0, 0, str(key))
-        if np.random.randint(5) == 0 and len(key) > 2
-        else solver.NumVar(-inf, inf, str(key))
+        solver.NumVar(-inf, inf, str(key))
         for key in variable_keys
     }
     
