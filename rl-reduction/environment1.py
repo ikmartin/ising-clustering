@@ -78,24 +78,19 @@ class MLPolyEnv:
         # set the number of total variables and the number of allowed auxiliaries
         self.maxvar = maxvar
         self.maxaux = math.ceil(0.5 * maxvar) if maxaux == -1 else maxaux
+
         assert self.maxaux < self.maxvar
 
         self.maxdeg = maxdeg
         self._isset = False
 
+        self.total_monomials = sum(
+            math.comb(self.maxvar, k) for k in range(self.maxdeg + 1)
+        )
+
     ################################
-    ### PROPERTIES
+    ### GENERATORS
     ################################
-    @property
-    def total_monomials(self):
-        """The total number of distinct multilinear monomials possible in this MLPolyEnv"""
-        try:
-            return self._total_monomials
-        except NameError:
-            self._total_monomials = sum(
-                math.comb(self.maxvar, k) for k in range(self.maxdeg + 1)
-            )
-            return self._total_monomials
 
     def allowed_terms(self):
         for k in range(self.maxdeg + 1):
@@ -158,6 +153,7 @@ class MLPolyEnv:
         self.maxcoeff = maxcoeff
         self.sparsity = sparsity
         self.intcoeff = intcoeff
+
         self.isset = True
 
     def reset(self):
@@ -178,22 +174,26 @@ class MLPolyEnv:
         self.score = 0
         self.current_aux = 0
         self._original_numvar = self.poly.num_nonzero_variables()
+        self.done = self.check_done()
+
+    def check_done(self):
+        return self.TERMINAL_DEGREE == self.poly.degree()
 
     ################################
     ### ACTION AND SCORING METHODS
     ################################
     def reduce(self, method: ReductAlgo, C):
         newpoly = method(self.poly, C)
-        return self.update_score(newpoly)
+        return self.update(newpoly)
 
-    def update_score(self, newpoly: MLPoly):
-        """Calculates the current score of the game.
+    def update(self, newpoly: MLPoly):
+        """Updates the environment with 'done' status, calculates current score, etc.
 
         IN THE FUTURE: Should account for more factors, for instance, the appearance of submodular terms should be penalized, possibly with a weight dependant on their coefficients. This penalty should be calculated relative to the starting submodularity of the polynomial so that bad starting polynomials don't receive artificially bad reduction scores.
 
         """
         # done if the reduction achieved the desired degree
-        done = self.TERMINAL_DEGREE == newpoly.degree()
+        self.done = self.TERMINAL_DEGREE == newpoly.degree()
 
         # no change
         if self.poly == newpoly:
@@ -209,7 +209,7 @@ class MLPolyEnv:
             done = True
             self.score += 1000
 
-        return done, self.score
+        return self.done, self.score
 
     #############################
     ### STATIC METHODS
@@ -270,7 +270,7 @@ class MLPolyEnv:
 
         return MLPoly(coeffs)
 
-    def tensor(self):
+    def state(self):
         """Returns the polynomial of this MLPolyEnv as a tensor"""
         degtensor = torch.nn.functional.one_hot(
             torch.tensor([self.poly.degree()]), num_classes=self.maxdeg + 1

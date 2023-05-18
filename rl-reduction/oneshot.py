@@ -68,6 +68,11 @@ class MLPoly:
         return self.__str__()
 
     def __eq__(self, other):
+        # allows comparisons to None for instance
+        if isinstance(other, MLPoly) == False:
+            return False
+
+        # cheap check
         if self.degree != other.degree:
             return False
 
