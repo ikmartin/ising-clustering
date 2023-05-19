@@ -34,7 +34,7 @@ def binary_spin(spin: Spin):
 def prod_term(array: np.ndarray, key: tuple):
     return prod([array[i] for i in key])
     
-def gen_var_keys(degree, circuit):
+def gen_var_keys(circuit, degree):
     dimension = circuit.G
     input_length = circuit.N
     variable_keys = chain.from_iterable([combinations(range(dimension), i) for i in range(1, degree+1)])

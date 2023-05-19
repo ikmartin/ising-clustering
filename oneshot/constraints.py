@@ -3,6 +3,7 @@ from ising import PICircuit
 from spinspace import Spin
 from oneshot import MLPoly, reduce_poly
 from itertools import chain, combinations
+from polyfit import gen_var_keys
 
 def tensor_power(tensor: torch.Tensor, power: int) -> torch.Tensor:
     """
@@ -51,6 +52,9 @@ def make_poly(dim: int, degree: int, coeffs: torch.Tensor) -> MLPoly:
         if val
     }
     return MLPoly(coeff_dict)
+
+def get_constraints(circuit, degree):
+    return get_constraint_matrix(circuit, degree), gen_var_keys(circuit, degree)
 
 def get_constraint_matrix(circuit: PICircuit, degree: int) -> torch.Tensor:
     constraint_sets = [

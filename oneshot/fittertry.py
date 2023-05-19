@@ -2,7 +2,6 @@ from polyfit import search_polynomial, gen_var_keys
 from spinspace import Spin, Spinspace
 from ising import IMul, PICircuit
 from oneshot import reduce_poly, MLPoly
-from l0_cpu import l0_fit
 
 class IMulBit(PICircuit):
     def __init__(self, N1, N2, bit):
@@ -19,6 +18,7 @@ class IMulBit(PICircuit):
         result_int = 0 if result_spin == -1 else 1
         return Spin(spin = result_int, shape = (self.M,))
 
+"""
 n1 = 3
 n2 = 3
 for i in range(0,n1+n2):    
@@ -47,3 +47,4 @@ for i in range(0,n1+n2):
 circuit = IMul(n1, n2)
 poly = search_polynomial(circuit)
 print(f'full num aux {poly.num_variables() - n1 - n2 - n1 - n2}')
+"""
