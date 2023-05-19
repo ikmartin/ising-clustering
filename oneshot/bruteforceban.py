@@ -89,12 +89,16 @@ def search(circuit, degree, num_workers):
 
 # 3x3 bitwise best
 # 0 + 4 + 5 + 6 + 2 + 0
+# +fgbz/fd
+# 0 + 10 + 19 + 24 + 5 + 0
 
 # 2x3 bitwise best
 # 0 + 1 + 2 + 2 + 0
+# fgbz/fd
+# 0 + 3 + 6 + 5 + 0
 
 # 4x4 bitwise best
-# 1 + 11 + 16
+# 1 + 11 + [16] + [23] + [23] + 6 + 2 + 0
 
 
 class SolverProcess(Process):
@@ -104,7 +108,6 @@ class SolverProcess(Process):
         self.degree = degree
         self.M, self.keys = constraints if constraints is not None else get_constraints(circuit, degree)
         self.min_ban_number = circuit.G + comb(circuit.G, 2)
-
 
         self.name = name if name is not None else 'solver'
 
