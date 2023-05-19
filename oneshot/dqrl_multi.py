@@ -19,6 +19,7 @@ from constraints import get_constraint_matrix, make_poly
 from oneshot import reduce_poly, MLPoly
 from polyfit import gen_var_keys
 from ising import IMul
+from fittertry import IMulBit
 
 FAILURE_SCORE = -1
 
@@ -186,13 +187,12 @@ class DQAgent():
             bans[game_over] = initial_bans[game_over]
             
             if self.epsilon > 0.01:
-                self.epsilon *= 0.95
+                self.epsilon -= 1e-4
 
     def run_emulators(self, bans):
         futures = []
-        with ProcessPoolExecutor(max_workers = self.NUM_PLAYERS) as executor:
-            for i, emulator in enumerate(self.emulators):
-                futures.append((executor.submit(emulator.run, bans[i]), i))
+        for i, emulator in enumerate(self.emulators):
+            futures.append((self.executor.submit(emulator.run, bans[i]), i))
 
         new_coeffs = []
         new_scores = []
@@ -251,9 +251,10 @@ class DQAgent():
 
         print('Running setup...')
         futures = []
-        with ProcessPoolExecutor(max_workers = self.NUM_PLAYERS) as executor:
-            for emulator in self.emulators:
-                futures.append(executor.submit(emulator.setup))
+        self.executor = ProcessPoolExecutor(max_workers = self.NUM_PLAYERS)
+
+        for emulator in self.emulators:
+            futures.append(self.executor.submit(emulator.setup))
 
         for future in futures:
             future.result()
@@ -272,7 +273,7 @@ class BanGameEmulator():
         self.M = get_constraint_matrix(self.circuit, self.degree).int() if self.M is None else self.M
         self.num_terms = self.M.shape[1]
         self.threshold = 0.01
-        self.keys = gen_var_keys(self.degree, self.circuit) if self.keys is None else self.keys
+        self.keys = gen_var_keys(self.circuit, self.degree) if self.keys is None else self.keys
         self.solver = self.build_solver()
 
     def clear(self):
@@ -354,17 +355,17 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     num_threads = len(os.sched_getaffinity(0))
     print(f'Running on {device} with {num_threads} threads.')
-    circuit = IMul(3,3)
+    circuit = IMulBit(3,3,2)
     degree = 4
 
     agent = DQAgent(
         device = device,
         circuit = circuit,
         degree = degree,
-        epsilon = 0.9,
+        epsilon = 0.2,
         MAX_MEMORY_SIZE = 2048,
         BATCH_SIZE = 256,
-        NUM_PLAYERS = 8
+        NUM_PLAYERS = num_threads
     )
 
     agent.run()

@@ -15,30 +15,20 @@ from fittertry import IMulBit
 
 
 def request_task(admin):
-    admin['queue_lock'].acquire()
-    if len(admin['queue']):
-        admin['working_lock'].acquire()
-        task = admin['queue'].pop(0)
-        admin['working'].append(task)
-        admin['working_lock'].release()
-        admin['queue_lock'].release()
+    if not admin['queue'].empty():
+        task = admin['queue'].get()
+        #with admin['cache_lock']:
+        admin['cache'][task] = False
         return task
-    admin['queue_lock'].release()
         
     return None
     
 def submit(admin, task, coeffs, score):
-    admin['working_lock'].acquire()
-    admin['cache_lock'].acquire()
-    admin['done_lock'].acquire()
 
-    admin['working'].remove(task)
+    #with admin['cache_lock']:
     admin['cache'][task] = True
-    admin['done'].append((task, coeffs))
 
-    admin['done_lock'].release()
-    admin['cache_lock'].release()
-    admin['working_lock'].release()
+    admin['done'].put((task, coeffs))
 
     if score is not None:
         with admin['score_lock']:
@@ -49,17 +39,12 @@ def submit(admin, task, coeffs, score):
                     admin['score']['score'] = score
                     admin['score']['task'] = task
 
-def add_new_tasks(admin, new_tasks):
-    new_tasks = [
-        task
-        for task in new_tasks
-        if task not in admin['cache'] 
-        and task not in admin['working']
-        and task not in admin['queue']
-    ]
+            admin['score']['total'] += 1
 
-    with admin['queue_lock']:
-        admin['queue'].extend(new_tasks)
+def add_new_tasks(admin, new_tasks):
+    for task in new_tasks:
+        if task not in admin['cache']:
+            admin['queue'].put(task)
 
 def make_new_tasks(task, coeffs, min_ban_number):
     return [
@@ -72,22 +57,28 @@ def make_new_tasks(task, coeffs, min_ban_number):
 def search(circuit, degree, num_workers):
     print('[Master] Getting constraints...')
     M, keys = get_constraints(circuit, degree)
+
+    min_ban_length = 3
+    min_ban_idx = len([
+        key for key in keys
+        if len(key) < min_ban_length
+    ])
+    print(keys)
+    print(min_ban_idx)
     
     print('[Master] Creating global manager.')
     manager = Manager()
     admin = {
-        'queue_lock': manager.Lock(),
-        'working_lock': manager.Lock(),
-        'done_lock': manager.Lock(),
         'cache_lock': manager.Lock(),
         'score_lock': manager.Lock(),
-        'queue': manager.list(),
-        'working': manager.list(),
+        'queue': manager.Queue(),
         'cache': manager.dict(),
         'score': manager.dict(),
-        'done': manager.list()
+        'done': manager.Queue()
     }
     admin['score']['score'] = None
+    admin['score']['task'] = None
+    admin['score']['total'] = 0
 
     print('[Master] Creating solvers...')
     workers = [
@@ -102,7 +93,7 @@ def search(circuit, degree, num_workers):
     ]
 
     print('[Master] Creating delegator...')
-    delegator = Delegator(admin, circuit)
+    delegator = Delegator(admin, circuit, min_ban_idx)
 
     print('[Master] Initialized.')
 
@@ -112,18 +103,18 @@ def search(circuit, degree, num_workers):
         worker.start()
 
     print('[Master] Setting initial task.')
-    with admin['queue_lock']:
-        admin['queue'].append(frozenset())
+    admin['queue'].put(frozenset())
 
     print('[Master] Letting solvers work.')
     while True:
-        queue_length = len(admin['queue'])
-        in_progress_length = len(admin['working'])
+        queue_length = admin['queue'].qsize()
         
         best_score = admin['score']['score']
+        best_task = admin['score']['task']
+        num_done = admin['score']['total']
     
-        print(f'[Master] {queue_length} tasks in queue and {in_progress_length} tasks in progress.')
-        print(f'[Master] Best so far is {best_score}')
+        print(f'[Master] {queue_length} tasks in queue.')
+        print(f'[Master] {num_done} complete. Best so far is {best_task}: {best_score}')
         time.sleep(0.1)
 
 
@@ -141,21 +132,22 @@ def search(circuit, degree, num_workers):
 # 1 + 11 + [16] + [23] + [23] + 6 + 2 + 0
 
 class Delegator(Process):
-    def __init__(self, admin, circuit):
+    def __init__(self, admin, circuit, min_ban_idx):
         self.admin = admin
         self.circuit = circuit
+        self.min_ban_idx = min_ban_idx
         super().__init__()
 
     def run(self):
         while(True):
-            need = self.admin['queue'].qsize() < 100 and self.admin['done'].qsize())
+            need = self.admin['queue'].qsize() < 100 and not self.admin['done'].empty()
 
             if not need:
                 continue
             
             task, coeffs = self.admin['done'].get()
 
-            new_tasks = make_new_tasks(task, coeffs, self.circuit.G)
+            new_tasks = make_new_tasks(task, coeffs, self.min_ban_idx)
             add_new_tasks(self.admin, new_tasks)
 
 class SolverProcess(Process):
@@ -185,7 +177,7 @@ class SolverProcess(Process):
 
             coeffs, score = self.solve(task)
             coeffs = frozenset(torch.nonzero(coeffs, as_tuple=True)[0].tolist()) if coeffs is not None else None
-            print(f'[{self.name}] Task {task}: {score}')
+            #print(f'[{self.name}] Task {task}: {score}')
             submit(self.admin, task, coeffs, score)
 
 
