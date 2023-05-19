@@ -15,25 +15,58 @@ from fittertry import IMulBit
 
 
 def request_task(admin):
-    with admin['lock']:
-        if len(admin['queue']):
-            task = admin['queue'].pop(0)
-            admin['working'].append(task)
-            return task
+    admin['queue_lock'].acquire()
+    if len(admin['queue']):
+        admin['working_lock'].acquire()
+        task = admin['queue'].pop(0)
+        admin['working'].append(task)
+        admin['working_lock'].release()
+        admin['queue_lock'].release()
+        return task
+    admin['queue_lock'].release()
         
-        return None
+    return None
     
-def submit(admin, task, coeffs, score, new_tasks):
-    with admin['lock']:
-        admin['working'].remove(task)
-        admin['cache'][task] = (coeffs, score)
+def submit(admin, task, coeffs, score):
+    admin['working_lock'].acquire()
+    admin['cache_lock'].acquire()
+    admin['done_lock'].acquire()
 
-        for new_task in new_tasks:
-            if new_task in admin['cache'] or new_task in admin['working'] or new_task in admin['queue']:
-                continue
+    admin['working'].remove(task)
+    admin['cache'][task] = True
+    admin['done'].append((task, coeffs))
 
-            admin['queue'].append(new_task)
+    admin['done_lock'].release()
+    admin['cache_lock'].release()
+    admin['working_lock'].release()
 
+    if score is not None:
+        with admin['score_lock']:
+            if admin['score']['score'] is None:
+                admin['score']['score'] = score
+            else:
+                if admin['score']['score'] > score:
+                    admin['score']['score'] = score
+                    admin['score']['task'] = task
+
+def add_new_tasks(admin, new_tasks):
+    new_tasks = [
+        task
+        for task in new_tasks
+        if task not in admin['cache'] 
+        and task not in admin['working']
+        and task not in admin['queue']
+    ]
+
+    with admin['queue_lock']:
+        admin['queue'].extend(new_tasks)
+
+def make_new_tasks(task, coeffs, min_ban_number):
+    return [
+        task | frozenset({i})
+        for i in coeffs
+        if i >= min_ban_number
+    ] if coeffs is not None else []
 
 
 def search(circuit, degree, num_workers):
@@ -43,11 +76,18 @@ def search(circuit, degree, num_workers):
     print('[Master] Creating global manager.')
     manager = Manager()
     admin = {
-        'lock': manager.Lock(),
+        'queue_lock': manager.Lock(),
+        'working_lock': manager.Lock(),
+        'done_lock': manager.Lock(),
+        'cache_lock': manager.Lock(),
+        'score_lock': manager.Lock(),
         'queue': manager.list(),
         'working': manager.list(),
-        'cache': manager.dict()
+        'cache': manager.dict(),
+        'score': manager.dict(),
+        'done': manager.list()
     }
+    admin['score']['score'] = None
 
     print('[Master] Creating solvers...')
     workers = [
@@ -60,31 +100,31 @@ def search(circuit, degree, num_workers):
         ) 
         for i in range(num_workers)
     ]
+
+    print('[Master] Creating delegator...')
+    delegator = Delegator(admin, circuit)
+
     print('[Master] Initialized.')
 
     print('[Master] Starting processes.')
+    delegator.start()
     for worker in workers:
         worker.start()
 
     print('[Master] Setting initial task.')
-    with admin['lock']:
+    with admin['queue_lock']:
         admin['queue'].append(frozenset())
 
     print('[Master] Letting solvers work.')
     while True:
-        with admin['lock']:
-            queue_length = len(admin['queue'])
-            in_progress_length = len(admin['working'])
-            values = [val[1] for key, val in admin['cache'].items() if val[1] is not None]
-            if len(values):
-                best = min(values)
-            else:
-                best = -1
-
+        queue_length = len(admin['queue'])
+        in_progress_length = len(admin['working'])
+        
+        best_score = admin['score']['score']
     
         print(f'[Master] {queue_length} tasks in queue and {in_progress_length} tasks in progress.')
-        print(f'[Master] Best so far is {best}')
-        time.sleep(2)
+        print(f'[Master] Best so far is {best_score}')
+        time.sleep(0.1)
 
 
 # 3x3 bitwise best
@@ -100,6 +140,23 @@ def search(circuit, degree, num_workers):
 # 4x4 bitwise best
 # 1 + 11 + [16] + [23] + [23] + 6 + 2 + 0
 
+class Delegator(Process):
+    def __init__(self, admin, circuit):
+        self.admin = admin
+        self.circuit = circuit
+        super().__init__()
+
+    def run(self):
+        while(True):
+            need = self.admin['queue'].qsize() < 100 and self.admin['done'].qsize())
+
+            if not need:
+                continue
+            
+            task, coeffs = self.admin['done'].get()
+
+            new_tasks = make_new_tasks(task, coeffs, self.circuit.G)
+            add_new_tasks(self.admin, new_tasks)
 
 class SolverProcess(Process):
     def __init__(self, admin, circuit, degree, constraints = None, name = None):
@@ -107,7 +164,6 @@ class SolverProcess(Process):
         self.circuit = circuit
         self.degree = degree
         self.M, self.keys = constraints if constraints is not None else get_constraints(circuit, degree)
-        self.min_ban_number = circuit.G + comb(circuit.G, 2)
 
         self.name = name if name is not None else 'solver'
 
@@ -128,16 +184,10 @@ class SolverProcess(Process):
                 continue
 
             coeffs, score = self.solve(task)
+            coeffs = frozenset(torch.nonzero(coeffs, as_tuple=True)[0].tolist()) if coeffs is not None else None
             print(f'[{self.name}] Task {task}: {score}')
-            new_tasks = self._make_new_tasks(task, coeffs)
-            submit(self.admin, task, coeffs, score, new_tasks)
+            submit(self.admin, task, coeffs, score)
 
-    def _make_new_tasks(self, task, coeffs):
-        return [
-            task | frozenset([i.item()])
-            for i in torch.nonzero(coeffs, as_tuple = True)[0]
-            if i.item() >= self.min_ban_number
-        ] if coeffs is not None else []
 
     def _clear(self):
         for ban_constraint in self.ban_constraints:
@@ -220,7 +270,7 @@ def main(n1, n2, degree, bit):
     else:
         circuit = IMulBit(n1,n2,int(bit))
 
-    num_workers = os.cpu_count()
+    num_workers = len(os.sched_getaffinity(0))
 
     search(circuit, degree, num_workers)
 
