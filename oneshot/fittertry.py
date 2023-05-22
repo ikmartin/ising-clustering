@@ -1,7 +1,9 @@
 from polyfit import search_polynomial, gen_var_keys
 from spinspace import Spin, Spinspace
 from ising import IMul, PICircuit
-from oneshot import reduce_poly, MLPoly
+from oneshot import reduce_poly, MLPoly, single_positive_FGBZ, single_negative_FGBZ, single_rosenberg
+from more_itertools import powerset
+import numpy as np
 
 class IMulBit(PICircuit):
     def __init__(self, N1, N2, bit):
@@ -18,33 +20,57 @@ class IMulBit(PICircuit):
         result_int = 0 if result_spin == -1 else 1
         return Spin(spin = result_int, shape = (self.M,))
 
-"""
+def find_patterns(circuit):
+    states = []
+    for spin in circuit.inspace:
+        states.append(circuit.inout(spin).binary().tolist())
+    states = states.T
+    print(states)
+    N = states.shape[0] - 1
+    for combo in powerset(range(N)):
+        if len(combo) <= 1:
+            continue
+        combo = combo + (N,)
+        products = np.prod(states[np.array(combo)], axis=0)
+        if np.all(products == 0):
+            print(f'deduc {combo} = 0')
+        if np.all(products == 1):
+            print(f'deduc {combo} = 1')
+        
+
+
+
+
+
 n1 = 3
 n2 = 3
-for i in range(0,n1+n2):    
+for i in range(0,1):    
     #circuit = IMulBit(n1,n2,i)
-    circuit = IMul(3,3)
-    poly = search_polynomial(circuit)
-    num_aux_l1 = poly.num_variables() - n1 - n2 - 1
-    for degree in range(2, circuit.G): 
-        coeffs_l0 = l0_fit(circuit, degree)
-        if coeffs_l0 is None:
-            continue
-        keys = gen_var_keys(degree, circuit)
-        coeff_dict = {
-            key: val
-            for key, val in zip(keys, coeffs_l0)
-        }
-        poly2 = MLPoly(coeff_dict)
-        poly2.clean(threshold = 0.01)
-        poly2 = reduce_poly(poly2, ['rosenberg'])
-        num_aux_l0 = poly2.num_variables() - n1 - n2 - 1
+    circuit = IMul(n1,n2)
+    print(f'IMul{n1}x{n2}')
+    poly = search_polynomial(circuit, weak = True)
+    regular_reduction = reduce_poly(poly, ['rosenberg'])
+    print('Original Polynomial')
+    print(poly)
+    print('')
+    print('Full Rosenberg')
+    print(regular_reduction)
+    print('')
+    print('Trying iterative reduction')
+    aux_array = []
+    while True:
+        poly, aux_map = single_rosenberg(poly)
+        if aux_map is None:
+            break
         print(poly)
-        print(poly2)
-        print(f'l1: {num_aux_l1} l0: {num_aux_l0}')
-        break
+        print("")
+        aux_array.append([
+            aux_map(tuple(circuit.inout(inspin).binary())) for inspin in circuit.inspace
+        ])
+        circuit.set_all_aux(aux_array)
+        poly = search_polynomial(circuit, weak = True)
+        print(poly)
+        print("")
+    
 
-circuit = IMul(n1, n2)
-poly = search_polynomial(circuit)
-print(f'full num aux {poly.num_variables() - n1 - n2 - n1 - n2}')
-"""
+

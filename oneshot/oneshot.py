@@ -113,6 +113,27 @@ def get_common_key(poly: MLPoly, criterion: Callable):
 
     return max(options, key=lambda pair: len(pair[1]) * len(pair[0]))
 
+positive_FGBZ_criterion = lambda factor, key, value: (
+    set(factor).issubset(key)
+    and len(factor) < len(key) - 1
+    and len(key) > 2
+    and len(factor) >= 1
+    and value > 0
+)
+
+
+negative_FGBZ_criterion = lambda factor, key, value: (
+    set(factor).issubset(key)
+    and len(factor) < len(key) - 1
+    and len(key) > 3
+    and len(factor) >= 2
+    and value < 0
+)
+
+rosenberg_criterion = lambda factor, key, value: (
+    set(factor).issubset(key) and len(factor) == 2 and len(key) > 2
+)
+
 
 def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     """
@@ -226,54 +247,68 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
 
 
 def full_Rosenberg(poly: MLPoly) -> MLPoly:
-    rosenberg_criterion = lambda factor, key, value: (
-        set(factor).issubset(key) and len(factor) == 2 and len(key) > 2
-    )
-
     while poly.degree() > 2:
-        C, H = get_common_key(poly, rosenberg_criterion)
-        M = sum([max(0, poly.get_coeff(key)) for key in H])
-        if not len(H):
-            break
-
-        poly = Rosenberg(poly, C, H, M)
+        poly, aux_map = single_rosenberg(poly)
 
     return poly
+
+def single_rosenberg(poly: MLPoly) -> MLPoly:
+    C, H = get_common_key(poly, rosenberg_criterion)
+    M = sum([max(0, poly.get_coeff(key)) for key in H])
+    if not len(H):
+        return poly, None
+
+    poly = Rosenberg(poly, C, H, M)
+    aux_map = MLPoly({
+        C: 1
+    })
+
+    return poly, aux_map
+
+
+def single_positive_FGBZ(poly: MLPoly) -> MLPoly:
+    C, H = get_common_key(poly, positive_FGBZ_criterion)
+    if not len(H):
+        return poly, None
+
+    poly = PositiveFGBZ(poly, C, H)
+    aux_map = MLPoly({
+        () : 1,
+        C : -1
+    })
+
+    return poly, aux_map
+
+
+def single_negative_FGBZ(poly: MLPoly) -> MLPoly:
+    C, H = get_common_key(poly, negative_FGBZ_criterion)
+    if not len(H):
+        return poly, None
+
+    poly = NegativeFGBZ(poly, C, H)
+    aux_map = MLPoly({
+        C: 1
+    })
+
+    return poly, aux_map
+
+
 
 def full_positive_FGBZ(poly: MLPoly) -> MLPoly:
-    positive_FGBZ_criterion = lambda factor, key, value: (
-        set(factor).issubset(key)
-        and len(factor) < len(key) - 1
-        and len(key) > 2
-        and len(factor) >= 1
-        and value > 0
-    )
-    
     while True:
-        C, H = get_common_key(poly, positive_FGBZ_criterion)
-        if not len(H):
+        poly, aux_map = single_positive_FGBZ(poly)
+        if aux_map is None:
             break
-
-        poly = PositiveFGBZ(poly, C, H)
 
     return poly
 
-def full_negative_FGBZ(poly: MLPoly) -> MLPoly:
-    negative_FGBZ_criterion = lambda factor, key, value: (
-        set(factor).issubset(key)
-        and len(factor) < len(key) - 1
-        and len(key) > 3
-        and len(factor) >= 2
-        and value < 0
-    )
 
+def full_negative_FGBZ(poly: MLPoly) -> MLPoly:
     while True:
-        C, H = get_common_key(poly, negative_FGBZ_criterion)
-        if not len(H):
+        poly, aux_map = single_negative_FGBZ(poly)
+        if aux_map is None:
             break
 
-        poly = NegativeFGBZ(poly, C, H)
-    
     return poly
 
 def get_method(method):

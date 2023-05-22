@@ -14,13 +14,12 @@ def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
     """
 
     # Number of variables in the domain space
-    num_variables = circuit.G
+    num_variables = circuit.N + circuit.M
 
     for degree in range(2, num_variables):
         solver, status, params = build_polynomial_fitter(circuit, degree, weak)
         #print(f'degree={degree} status={status}')
         if status == 2:
-            print(f'{degree} failed')
             continue 
 
         coeffs = {key: var.solution_value() for key, var in params.items()}
@@ -28,6 +27,9 @@ def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
         poly.clean(threshold = 0.1)
         return poly
 
+def binary_spin(spin: Spin):
+    binstring = np.binary_repr(spin.asint()).zfill(spin.dim())
+    return np.array([int(b) for b in binstring]).astype(float)
     
 def prod_term(array: np.ndarray, key: tuple):
     return prod([array[i] for i in key])
@@ -61,15 +63,40 @@ def build_polynomial_fitter(circuit: PICircuit, degree: int, weak = False) -> So
         for key in variable_keys
     }
     
-    #old constraint method: enforce that the correct answer be the global min of the input level
+    """
+    old constraint method: enforce that the correct answer be the global min of the input level
+    for inspin, outspin in product(circuit.inspace, circuit.outspace):
+        if circuit.fout(inspin) == outspin:
+            continue
+
+        constraint = solver.Constraint(1, inf)
+        correct_array = binary_spin(circuit.inout(inspin))
+        wrong_array = binary_spin(Spin.catspin(spins = (inspin, outspin)))
+        
+        for key, var in params.items():
+            constraint.SetCoefficient(var, prod_term(wrong_array, key) - prod_term(correct_array, key))
+    
+    """
+    # New constraint method: add a new constraint for each edge of the hypercube representing the possible output spins, thus enforcing convexity on the Hamiltonian restricted to this input level.
     for inspin in circuit.inspace:
-        correct = circuit.inout(inspin).binary()
-        for outaux in circuit.allwrong(inspin):
-            constraint = solver.Constraint(1, inf)
-            wrong = Spin.catspin(spins = (inspin, outaux)).binary() 
-            
-            for key, var in params.items():
-                constraint.SetCoefficient(var, int(prod_term(wrong, key) - prod_term(correct, key)))
+        correct_out = circuit.f(inspin)
+        correct_out_array = correct_out.spin()
+
+        for outspin in circuit.outspace:
+            out_array = outspin.spin()
+
+            # for each output state, we want to enforce that the hamiltonian be less than the other output states which are one further away from the correct output in Hamming distance. Thus we iterate through the bits of the output sate, and for each one that is equal to the correct output, we flip it and add a constraint. This is because only flipping a bit that is equal to the correct output will move us one further array in Hamming distance.
+            for i, s in enumerate(out_array):
+                if s == correct_out_array[i]:
+                    constraint = solver.Constraint(1, inf)
+
+                    current_binary = binary_spin(Spin.catspin(spins = (inspin, outspin)))
+                    other_spin_array = out_array.copy()
+                    other_spin_array[i] *= -1
+                    other_spin = Spin(other_spin_array, shape=outspin.shape)
+                    other_binary = binary_spin(Spin.catspin(spins = (inspin, other_spin)))
+                    for key, var in params.items():
+                        constraint.SetCoefficient(var, prod_term(other_binary, key) - prod_term(current_binary, key))
     
     # Now that the hypercube constraints on x have been loaded, we need to create the new variables y and the constraints to force y to represent |x|.
     
