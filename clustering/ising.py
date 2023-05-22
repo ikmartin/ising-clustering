@@ -228,7 +228,7 @@ class PICircuit:
             diff = inout.vspin().spin() - correct_vspin
             lvec += diff / np.linalg.norm(diff)
 
-        return lvec
+        return lvec / np.linalg.norm(lvec)
 
     @cache
     def poslvec(self, inspin):
