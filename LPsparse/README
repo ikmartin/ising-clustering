@@ -1,0 +1,40 @@
+To compile:
+
+	$ make
+
+To see options:
+
+	$ ./LPsparse
+
+	Usage: ./LPsparse (options) [data_dir]
+	options:
+	-d solve_dual: solve dual to obtain solution of primal problem (default: No)
+	-c use_cg: use projected-conjugate gradient method to obtain faster asymptotic convergence (default: No)
+	-t tol: tolerance of primal and dual infeasibility for terminiation (default: 1e-3)
+	-e eta: Augmented Lagragnain parameter (default: 1.0)
+	-p tol_phase2: tolerance for changing to phase 2 (default: 1e-2)
+	-s tol_sub: tolerance for solving sub-problem in phase-1 (default: 1e-2)
+	-m max_iter: maximum number of outer iterations (default 1000)
+	-n nnz_tol: truncate a value to 0 if less than nnz_tol for the output (default 1e-4)
+
+
+Data format:
+
+	See directory "data/" as an example.
+
+To run example:
+
+Primal AL-CD:
+
+	$ ./LPsparse data/
+
+
+Dual AL-CD:
+
+	$ ./LPsparse -d data/
+
+
+Higher precision via phase-2 Newton-CG:
+
+(primal)	$ ./LPsparse -t 1e-7 -c data/
+(dual)		$ ./LPsparse -d -t 1e-7 -c data/
