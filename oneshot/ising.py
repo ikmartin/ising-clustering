@@ -178,13 +178,13 @@ class PICircuit:
     def fout(self, inspin: Spin) -> Spin:
         pass
 
-    def faux(self, inspin: Spin) -> None | Spin:
+    def faux(self, inspin: Spin):
         if self.Ain(inspin) == 0:
             return None
         else:
             return self._aux_dict[inspin]
 
-    def f(self, inspin: Spin | int) -> Spin:
+    def f(self, inspin: Spin) -> Spin:
         # ensure is of type Spin
         if isinstance(inspin, int):
             inspin = self.inspace.getspin(inspin)

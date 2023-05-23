@@ -46,13 +46,24 @@ class MLPoly:
             ]
         )
 
+    def _format_coeff(self, val):
+        if abs(val - round(val)) < 1e-1:
+            if round(val) == 1:
+                return ''
+
+            return str(round(val))
+
+        
+        return f'{val:.2f}'
+
     def __str__(self):
+        SUB = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
         sorted_items = sorted(self.coeffs.items(), key=lambda pair: len(pair[0]))
         terms = [
             [
                 " + " if value > 0 else " - ",
-                f'{abs(value):.2f}',
-                "".join([f"x_{i}" for i in key]),
+                f'{self._format_coeff(abs(value))}',
+                "".join([f"x{str(i).translate(SUB)}" for i in key]),
             ]
             for key, value in sorted_items
             if value

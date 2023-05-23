@@ -64,43 +64,8 @@ def get_constraint_matrix(circuit: PICircuit, degree: int) -> torch.Tensor:
     constraint_sets = list(filter(lambda x: x is not None, constraint_sets))
     constraint_matrix = torch.cat(constraint_sets)
 
-    return mask_constraints(constraint_matrix, circuit, degree)
-
-def mask_constraints(constraint_matrix, circuit, degree):
     ## At this point, the constraint matrix is the `entire' constraint matrix, and still includes columns corresponding to the terms which are products only of the input spins. These are constant on every input level, and totally irrelevant to the behavior of the Hamiltonian. Therefore, we do not want to waste effort on fitting variables to these. We will determine which columns are useless and remove them from the constraint matrix.
     mask_tensor = torch.cat([torch.ones(circuit.N), torch.zeros(circuit.M)]).byte()
     vspin_mask = (vspin(mask_tensor, degree) - 1).nonzero(as_tuple = True)[0]
     constraint_matrix = torch.index_select(constraint_matrix, dim=1, index=vspin_mask)
     return constraint_matrix
-
-def trad_block(circuit, degree, inspin):
-    correct = torch.tensor(circuit.inout(inspin).binary())
-    return torch.cat([
-        (
-            vspin(
-                torch.tensor(
-                    Spin.catspin((inspin, outaux)).binary()
-                ), 
-                degree
-            ) 
-            - vspin(correct, degree)
-        ).unsqueeze(0).to_sparse()
-        for outaux in circuit.allwrong(inspin)
-    ])
-
-def traditional_constraints(circuit, degree):
-    return torch.cat([
-        trad_block(circuit, degree, inspin)
-        for inspin in circuit.inspace
-    ])
-
-
-
-
-
-
-
-
-
-
-

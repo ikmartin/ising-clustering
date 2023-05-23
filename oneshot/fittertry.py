@@ -42,8 +42,8 @@ def find_patterns(circuit):
 
 
 
-n1 = 3
-n2 = 3
+n1 = 2
+n2 = 2
 for i in range(0,1):    
     #circuit = IMulBit(n1,n2,i)
     circuit = IMul(n1,n2)
