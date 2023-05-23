@@ -1,4 +1,5 @@
 from spinspace import Spin
+from itertools import chain, combinations
 import torch
 
 def dec2bin(x, bits):
@@ -23,6 +24,12 @@ def batch_vspin(input, degree):
         dim = 1
     )
 
+def keys(circuit, degree):
+    return list(chain.from_iterable([
+        combinations(range(circuit.G), i)
+        for i in range(1, degree + 1)
+    ]))
+
 def fast_constraints(circuit, degree):
     all_states = all_answers(circuit)
 
@@ -40,6 +47,18 @@ def fast_constraints(circuit, degree):
     constraints = virtual_all - exp_virtual_right
 
     # Filter out the rows with correct answers
-    mask = constraints[..., circuit.N:(circuit.N + circuit.M)].any(dim=-1)
+    row_mask = constraints[..., circuit.N:(circuit.N + circuit.M)].any(dim=-1)
+    terms = keys(circuit, degree)
 
-    return constraints[mask].to_sparse()
+    # Filter out connections between inputs
+    col_mask = torch.tensor([
+        max(key) >= circuit.N
+        for key in terms
+    ])
+    terms = [
+        term for term in terms if max(term) >= circuit.N
+    ]
+    constraints = constraints[row_mask][..., col_mask]
+
+    constraints = constraints.to_sparse()
+    return constraints, terms
