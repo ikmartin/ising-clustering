@@ -8,13 +8,11 @@ from math import comb
 
 from ortools.linear_solver.pywraplp import Solver
 
-from constraints import get_constraints
+from fast_constraints import fast_constraints
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
 from fittertry import IMulBit
 
-def quadratic_gen(numvar):
-    for 
 
 def request_task(admin):
     if not admin["queue"].empty():
@@ -60,7 +58,7 @@ def make_new_tasks(task, coeffs, min_ban_number):
 
 def search(circuit, degree, num_workers):
     print("[Master] Getting constraints...")
-    M, keys = get_constraints(circuit, degree)
+    M, keys = fast_constraints(circuit, degree)
 
     min_ban_length = 3
     min_ban_idx = len([key for key in keys if len(key) < min_ban_length])
@@ -159,7 +157,7 @@ class SolverProcess(Process):
         self.circuit = circuit
         self.degree = degree
         self.M, self.keys = (
-            constraints if constraints is not None else get_constraints(circuit, degree)
+            constraints if constraints is not None else fast_constraints(circuit, degree)
         )
 
         self.name = name if name is not None else "solver"

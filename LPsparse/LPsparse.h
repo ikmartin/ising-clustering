@@ -572,11 +572,20 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			pinf = primal_inf(n,nf,m,me,x,A,b);
 			dinf = dual_inf(n,nf,m,me,w,At,c,eta_t);
 			gap = duality_gap(n,nf,m,me,x,w,c,b,eta_t);
+				
+			// inserted code: exit the process with failure if the gap explodes to infinity, i.e. if the problem is infeasible.
+			double normalized_gap = fabs(gap/obj);
+			cerr << gap << endl;
+			cerr << obj << endl;
+			cerr << normalized_gap << endl;
+			if( isinf(normalized_gap) && t > 1) {
+				exit(1);
+			}
 
 			minus_time += omp_get_wtime();
 			
 			cerr << setprecision(7) << "iter=" << t << ", #inner=" << niter << ", obj=" << obj ;
-			cerr << setprecision(2)  << ", p_inf=" << pinf << ", d_inf=" << dinf << ", gap=" << fabs(gap/obj) << ", nnz=" << nnz << "(" << ((double)active_nnz/nnz_A) << ")" ;
+			cerr << setprecision(2)  << ", p_inf=" << pinf << ", d_inf=" << dinf << ", gap=" << normalized_gap << ", nnz=" << nnz << "(" << ((double)active_nnz/nnz_A) << ")" ;
 			cerr << setprecision(6) << ", time eplased=" << omp_get_wtime()-start-minus_time<< ", eta=" << eta_t << ", EPS=" << param.tol_sub << endl;
 		}
 		

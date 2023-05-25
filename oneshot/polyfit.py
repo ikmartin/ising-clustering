@@ -4,6 +4,8 @@ from oneshot import MLPoly, reduce_poly
 from itertools import combinations, chain, product
 from math import prod
 from ortools.linear_solver.pywraplp import Solver
+from solver import build_solver
+from fast_constraints import fast_constraints
 import numpy as np
 
 def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
@@ -17,16 +19,47 @@ def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
     num_variables = circuit.G
 
     for degree in range(2, num_variables):
-        solver, status, params = build_polynomial_fitter(circuit, degree, weak)
+        #solver, status, params = build_polynomial_fitter(circuit, degree, weak)
         #print(f'degree={degree} status={status}')
+        #if degree > 2:
+        #    degree = 3
+        M, keys = fast_constraints(circuit, degree)
+        solver, variables = build_solver(M, keys)
+        status = solver.Solve()
         if status == 2:
             print(f'{degree} failed')
             continue 
 
-        coeffs = {key: var.solution_value() for key, var in params.items()}
+        coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
         poly = MLPoly(coeffs = coeffs)
         poly.clean(threshold = 0.1)
         return poly
+
+def tryall(circuit: PICircuit, weak = False) -> MLPoly:
+    """
+    Searches for the lowest degree multilinear polynomial in the original spinspace (inputs/outputs only with no auxilliaries) that satisfies the constraint set. The idea is just to iterate through degrees from 2 upwards, attempting to fit a polynomial of each degree by representing the fitting problem as a linear programming problem in the tensor algebra (the original method of finding h, J that satisfy the constraint set is simply the degree-2 special case). 
+
+    We work without auxilliary spins. The idea is that instead of adding auxilliaries to make the degree 2 fitting problem possible, we will instead find the minimum d such that the degree d fitting problem is possible, then apply quadritization algorithms to add the auxilliaries.
+    """
+
+    # Number of variables in the domain space
+    num_variables = circuit.G
+
+    for degree in range(2, num_variables):
+        #solver, status, params = build_polynomial_fitter(circuit, degree, weak)
+        #print(f'degree={degree} status={status}')
+        M, keys = fast_constraints(circuit, degree)
+        solver, variables = build_solver(M, keys)
+        status = solver.Solve()
+        if status == 2:
+            print(f'{degree} failed')
+            continue 
+
+        coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
+        poly = MLPoly(coeffs = coeffs)
+        poly.clean(threshold = 0.1)
+        print(poly)
+        print("")
 
     
 def prod_term(array: np.ndarray, key: tuple):

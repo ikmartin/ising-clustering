@@ -125,8 +125,8 @@ int main(int argc, char** argv){
 
 	string solname = (data_dir + "/sol").c_str();
 	string dualsolname = (data_dir + "/sol_dual").c_str();
-	cout << solname << endl;
-	cout << dualsolname << endl;
+	//cout << solname << endl;
+	//cout << dualsolname << endl;
 	writeVec((char*) solname.c_str(), x, n+nf, param.nnz_tol);
 	writeVec((char*) dualsolname.c_str(), w, m+me, param.nnz_tol);
 	

@@ -57,6 +57,7 @@ class MLPoly:
         return f'{val:.2f}'
 
     def __str__(self):
+        preface = f'Poly(degree = {self.degree()}, dim = {self.num_variables()}): '
         SUB = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
         sorted_items = sorted(self.coeffs.items(), key=lambda pair: len(pair[0]))
         terms = [
@@ -68,7 +69,7 @@ class MLPoly:
             for key, value in sorted_items
             if value
         ]
-        return "".join(list(chain(*terms))[1:])
+        return preface + "".join(list(chain(*terms))[1:])
 
     def __repr__(self):
         return self.__str__()
@@ -103,7 +104,7 @@ def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value:
 
     term_table = {
         tuple(sorted(factor)): [
-            key
+            (key, value)
             for key, value in poly.coeffs.items()
             if criterion(factor, key, value)  # monomial satisfies filter criterion
         ]
@@ -113,8 +114,9 @@ def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value:
     factor = max(term_table, key=lambda i: len(term_table[i]))
     return factor, term_table[factor]
 
+standard_heuristic = lambda pair: len(pair[1]) * len(pair[0])
 
-def get_common_key(poly: MLPoly, criterion: Callable):
+def get_common_key(poly: MLPoly, criterion: Callable, heuristic = standard_heuristic):
     """
     Tries to find common keys to extract up to degree ceil(d/2) where poly is degree d. Uses a heuristic to pick the best one.
     """
@@ -122,7 +124,7 @@ def get_common_key(poly: MLPoly, criterion: Callable):
     d = poly.degree()
     options = [max_common_key(poly, i, criterion) for i in range(ceil(d / 2) + 1)]
 
-    return max(options, key=lambda pair: len(pair[1]) * len(pair[0]))
+    return max(options, key=heuristic)
 
 positive_FGBZ_criterion = lambda factor, key, value: (
     set(factor).issubset(key)
@@ -159,10 +161,10 @@ def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     n = poly.num_variables()
 
     # Now, execute the algorithm by extracting C
-    sum_alpha_H = sum([poly.get_coeff(key) for key in H])
+    sum_alpha_H = sum([poly.get_coeff(key) for key, value in H])
     poly.add_coeff(tuple(set(C) | {n}), sum_alpha_H)
 
-    for key in H:
+    for key, value in H:
         term1 = tuple(set(key) - set(C))
         term2 = tuple(set(key) - set(C) | {n})
         alpha_H = poly.get_coeff(key)
@@ -185,11 +187,11 @@ def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     n = poly.num_variables()
 
     # Now, execute the algorithm by extracting C
-    sum_alpha_H = sum([poly.get_coeff(key) for key in H])
+    sum_alpha_H = sum([poly.get_coeff(key) for key, value in H])
     poly.add_coeff((n,), -sum_alpha_H)
     poly.add_coeff(tuple(set(C) | {n}), sum_alpha_H)
 
-    for key in H:
+    for key, value in H:
         term = tuple(set(key) - set(C) | {n})
         alpha_H = poly.get_coeff(key)
 
@@ -211,7 +213,7 @@ def Rosenberg(poly: MLPoly, C: tuple, H: tuple, M: float) -> MLPoly:
     n = poly.num_variables()
 
     # replace occurances of the pair with a new auxilliary
-    for key in H:
+    for key, value in H:
         term = tuple(set(key) - set(C) | {n})
         poly.add_coeff(term, poly.get_coeff(key))
         poly.set_coeff(key, 0)
@@ -257,15 +259,16 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
     return poly
 
 
-def full_Rosenberg(poly: MLPoly) -> MLPoly:
+def full_Rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
     while poly.degree() > 2:
-        poly, aux_map = single_rosenberg(poly)
+        poly, aux_map = single_rosenberg(poly, heuristic)
 
     return poly
 
-def single_rosenberg(poly: MLPoly) -> MLPoly:
-    C, H = get_common_key(poly, rosenberg_criterion)
-    M = sum([max(0, poly.get_coeff(key)) for key in H])
+def single_rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
+    C, H = get_common_key(poly, rosenberg_criterion, heuristic)
+    print(f'reducing {C}')
+    M = sum([max(0, value) for key, value in H])
     if not len(H):
         return poly, None
 
