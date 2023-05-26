@@ -92,6 +92,19 @@ def generate_polynomial(f: Callable, n: int) -> MLPoly:
 
     return poly
 
+def get_term_table(poly: MLPoly, criterion = lambda factor, key, value: True, size = None) -> dict:
+    n = poly.num_variables()
+
+    if size is not None:
+        return {
+            tuple(sorted(factor)): [
+                (key, value)
+                for key, value in poly.coeffs.items()
+                if criterion(factor, key, value)  # monomial satisfies filter criterion
+            ]
+            for factor in combinations(range(n), size)
+        }
+
 
 def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value: True):
     """
@@ -100,17 +113,7 @@ def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value:
     Note that this algorithm has been written with simplicity in mind and will scale horribly to polynomials with larger numbers of variables.
     """
 
-    n = poly.num_variables()
-
-    term_table = {
-        tuple(sorted(factor)): [
-            (key, value)
-            for key, value in poly.coeffs.items()
-            if criterion(factor, key, value)  # monomial satisfies filter criterion
-        ]
-        for factor in combinations(range(n), size)
-    }
-
+    term_table = get_term_table(poly, criterion, size)
     factor = max(term_table, key=lambda i: len(term_table[i]))
     return factor, term_table[factor]
 
@@ -201,10 +204,12 @@ def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     return poly
 
 
-def Rosenberg(poly: MLPoly, C: tuple, H: tuple, M: float) -> MLPoly:
+def Rosenberg(poly: MLPoly, C: tuple, H: tuple) -> MLPoly:
     """
     Old standard pair-reduction algorithm.
     """
+    
+    M = sum([max(0, value) for key, value in H])
 
     assert len(C) == 2
 
@@ -267,12 +272,10 @@ def full_Rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
 
 def single_rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
     C, H = get_common_key(poly, rosenberg_criterion, heuristic)
-    print(f'reducing {C}')
-    M = sum([max(0, value) for key, value in H])
     if not len(H):
         return poly, None
 
-    poly = Rosenberg(poly, C, H, M)
+    poly = Rosenberg(poly, C, H)
     aux_map = MLPoly({
         C: 1
     })

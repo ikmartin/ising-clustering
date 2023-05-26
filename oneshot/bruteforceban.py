@@ -6,12 +6,15 @@ import time, os, torch, click
 import numpy as np
 from math import comb
 
+from solver import LPWrapper
+from oneshot import full_Rosenberg
+
 from ortools.linear_solver.pywraplp import Solver
 
 from fast_constraints import fast_constraints
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
-from fittertry import IMulBit
+#from fittertry import IMulBit
 
 
 def request_task(admin):
@@ -62,8 +65,6 @@ def search(circuit, degree, num_workers):
 
     min_ban_length = 3
     min_ban_idx = len([key for key in keys if len(key) < min_ban_length])
-    print(keys)
-    print(min_ban_idx)
 
     print("[Master] Creating global manager.")
     manager = Manager()
@@ -168,7 +169,7 @@ class SolverProcess(Process):
 
     def run(self):
         print(f"[{self.name}] Building...")
-        self.solver = self.build_solver()
+        self.solver = LPWrapper(self.M, self.keys)
 
         print(f"[{self.name}] Ready.")
         # Run an infinite loop waiting for tasks to be added to the parent queue
@@ -178,77 +179,25 @@ class SolverProcess(Process):
                 time.sleep(0.1)
                 continue
 
-            coeffs, score = self.solve(task)
-            coeffs = (
-                frozenset(torch.nonzero(coeffs, as_tuple=True)[0].tolist())
+            coeffs = self.solver.solve(task)
+
+            nonzero = (
+                frozenset(np.nonzero(coeffs)[0].tolist())
                 if coeffs is not None
                 else None
             )
+            if coeffs is not None:
+                score = full_Rosenberg(self.get_poly(coeffs)).num_variables() - self.circuit.G
+            else:
+                score = None
+
             # print(f'[{self.name}] Task {task}: {score}')
-            submit(self.admin, task, coeffs, score)
+            submit(self.admin, task, nonzero, score)
 
-    def _clear(self):
-        for ban_constraint in self.ban_constraints:
-            ban_constraint.Clear()
-
-    def _ban(self, index):
-        self.ban_constraints[index].SetCoefficient(self.variables[index], 1)
-
-    def build_solver(self):
-        solver = Solver.CreateSolver("GLOP")
-        inf = solver.infinity()
-        self.variables = [
-            solver.NumVar(-inf, inf, f"x_{i}") for i in range(self.num_terms)
-        ]
-        self.ban_constraints = [solver.Constraint(0, 0) for var in self.variables]
-
-        for row in self.M:
-            constraint = solver.Constraint(1.0, inf)
-            for i, coeff in enumerate(row):
-                if not coeff:
-                    continue
-
-                constraint.SetCoefficient(self.variables[i], int(coeff))
-
-        y_vars = [solver.NumVar(-inf, inf, f"y_{var}") for var in self.variables]
-        for x, y in zip(self.variables, y_vars):
-            constraint1 = solver.Constraint(-inf, 0)
-            constraint2 = solver.Constraint(0, inf)
-            constraint1.SetCoefficient(x, 1)
-            constraint1.SetCoefficient(y, -1)
-            constraint2.SetCoefficient(x, 1)
-            constraint2.SetCoefficient(y, 1)
-
-        objective = solver.Objective()
-        for key, var in zip(self.keys, y_vars):
-            if len(key) > 2:
-                objective.SetCoefficient(var, 1)
-
-        objective.SetMinimization()
-
-        return solver
 
     def get_poly(self, coeffs) -> MLPoly:
         coeff_dict = {key: val for key, val in zip(self.keys, coeffs)}
         return MLPoly(coeff_dict)
-
-    def solve(self, bans: tuple):
-        self._clear()
-        for i in bans:
-            self._ban(i)
-
-        status = self.solver.Solve()
-        if status:
-            return None, None
-
-        coeffs = torch.tensor([var.solution_value() for var in self.variables])
-        coeffs[abs(coeffs) < self.threshold] = 0
-        poly = self.get_poly(coeffs.tolist())
-
-        reduced_poly = reduce_poly(poly, ["rosenberg"])
-        num_aux = reduced_poly.num_variables() - self.circuit.G
-
-        return coeffs, int(num_aux)
 
 
 @click.command()

@@ -5,7 +5,6 @@ from oneshot import reduce_poly, MLPoly, single_positive_FGBZ, single_negative_F
 from more_itertools import powerset
 import numpy as np
 
-from fast_LP import sparse_solve
 
 class IMulBit(PICircuit):
     def __init__(self, N1, N2, bit):
@@ -82,7 +81,7 @@ n1 = 3
 n2 = 3
 for i in range(0,1):    
     #circuit = IMulBit(n1,n2,i)
-    circuit = IMulBit(3,3,3)
+    circuit = IMul(3,3)
     # tryall(circuit)
     print(f'IMul{n1}x{n2}')
     poly = search_polynomial(circuit)

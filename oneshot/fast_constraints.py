@@ -2,16 +2,19 @@ from spinspace import Spin
 from itertools import chain, combinations
 import torch
 
+#DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cpu'
+
 def dec2bin(x, bits):
-    mask = 2 ** torch.arange(bits-1, -1, -1)
+    mask = 2 ** torch.arange(bits-1, -1, -1).to(x.device)
     return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
 
 def all_answers(circuit):
-    return dec2bin(torch.arange(2 ** circuit.G), circuit.G)
+    return dec2bin(torch.arange(2 ** circuit.G).to(DEVICE), circuit.G)
 
 def batch_tensor_power(input, power):
     num_rows, num_cols = input.shape
-    index = torch.combinations(torch.arange(num_cols), r=power).unsqueeze(0).expand(num_rows, -1, -1)
+    index = torch.combinations(torch.arange(num_cols).to(DEVICE), r=power).unsqueeze(0).expand(num_rows, -1, -1)
     input = input.unsqueeze(-1).expand(-1, -1, power)
     return torch.gather(input, 1, index).prod(dim=-1)
 
@@ -36,7 +39,7 @@ def fast_constraints(circuit, degree):
     correct_rows = torch.cat([
         torch.tensor(
             circuit.inout(inspin).binary()
-        ).unsqueeze(0)
+        ).unsqueeze(0).to(DEVICE)
         for inspin in circuit.inspace
     ])
 
@@ -60,5 +63,4 @@ def fast_constraints(circuit, degree):
     ]
     constraints = constraints[row_mask][..., col_mask]
 
-    constraints = constraints.to_sparse()
-    return constraints, terms
+    return constraints.cpu(), terms

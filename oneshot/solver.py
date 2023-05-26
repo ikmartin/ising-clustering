@@ -1,14 +1,42 @@
 from ortools.linear_solver.pywraplp import Solver 
 import torch
 from time import perf_counter as pc
+from numba import jit
+import numpy as np
+
+class LPWrapper:
+    def __init__(self, M, keys):
+        self.keys = keys
+        self.threshold = 1e-2
+        self.solver, self.variables, self.bans = build_solver(M, keys)
+        
+    def _clear(self):
+        for ban in self.bans:
+            ban.Clear()
+
+    def _ban(self, index):
+        self.bans[index].SetCoefficient(self.variables[index], 1)
+
+    def solve(self, bans = None):
+        self._clear()
+        if bans is not None:
+            for ban in bans:
+                self._ban(ban)
+
+        status = self.solver.Solve()
+        if status == 2:     # Infeasible
+            return None
+            
+        answer = np.array([var.solution_value() for var in self.variables])
+        answer[abs(answer) < self.threshold] = 0
+        return answer
 
 def build_solver(M, keys):
     """
     Builds a GLOP solver from a sparse constraint matrix.
     """
 
-    start = pc()
-
+    M = M.to_sparse()
     num_vars = M.shape[1]
 
     solver = Solver.CreateSolver("GLOP")
@@ -16,8 +44,7 @@ def build_solver(M, keys):
     variables = [
         solver.NumVar(-inf, inf, f"x_{i}") for i in range(num_vars)
     ]
-    ban_constraints = [solver.Constraint(0, 0) for var in variables]
-    
+    ban_constraints = [solver.Constraint(0, 0) for var in variables]    
 
     constraint_vals = torch.t(torch.cat([M.indices(), M.values().unsqueeze(0)]))
     constraints = [solver.Constraint(1.0, inf) for _ in range(M.shape[0])]
@@ -41,8 +68,5 @@ def build_solver(M, keys):
 
     objective.SetMinimization()
     
-    end = pc()
-    print(f'Building solver took {end-start}')
-
-    return solver, variables
+    return solver, variables, ban_constraints
 
