@@ -24,7 +24,7 @@ def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
         #if degree > 2:
         #    degree = 3
         M, keys = fast_constraints(circuit, degree)
-        solver, variables = build_solver(M, keys)
+        solver, variables, bans = build_solver(M, keys)
         status = solver.Solve()
         if status == 2:
             print(f'{degree} failed')

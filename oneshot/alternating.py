@@ -16,7 +16,7 @@ from typing import Any
 from fast_constraints import fast_constraints
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
-#from fittertry import IMulBit
+from fittertry import IMulBit
 
 
 """
@@ -66,7 +66,9 @@ Admin Object:
 
 def get_poly(keys, coeffs) -> MLPoly:
     coeff_dict = {key: val for key, val in zip(keys, coeffs)}
-    return MLPoly(coeff_dict)
+    poly = MLPoly(coeff_dict)
+    poly.clean(0.1)
+    return poly
 
 def estimate_score(poly) -> int:
     """
@@ -131,15 +133,18 @@ class CircuitFactory:
 
 def log(owner, name, message):
     reset = '\x1b[0m'
+    bold = '\033[1m'
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
     color = YELLOW
     if owner == 'master':
         color = MAGENTA
     if owner == 'delegator':
         color = CYAN
-    format = f'[\x1b[{30+color};20m{name}{reset}] {message}{reset}'
+
     if owner == 'master':
-        format = '\033[1m' + format
+        format = f'{bold}[\x1b[{30+color};20m{name}{reset}{bold}] {message}{reset}'
+    else:
+        format = f'[\x1b[{30+color};20m{name}{reset}] {message}{reset}'
 
     print(format)
         
@@ -165,7 +170,7 @@ def search(num_workers, circuit_args):
 
     log('master', 'Master', "Creating solvers...")
     workers = [
-        SolverProcess(admin, factory)
+        Solver(admin, factory)
         for i in range(num_workers)
     ]
 
@@ -220,6 +225,9 @@ class Delegator(Process):
                 log('delegator', self.name, 'Worthless docket item.')
                 return
 
+            
+        log('delegator', self.name, f'Accepting docket item with priority {task.priority}.')
+
         # Generate new tasks and add them to the queue
         self.make_new_tasks(poly, array)
 
@@ -227,6 +235,10 @@ class Delegator(Process):
         circuit = self.factory.get(array)
 
         term_table = get_term_table(poly, rosenberg_criterion, 2)
+
+        # Printout information objects
+        log_priorities = []
+        new_length = array.shape[0] + 1 if array is not None else 1
 
         for C, H in term_table.items():
             if not len(H):
@@ -249,9 +261,12 @@ class Delegator(Process):
             new_task = PrioritizedItem(priority = new_priority, item = new_aux_array)
 
             self.admin['task_queue'].put(new_task)
-            log('delegator', self.name, f'Added task with priority {new_priority} and length {new_aux_array.shape[0]}')
+            log_priorities.append(new_priority)
 
-class SolverProcess(Process):
+        log_priorities = sorted(log_priorities)
+        log('delegator', self.name, f'Added new tasks (length = {new_length}): priorities {log_priorities}')
+
+class Solver(Process):
     def __init__(self, admin, factory):
         self.admin = admin
         self.factory = factory
@@ -332,7 +347,11 @@ class SolverProcess(Process):
 
                 continue
 
-            return get_poly(keys, solution)
+            poly = get_poly(keys, solution)
+            log('solver', self.name, f'Found solution with degree {degree}.')
+            print(poly)
+
+            return poly
 
         log('solver', self.name, 'ERROR: No solution at any degree! This should not be possible.')
         return None
@@ -342,16 +361,14 @@ class SolverProcess(Process):
 @click.command()
 @click.option("--n1", default=2, help="First input")
 @click.option("--n2", default=2, help="Second input")
-@click.option("--bit", default=None, help="Select an output bit.")
-def main(n1, n2, bit):
-
-    num_workers = os.cpu_count()
-    
-    #num_workers = 2
+@click.option("--bit", default=0, help="Select an output bit.")
+@click.option("--workers", default=os.cpu_count(), help="Number of solver processes.")
+def main(n1, n2, bit, workers):
+    num_workers = workers
 
     circuit_args = {
-        'class': IMul,
-        'args': (n1, n2)
+        'class': IMulBit,
+        'args': (n1, n2, bit)
     }
     search(num_workers, circuit_args)
 
