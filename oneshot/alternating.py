@@ -149,7 +149,7 @@ def log(owner, name, message):
     print(format)
         
 
-def search(num_workers, circuit_args):
+def search(circuit_args, num_solvers, num_delegators):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -171,18 +171,23 @@ def search(num_workers, circuit_args):
     log('master', 'Master', "Creating solvers...")
     workers = [
         Solver(admin, factory)
-        for i in range(num_workers)
+        for i in range(num_solvers)
     ]
 
-    log('master', 'Master', "Creating delegator...")
-    delegator = Delegator(admin, factory)
+    log('master', 'Master', "Creating delegators...")
+    delegators = [
+        Delegator(admin, factory)
+        for i in range(num_delegators)
+    ]
 
     log('master', 'Master', "Initialized.")
 
     log('master', 'Master', "Starting processes.")
-    delegator.start()
     for worker in workers:
         worker.start()
+
+    for delegator in delegators:
+        delegator.start()
 
     log('master', 'Master', "Setting initial task.")
     admin["task_queue"].put(PrioritizedItem(priority = 0, item = None))
@@ -349,7 +354,6 @@ class Solver(Process):
 
             poly = get_poly(keys, solution)
             log('solver', self.name, f'Found solution with degree {degree}.')
-            print(poly)
 
             return poly
 
@@ -362,15 +366,15 @@ class Solver(Process):
 @click.option("--n1", default=2, help="First input")
 @click.option("--n2", default=2, help="Second input")
 @click.option("--bit", default=0, help="Select an output bit.")
-@click.option("--workers", default=os.cpu_count(), help="Number of solver processes.")
-def main(n1, n2, bit, workers):
-    num_workers = workers
+@click.option("--solvers", default=os.cpu_count()-1, help="Number of solver processes.")
+@click.option("--delegators", default=1, help="Number of delegator processes.")
+def main(n1, n2, bit, solvers, delegators):
 
     circuit_args = {
         'class': IMulBit,
         'args': (n1, n2, bit)
     }
-    search(num_workers, circuit_args)
+    search(circuit_args, solvers, delegators)
 
 
 if __name__ == "__main__":
