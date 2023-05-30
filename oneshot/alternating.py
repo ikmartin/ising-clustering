@@ -127,8 +127,25 @@ class CircuitFactory:
         circuit.set_all_aux(aux_array.tolist())
         return circuit
 
+## A function which makes colored console output. Looks a little nicer.
+
+def log(owner, name, message):
+    reset = '\x1b[0m'
+    BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+    color = YELLOW
+    if owner == 'master':
+        color = MAGENTA
+    if owner == 'delegator':
+        color = CYAN
+    format = f'[\x1b[{30+color};20m{name}{reset}] {message}{reset}'
+    if owner == 'master':
+        format = '\033[1m' + format
+
+    print(format)
+        
+
 def search(num_workers, circuit_args):
-    print("[Master] Creating global manager.")
+    log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
         "success_lock": manager.Lock(),
@@ -146,26 +163,26 @@ def search(num_workers, circuit_args):
     # Generate circuit factory, used for making new circuits on the specified pattern.
     factory = CircuitFactory(circuit_args['class'], circuit_args['args'])
 
-    print("[Master] Creating solvers...")
+    log('master', 'Master', "Creating solvers...")
     workers = [
         SolverProcess(admin, factory)
         for i in range(num_workers)
     ]
 
-    print("[Master] Creating delegator...")
+    log('master', 'Master', "Creating delegator...")
     delegator = Delegator(admin, factory)
 
-    print("[Master] Initialized.")
+    log('master', 'Master', "Initialized.")
 
-    print("[Master] Starting processes.")
+    log('master', 'Master', "Starting processes.")
     delegator.start()
     for worker in workers:
         worker.start()
 
-    print("[Master] Setting initial task.")
+    log('master', 'Master', "Setting initial task.")
     admin["task_queue"].put(PrioritizedItem(priority = 0, item = None))
 
-    print("[Master] Letting solvers work.")
+    log('master', 'Master', "Letting solvers work.")
     while True:
         queue_length = admin["task_queue"].qsize()
         done_length = admin["done_queue"].qsize()
@@ -173,18 +190,18 @@ def search(num_workers, circuit_args):
         best_score = admin["success"]["best"]
         num_done = admin["success"]["total"]
 
-        print(f"[Master] {num_done} done / {queue_length} ready / {done_length} docket / best {best_score}")
+        log('master', 'Master', f"{num_done} done / {queue_length} ready / {done_length} docket / best {best_score}")
         time.sleep(1.0)
 
 class Delegator(Process):
     def __init__(self, admin, factory):
         self.admin = admin
         self.factory = factory
-        self.STABLE_QSIZE = 100
+        self.STABLE_QSIZE = 10000
         super().__init__()
 
     def run(self):
-        print(f'[{self.name}] Running.')
+        log('delegator', self.name, 'Running.')
         while True:
             self.loop()
 
@@ -200,6 +217,7 @@ class Delegator(Process):
         # Check to see if the current aux array is even with the best final solutions. Since we know that we are about to add a new row to the aux array, if this is the case, then whatever tasks we would add would be guarunteed not to improve on the currently known best answer. Therefore, simply skip.
         with self.admin['success_lock']:
             if array is not None and array.shape[0] >= self.admin['success']['best'] - 1:
+                log('delegator', self.name, 'Worthless docket item.')
                 return
 
         # Generate new tasks and add them to the queue
@@ -229,9 +247,9 @@ class Delegator(Process):
             new_priority = estimate_score(new_poly)
 
             new_task = PrioritizedItem(priority = new_priority, item = new_aux_array)
-            print(f'[{self.name}] {new_task}')
 
             self.admin['task_queue'].put(new_task)
+            log('delegator', self.name, f'Added task with priority {new_priority} and length {new_aux_array.shape[0]}')
 
 class SolverProcess(Process):
     def __init__(self, admin, factory):
@@ -240,7 +258,7 @@ class SolverProcess(Process):
         super().__init__()
 
     def run(self):
-        print(f'[{self.name}] Running.')
+        log('solver', self.name, 'Running.')
         while True:
             self.loop()
 
@@ -251,16 +269,30 @@ class SolverProcess(Process):
             return
 
         array = task.item
+        priority = task.priority
         
         # Check to see if this task is worth doing at all
         with self.admin['success_lock']:
             if array is not None and array.shape[0] >= self.admin['success']['best']:
+                log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
                 return
+
+            # Set a flag indicating that this task is only worthwhile if it is solved immediately in case we are currently one aux vector behind the best. 
+            quad_only = (array.shape[0] == self.admin['success']['best'] - 1) if array is not None else False
+        
+        
+        log('solver', self.name, f'Accepting task with priority {priority}')
 
         circuit = self.factory.get(array)
         
         # Search for the minimum viable degree. This is the expensive step.
-        poly = self.degree_search(circuit)
+        poly = self.degree_search(circuit, quad_only = quad_only)
+
+        # If we didn't get any polynomial (likely intentionally skip of higher degree attempts),
+        # then we are essentially skipping this task as worthless.
+        if poly is None:
+            log('solver', self.name, 'Cannot fit quadratic, abandoning task.')
+            return
 
         # Update the results log
         with self.admin['success_lock']:
@@ -271,10 +303,11 @@ class SolverProcess(Process):
                 self.admin['success']['list'].append(array)
                 if array.shape[0] < self.admin['success']['best']:
                     self.admin['success']['best'] = array.shape[0]
+                    log('solver', self.name, f'Found new best aux array with length {array.shape[0]}')
+                    print(array)
                 
                 return
 
-        print(f'[{self.name}] putting task in docket')
         
         # Otherwise, put the appropriate information in the completed task queue.
         priority = estimate_score(poly)
@@ -285,19 +318,23 @@ class SolverProcess(Process):
             task = self.admin["task_queue"].get()
             return task
 
+
         return None
 
-    def degree_search(self, circuit):
+    def degree_search(self, circuit, quad_only = False):
         for degree in range(2, circuit.G):
             M, keys = fast_constraints(circuit, degree)
             solver = LPWrapper(M, keys)
             solution = solver.solve()
             if solution is None:
+                if quad_only:
+                    return None
+
                 continue
 
             return get_poly(keys, solution)
 
-        print(f'[{self.name}] ERROR: No solution at any degree! This should not be possible.')
+        log('solver', self.name, 'ERROR: No solution at any degree! This should not be possible.')
         return None
 
 
@@ -305,12 +342,13 @@ class SolverProcess(Process):
 @click.command()
 @click.option("--n1", default=2, help="First input")
 @click.option("--n2", default=2, help="Second input")
-@click.option("--degree", default=3, help="Degree")
 @click.option("--bit", default=None, help="Select an output bit.")
-def main(n1, n2, degree, bit):
+def main(n1, n2, bit):
 
-    num_workers = len(os.sched_getaffinity(0))
+    num_workers = os.cpu_count()
     
+    #num_workers = 2
+
     circuit_args = {
         'class': IMul,
         'args': (n1, n2)
