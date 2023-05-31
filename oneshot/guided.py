@@ -34,7 +34,7 @@ Master process: Starts the solvers and the delegator. Adds the initial task. Run
 
 Solver process: Runs an infinite loop with the following steps:
     1. Pull an auxilliary array from the task queue. Check to see if the aux array is at least as long as the currently known minimum. If so, skip this task.
-    2. Build a circuit and LP solver. Fit a polynomial of minimum degree.
+    2. Build a circuit and LP solver. Attempt to fit a quadratic.
         2a. If poly of degree 2 fits, append the solution to the success queue and register the size of the successful auxilliary array with the administrator object.
         2b. Otherwise, append the polynomial and the aux array it was solved with to the done queue, with same priority as the original task.
 
@@ -190,7 +190,7 @@ def search(circuit_args, num_solvers, num_delegators):
         delegator.start()
 
     log('master', 'Master', "Setting initial task.")
-    admin["task_queue"].put(PrioritizedItem(priority = 0, item = None))
+    admin["task_queue"].put(PrioritizedItem(priority = 0, item = (None, None)))
 
     log('master', 'Master', "Letting solvers work.")
     while True:
@@ -204,9 +204,6 @@ def search(circuit_args, num_solvers, num_delegators):
 
 
         time.sleep(1.0)
-        
-        if best_score < 1e5:
-            exit()
 
 class Delegator(Process):
     def __init__(self, admin, factory):
@@ -268,7 +265,7 @@ class Delegator(Process):
             self.admin['dibs'][new_array_id] = True
             new_priority = estimate_score(new_poly)
 
-            new_task = PrioritizedItem(priority = new_priority, item = new_aux_array)
+            new_task = PrioritizedItem(priority = new_priority, item = (new_aux_array, new_poly))
 
             self.admin['task_queue'].put(new_task)
             log_priorities.append(new_priority)
@@ -293,7 +290,7 @@ class Solver(Process):
         if task is None:
             return
 
-        array = task.item
+        array, poly = task.item
         priority = task.priority
         
         # Check to see if this task is worth doing at all
@@ -301,30 +298,22 @@ class Solver(Process):
             if array is not None and array.shape[0] >= self.admin['success']['best']:
                 log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
                 return
-
-            # Set a flag indicating that this task is only worthwhile if it is solved immediately in case we are currently one aux vector behind the best. 
-            quad_only = (array.shape[0] == self.admin['success']['best'] - 1) if array is not None else False
-        
         
         log('solver', self.name, f'Accepting task with priority {priority}')
 
         circuit = self.factory.get(array)
         
-        # Search for the minimum viable degree. This is the expensive step.
-        poly = self.degree_search(circuit, quad_only = quad_only)
-
-        # If we didn't get any polynomial (likely intentionally skip of higher degree attempts),
-        # then we are essentially skipping this task as worthless.
         if poly is None:
-            log('solver', self.name, 'Cannot fit quadratic, abandoning task.')
-            return
+            poly = self.degree_search(circuit, quad_only = False)
+
+        result = self.degree_search(circuit, quad_only = True)
 
         # Update the results log
         with self.admin['success_lock']:
             self.admin['success']['total'] += 1
             
             # Success condition is that we got a successful quadratic
-            if poly.degree() == 2:
+            if result is not None:
                 self.admin['success']['list'].append(array)
                 if array.shape[0] < self.admin['success']['best']:
                     self.admin['success']['best'] = array.shape[0]
@@ -335,7 +324,6 @@ class Solver(Process):
 
         
         # Otherwise, put the appropriate information in the completed task queue.
-        priority = estimate_score(poly)
         self.admin['done_queue'].put(PrioritizedItem(priority = priority, item = (array, poly)))
 
     def request_task(self):
@@ -351,6 +339,7 @@ class Solver(Process):
             M, keys = fast_constraints(circuit, degree)
             solver = LPWrapper(M, keys)
             solution = solver.solve()
+            print(solution)
             if solution is None:
                 if quad_only:
                     return None
@@ -376,8 +365,8 @@ class Solver(Process):
 def main(n1, n2, bit, solvers, delegators):
 
     circuit_args = {
-        'class': IMulBit,
-        'args': (n1, n2, bit)
+        'class': IMul,
+        'args': (n1, n2)
     }
     search(circuit_args, solvers, delegators)
 
