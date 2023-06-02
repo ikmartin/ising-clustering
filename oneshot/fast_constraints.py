@@ -63,4 +63,42 @@ def fast_constraints(circuit, degree):
     ]
     constraints = constraints[row_mask][..., col_mask]
 
-    return constraints.cpu(), terms
+    return constraints.cpu().to_sparse(), terms
+
+def sequential_constraints(circuit, degree):
+    terms = keys(circuit, degree)
+
+    # Filter out connections between inputs
+    col_mask = torch.tensor([
+        max(key) >= circuit.N
+        for key in terms
+    ])
+    terms = [
+        term for term in terms if max(term) >= circuit.N
+    ]
+    
+    
+    num_out_aux = circuit.M + circuit.A
+    rows_per_input = 2 ** num_out_aux
+    all_wrong_block = dec2bin(torch.arange(2 ** num_out_aux).to(DEVICE), num_out_aux)
+
+    def make(inspin):
+        
+        correct_row = torch.tensor(
+            circuit.inout(inspin).binary()
+        ).unsqueeze(0).to(DEVICE)
+        virtual_right = batch_vspin(correct_row, degree)
+        exp_virtual_right = virtual_right.expand(rows_per_input, -1)
+
+        inspin_block = torch.tensor(inspin.binary()).unsqueeze(0).expand(rows_per_input, -1)
+        wrong_block = torch.cat([inspin_block, all_wrong_block], dim = -1)
+        virtual_wrong = batch_vspin(wrong_block, degree)
+
+        constraints = virtual_wrong - exp_virtual_right
+
+        row_mask = constraints[..., circuit.N:(circuit.N + circuit.M)].any(dim=-1)
+        return constraints[row_mask][..., col_mask].to_sparse()
+
+    return make, terms
+    
+

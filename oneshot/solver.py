@@ -5,10 +5,10 @@ from numba import jit
 import numpy as np
 
 class LPWrapper:
-    def __init__(self, M, keys):
+    def __init__(self, keys):
         self.keys = keys
         self.threshold = 1e-2
-        self.solver, self.variables, self.bans = build_solver(M, keys)
+        self.solver, self.variables, self.bans = build_solver(keys)
         
     def _clear(self):
         for ban in self.bans:
@@ -31,13 +31,20 @@ class LPWrapper:
         answer[abs(answer) < self.threshold] = 0
         return answer
 
-def build_solver(M, keys, regularize_low_terms = False):
+    def add_constraints(self, M):
+        constraint_vals = torch.t(torch.cat([M.indices(), M.values().unsqueeze(0)]))
+        constraints = [self.solver.Constraint(1.0, self.solver.infinity()) for _ in range(M.shape[0])]
+
+        for x, y, val in constraint_vals:
+            constraints[x].SetCoefficient(self.variables[y], int(val))
+
+
+def build_solver(keys, regularize_low_terms = False):
     """
-    Builds a GLOP solver from a sparse constraint matrix.
+    Builds a GLOP solver for L1 regularization, without adding any constraints.
     """
 
-    M = M.to_sparse()
-    num_vars = M.shape[1]
+    num_vars = len(keys)
 
     solver = Solver.CreateSolver("GLOP")
     inf = solver.infinity()
@@ -45,12 +52,6 @@ def build_solver(M, keys, regularize_low_terms = False):
         solver.NumVar(-inf, inf, f"x_{i}") for i in range(num_vars)
     ]
     ban_constraints = [solver.Constraint(0, 0) for var in variables]    
-
-    constraint_vals = torch.t(torch.cat([M.indices(), M.values().unsqueeze(0)]))
-    constraints = [solver.Constraint(1.0, inf) for _ in range(M.shape[0])]
-
-    for x, y, val in constraint_vals:
-        constraints[x].SetCoefficient(variables[y], int(val))
 
     y_vars = [solver.NumVar(-inf, inf, f"y_{var}") for var in variables]
     for x, y in zip(variables, y_vars):

@@ -13,7 +13,7 @@ from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenbe
 from dataclasses import dataclass, field
 from typing import Any
 
-from fast_constraints import fast_constraints
+from fast_constraints import fast_constraints, sequential_constraints
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
 from fittertry import IMulBit
@@ -75,7 +75,7 @@ def estimate_score(poly) -> int:
     This provides a heuristic to estimate how good a particular intermediate set of coefficients is. The idea is to just try full Rosenberg reduction with the standard heuristic, and use the total number of variables as a quality score. The hope is that this provides a good notion of the complexity of a particular situation.
     """
 
-    return full_Rosenberg(poly).num_variables()
+    return reduce_poly(poly, ['+fgbz', '-fgbz', 'fd']).num_variables()
 
 
 ## Helper functions for uniquely identifying aux arrays
@@ -149,7 +149,7 @@ def log(owner, name, message):
     print(format, flush = True)
         
 
-def search(circuit_args, num_solvers, num_delegators):
+def search(circuit_args, num_solvers, num_delegators, limit):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -168,15 +168,19 @@ def search(circuit_args, num_solvers, num_delegators):
     # Generate circuit factory, used for making new circuits on the specified pattern.
     factory = CircuitFactory(circuit_args['class'], circuit_args['args'])
 
+    constraint_priority = gen_constraint_priority(factory.get().inspace)
+
+    print([[spin.splitint() for spin in stage] for stage in constraint_priority])
+
     log('master', 'Master', "Creating solvers...")
     workers = [
-        Solver(admin, factory)
+        Solver(admin, factory, constraint_priority, limit)
         for i in range(num_solvers)
     ]
 
     log('master', 'Master', "Creating delegators...")
     delegators = [
-        Delegator(admin, factory)
+        Delegator(admin, factory, limit)
         for i in range(num_delegators)
     ]
 
@@ -205,10 +209,40 @@ def search(circuit_args, num_solvers, num_delegators):
 
         time.sleep(1.0)
 
+def rank_spin(spin):
+    n1, n2 = spin.splitint()
+    rank = abs(int(n1 + n2 - (2 ** (spin.dim()/2) - 1)))
+    return rank
+
+
+def gen_constraint_priority(inspace):
+    inspin_list = [
+        (spin, rank_spin(spin))
+         for spin in inspace
+    ]
+
+    inspin_list = sorted(inspin_list, key = lambda pair: pair[1])
+    stage0 = [inspace.getspin(2 ** inspace.shape[0] - 1)]
+    stage1 = [
+        spin 
+        for spin, rank in inspin_list
+        if rank < 1
+        and spin not in stage0
+    ]
+    stage2 = [
+        spin
+        for spin, rank in inspin_list
+        if spin not in stage1
+        and spin not in stage0
+    ]
+    return [stage0, stage1, stage2]
+
+
 class Delegator(Process):
-    def __init__(self, admin, factory):
+    def __init__(self, admin, factory, limit):
         self.admin = admin
         self.factory = factory
+        self.limit = limit
         self.STABLE_QSIZE = 10000
         super().__init__()
 
@@ -228,7 +262,7 @@ class Delegator(Process):
 
         # Check to see if the current aux array is even with the best final solutions. Since we know that we are about to add a new row to the aux array, if this is the case, then whatever tasks we would add would be guarunteed not to improve on the currently known best answer. Therefore, simply skip.
         with self.admin['success_lock']:
-            if array is not None and array.shape[0] >= self.admin['success']['best'] - 1:
+            if array is not None and (array.shape[0] >= self.admin['success']['best'] - 1 or array.shape[0] >= self.limit):
                 log('delegator', self.name, 'Worthless docket item.')
                 return
 
@@ -274,10 +308,20 @@ class Delegator(Process):
         log('delegator', self.name, f'Added new tasks (length = {new_length}): priorities {log_priorities}')
 
 class Solver(Process):
-    def __init__(self, admin, factory):
+    def __init__(self, admin, factory, constraint_priority, limit):
         self.admin = admin
         self.factory = factory
+        self.limit = limit
+        self._gen_constraint_priority(constraint_priority)
+        
         super().__init__()
+
+    def _gen_constraint_priority(self, stages):
+        if stages is None:
+            example_circuit = self.factory.get()
+            self.stages = [example_circuit.inspace]
+
+        self.stages = stages
 
     def run(self):
         log('solver', self.name, 'Running.')
@@ -295,7 +339,7 @@ class Solver(Process):
         
         # Check to see if this task is worth doing at all
         with self.admin['success_lock']:
-            if array is not None and array.shape[0] >= self.admin['success']['best']:
+            if array is not None and (array.shape[0] >= self.admin['success']['best'] or array.shape[0] > self.limit):
                 log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
                 return
         
@@ -306,7 +350,8 @@ class Solver(Process):
         if poly is None:
             poly = self.degree_search(circuit, quad_only = False)
 
-        result = self.degree_search(circuit, quad_only = True)
+        #result = self.degree_search(circuit, quad_only = True)
+        result = self.validate(circuit)
 
         # Update the results log
         with self.admin['success_lock']:
@@ -337,9 +382,9 @@ class Solver(Process):
     def degree_search(self, circuit, quad_only = False):
         for degree in range(2, circuit.G):
             M, keys = fast_constraints(circuit, degree)
-            solver = LPWrapper(M, keys)
+            solver = LPWrapper(keys)
+            solver.add_constraints(M)
             solution = solver.solve()
-            print(solution)
             if solution is None:
                 if quad_only:
                     return None
@@ -354,21 +399,47 @@ class Solver(Process):
         log('solver', self.name, 'ERROR: No solution at any degree! This should not be possible.')
         return None
 
+    def validate(self, circuit):
+        """
+        Attempts to fit a quadratic. This method operates under the assumption that most arguments passed to it will be infeasible, so it attempts to disqualify them cheaply using sequential constraint building. This will be much more expensive for a feasible aux array, but much cheaper for an infeasible. This means that insofar as most aux arrays are infeasible, total cost should be reduced. 
+        """
+
+        constraint_gen, terms = sequential_constraints(circuit, 2)
+        solver = LPWrapper(terms)
+    
+        for stage in self.stages:
+            for spin in stage:
+                solver.add_constraints(constraint_gen(spin))
+
+            solution = solver.solve()
+            if solution is None:
+                return None
+
+        return solution
+
 
 
 @click.command()
 @click.option("--n1", default=2, help="First input")
 @click.option("--n2", default=2, help="Second input")
-@click.option("--bit", default=0, help="Select an output bit.")
+@click.option("--bit", default=None, help="Select an output bit.")
 @click.option("--solvers", default=os.cpu_count()-1, help="Number of solver processes.")
 @click.option("--delegators", default=1, help="Number of delegator processes.")
-def main(n1, n2, bit, solvers, delegators):
+@click.option("--limit", default = 16, help="Maximum aux array size.")
+def main(n1, n2, bit, solvers, delegators, limit):
 
-    circuit_args = {
-        'class': IMul,
-        'args': (n1, n2)
-    }
-    search(circuit_args, solvers, delegators)
+    if bit is None:
+        circuit_args = {
+            'class': IMul,
+            'args': (n1, n2)
+        }
+    else:
+        circuit_args = {
+            'class': IMulBit,
+            'args': (n1, n2, int(bit))
+        }
+
+    search(circuit_args, solvers, delegators, limit)
 
 
 if __name__ == "__main__":
