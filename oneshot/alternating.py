@@ -75,7 +75,7 @@ def estimate_score(poly) -> int:
     This provides a heuristic to estimate how good a particular intermediate set of coefficients is. The idea is to just try full Rosenberg reduction with the standard heuristic, and use the total number of variables as a quality score. The hope is that this provides a good notion of the complexity of a particular situation.
     """
 
-    return full_Rosenberg(poly).num_variables()
+    return reduce_poly(poly, ['rosenberg']).num_variables()
 
 
 ## Helper functions for uniquely identifying aux arrays
@@ -205,9 +205,6 @@ def search(circuit_args, num_solvers, num_delegators):
 
         time.sleep(1.0)
         
-        if best_score < 1e5:
-            exit()
-
 class Delegator(Process):
     def __init__(self, admin, factory):
         self.admin = admin
@@ -365,7 +362,10 @@ class Solver(Process):
         log('solver', self.name, 'ERROR: No solution at any degree! This should not be possible.')
         return None
 
-
+#330 0
+#331 3
+#332 4
+#333 4
 
 @click.command()
 @click.option("--n1", default=2, help="First input")

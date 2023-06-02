@@ -8,6 +8,18 @@ from solver import build_solver
 from fast_constraints import fast_constraints
 import numpy as np
 
+def fit(circuit: PICircuit, degree : int) -> MLPoly:
+    M, keys = fast_constraints(circuit, degree)
+    solver, variables, bans = build_solver(M, keys, regularize_low_terms = degree==2)
+    status = solver.Solve()
+    if status == 2:
+        return None
+
+    coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
+    poly = MLPoly(coeffs = coeffs)
+    poly.clean(threshold = 0.1)
+    return poly
+
 def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
     """
     Searches for the lowest degree multilinear polynomial in the original spinspace (inputs/outputs only with no auxilliaries) that satisfies the constraint set. The idea is just to iterate through degrees from 2 upwards, attempting to fit a polynomial of each degree by representing the fitting problem as a linear programming problem in the tensor algebra (the original method of finding h, J that satisfy the constraint set is simply the degree-2 special case). 
@@ -19,21 +31,9 @@ def search_polynomial(circuit: PICircuit, weak = False) -> MLPoly:
     num_variables = circuit.G
 
     for degree in range(2, num_variables):
-        #solver, status, params = build_polynomial_fitter(circuit, degree, weak)
-        #print(f'degree={degree} status={status}')
-        #if degree > 2:
-        #    degree = 3
-        M, keys = fast_constraints(circuit, degree)
-        solver, variables, bans = build_solver(M, keys)
-        status = solver.Solve()
-        if status == 2:
-            print(f'{degree} failed')
-            continue 
-
-        coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
-        poly = MLPoly(coeffs = coeffs)
-        poly.clean(threshold = 0.1)
-        return poly
+        poly = fit(circuit, degree)
+        if poly is not None:
+            return poly
 
 def tryall(circuit: PICircuit, weak = False) -> MLPoly:
     """
@@ -46,18 +46,10 @@ def tryall(circuit: PICircuit, weak = False) -> MLPoly:
     num_variables = circuit.G
 
     for degree in range(2, num_variables):
-        #solver, status, params = build_polynomial_fitter(circuit, degree, weak)
-        #print(f'degree={degree} status={status}')
-        M, keys = fast_constraints(circuit, degree)
-        solver, variables = build_solver(M, keys)
-        status = solver.Solve()
-        if status == 2:
-            print(f'{degree} failed')
-            continue 
+        poly = fit(circuit, degree)
+        if poly is None:
+            continue
 
-        coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
-        poly = MLPoly(coeffs = coeffs)
-        poly.clean(threshold = 0.1)
         print(poly)
         print("")
 

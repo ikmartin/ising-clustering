@@ -31,7 +31,7 @@ class LPWrapper:
         answer[abs(answer) < self.threshold] = 0
         return answer
 
-def build_solver(M, keys):
+def build_solver(M, keys, regularize_low_terms = False):
     """
     Builds a GLOP solver from a sparse constraint matrix.
     """
@@ -63,7 +63,7 @@ def build_solver(M, keys):
 
     objective = solver.Objective()
     for key, var in zip(keys, y_vars):
-        if len(key) > 2:
+        if regularize_low_terms or len(key) > 2:
             objective.SetCoefficient(var, 1)
 
     objective.SetMinimization()
