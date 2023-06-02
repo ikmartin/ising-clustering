@@ -405,7 +405,7 @@ class Solver(Process):
         """
 
         constraint_gen, terms = sequential_constraints(circuit, 2)
-        solver = LPWrapper(terms)
+        solver = LPWrapper(terms, fancy = True)
     
         for stage in self.stages:
             for spin in stage:
@@ -417,7 +417,13 @@ class Solver(Process):
 
         return solution
 
-
+#340 1
+#341 4
+#342 8?
+#343 9?
+#344 4
+#345 2
+#346 0
 
 @click.command()
 @click.option("--n1", default=2, help="First input")

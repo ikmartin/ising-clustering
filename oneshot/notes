@@ -6,5 +6,51 @@
 
 3x3x4
 
+#340 1
+#341 4
+#342 8?
+#343 9?
+#344 4
+#345 2
+#346 0
+
+270 0 
+271 1
+272 4?
+273 4?
+274 4?
+275 3
+276 2
+277 2
+278 0
+
+
+
 4x4(0)x1
 4x4(1)x5
+
+
+Next ideas:
+- Randomly sample the 'wrong answer' constraints. the idea is that the rigidity of the energy function should make neighboring wrong answer constraints redundant. Therefore a random sample may be enough to disqualify an aux array with a small fraction of the constraint set. Additionally, we may want to consider increasing the density of the sampling when closer to the right answer, on the logic that being closer to the right answer makes higher 'resolution' more important. 
+- A similar idea which could be added on: we could again take advantage of the rigidity of the energy function class to try to compensate for the resolution lost by random sampling of the constraints. We could randomly sample the constraints in a sparse manner, but require that the difference in Hamiltonian between the right answer and a far-away wrong answer be larger depending on that distance--in other words, a combination of hypercube constraints and sparse constraint sampling, which may balance each other out in terms of strictness. The downside is that this may be capable of producing false negatives. However, given that we want to enforce higher boltzmann probabilities at some point anyway, that might not be the worst thing in the world. 
+
+- Obviously, allowing fancier reduction methods than Rosenberg when constructing the aux arrays. This is a bit of a pain to program but it seems clear that this could only improve the situation. 
+- Of course, we could also just allow the creation of aux arrays via random other small polynomials of the variables. This seems like a good addition of flexibility, but it does introduce the problem that we need to know how to track progress without doing a refit of the entire situation as was the initial method. The fact that the reductions come from poly-reduction methods allows use to use the continually reducing polynomial as a progress tracker.
+
+- We know that we need a better heuristic to guide the choices of which pairs to prioritize. One idea is to use the 'sum-of-rho' method that is standard among the rest of the team. The problem is that this appears to be mostly incompatible with constraint filtering, since the quality of the heuristic depends on being fit to the entire constraint set, or at least close to it, and extrapolating from a small subset may not be sufficient to give good information.
+
+- We know that some constraints are more important than others. It seems like the problem might be dual-sparse. Are these related? How can we take advantage of the latter fact?
+
+- Easy one: include a lower-bound. Don't bother testing quadratic feasibility if we're below the lower bound. This would clearly give a small speedup, but since the cost goes exponentially with the length of aux array in general, it should be just a small speedup.
+
+- a brute-force compsci approach: we know that adding more solver processes does not seem to help the situation and in fact slows dwn the algorithm. This is probably because of competition for memory access. This means that we may be able to fully take advantage of multiprocessing if we use message-passing to put one or two solvers on each node of Kruskal. Really the only thing that needs to be shared is the dibs cache indicating which tasks have already been taken over. there might be some sublety to this but I think that should be find. MPI is a pain in the butt of course. Maybe Nemo has better parallel memory access?
+
+- I have been thinking somewhat that the higher-degree polynomial fit is something like a taylor expansion. We know from observation that l1-regularized hamiltonians often tend to have small coefficients on the higher order terms, so it seems like each degree is a sucessively smaller correction of the previous approximation. To this end, we may be able to think of the higher order terms as less important in some sense: what if we fit a quite high-degree polynomial, and then focus only on Rosenberg reduction of the cubic terms? Will it turn out that those higher-order terms were less important than appeared at first? They do activate much less often, being multi-op AND gates. Furthermore, it seems suggestive that the cubics which do make it in to the higher-degree polynomial fit may be significantly more important than your average cubic from the cubic Hamiltonian. Of course a sparser high-degree hamiltonian does provide the opportunity for logarithmic preformance out of FGBZ, but I had already thought of that---unfortunately, while it is of course worth trying (I am going to add FGBZ options anyway), I suspect that we may not get the expected benefits, as manual inspection of the higher degree hamiltonians indicates that they do not actually have a huge amount of high-degree common factors. 
+
+- It seems to stand to reason that we could get our LP solvers to work more quickly if they were instructed only to figure out if as solution was feasible, rather than actually producing it. For one thing, l1 regularization requires double the number of variables, and twice as many more constraints.This suggests that we could remove the objective and obtain solutions faster. On the other hand, my attempt at trying this mysteriously did not work. That is a somewhat disquieting error, which should be looked into. 
+
+- Delegator slowdown is starting to become signficant. Of course there isn't really much of a problem with just adding more delegator processes, but still it may be worth looking into optimizing the polynomial code at some point. it isn't clear that storing everything as a dict is really the right solution, as we end up just iterating over items() quite a lot anyway. 
+
+- Insofar as what we are currently doing is just trying out a bunch of different reduction paths and continually attempting quadratic fit at each node in the tree---perhaps it would be worth attempting (and it is far cheaper) to actually find that optimal Rosenberg reduction and so on before going through all this. What I have in mind is a two part algorithm: first, work through the NP-hard problem of finding the optimal reduction, presumably by enumerating out the big reduction tree with all the methods and so on. We can prune this by ignoring obviously bad branches for an optimization, but for now in theory just imagine that we have the entire tree. Then we could iterate through the tree with quadratic feasibility checking. The big advantage is that if we have the tree enumerated out down to the leaves, then the final auxilliary numbers of the leaves provides us a much better heuristic than we are currently using, though based on the same method, for we don't have to rely on any heuristics to know the optimal rosenberg cost of a given reduction option---it just becomes a minimax problem. With the heuristic values precomputed, we may be able to to much better in terms of picking the right tasks during the actualy solvability-search stage (as we know, since good solutions sometimes appear after a while of searching, the current heuristics are pretty bad, although they do point us in the right overall direction). This seems like a natural thing to try, given that we have already abandoned as too expensive (and seemingly not worth it) the idea of refitting the higher degree hamiltonian at each step in order to obtain new reduction candidates. As Jess mentioned, we could of course still just do this sometimes, but the fact that the results of the two methods are so far equivalent indicates to me that the extra effort is simply not worth it. Finding the best possible Rosenberg reduction is curiously something that we have not actually attempted at all so far, even for the smallest problems where it is clearly computationally feasible---I suppose the NP-hard label just scared us off. 
+
+- In general, we need better heuristics to guide solver priority, and we need better and quicker ways to determine if a quadratic problem is infeasible. However, we have had very good results with this so far, and we're definitely still making progress. I have hope!
