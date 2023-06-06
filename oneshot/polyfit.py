@@ -4,18 +4,19 @@ from oneshot import MLPoly, reduce_poly
 from itertools import combinations, chain, product
 from math import prod
 from ortools.linear_solver.pywraplp import Solver
-from solver import build_solver
+from solver import LPWrapper
 from fast_constraints import fast_constraints
 import numpy as np
 
 def fit(circuit: PICircuit, degree : int) -> MLPoly:
     M, keys = fast_constraints(circuit, degree)
-    solver, variables, bans = build_solver(M, keys, regularize_low_terms = degree==2)
-    status = solver.Solve()
-    if status == 2:
+    solver = LPWrapper(keys)
+    solver.add_constraints(M)
+    answer = solver.solve()
+    if answer is None:
         return None
 
-    coeffs = {key: var.solution_value() for key, var in zip(keys, variables)}
+    coeffs = {key: val for key, val in zip(keys, answer)}
     poly = MLPoly(coeffs = coeffs)
     poly.clean(threshold = 0.1)
     return poly

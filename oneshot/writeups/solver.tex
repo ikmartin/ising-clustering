@@ -1,0 +1,189 @@
+\documentclass{article}
+\usepackage{geometry}[1in]
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\newcommand{\R}{{\mathbb{R}}}
+\newcommand{\Z}{{\mathbb{Z}}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\softmax}{soft\,max}
+
+\title{Solver Documentation}
+\author{Andrew Moore}
+\date{Summer 2023}
+\begin{document}
+\maketitle
+
+Our goal is to solve the linear programming problem $M\phi \geq v$, where in general $v$ is the vector of all ones. In practice we can reformulate the problem as 
+\begin{align*}
+		\min_{\phi, \rho}\ \langle 1, \rho\rangle &\text{ s.t. } M\phi + \rho \geq v, \rho \geq 0
+\end{align*}
+Note that this is equivalent to
+\begin{align*}
+		\max_{\lambda, s}\ \langle b, \lambda \rangle &\text{ s.t. } A^T \lambda + s = c, s \geq 0
+\end{align*}
+If we make the identification
+\begin{align*}
+		&b = \begin{bmatrix}
+				0\\
+				-1\end{bmatrix} 
+		&c = \begin{bmatrix}
+				-v\\
+				0\end{bmatrix}
+		&&A^T = \begin{bmatrix}
+				-M & -I\\
+				0  & -I
+		\end{bmatrix}
+\end{align*}
+Since if $\lambda = (\lambda_1, \lambda_2)$ and $s = (s_1, s_2)$, then $A^T\lambda + s = c$ can be written as the pair of equations $-M\lambda_1 - \lambda_2 + s_1 = -v$ and $-\lambda_2 + s_2 = 0$, which can be re-arranged as $s_2 = \lambda_2$ and $s_1 = M\lambda_1 + \lambda_2 - v$, so $s \geq 0$ actually means $\lambda_2 \geq 0$ and $M\lambda_1 + \lambda_2 \geq v$. This recovers our original problem with the identification $\phi := \lambda_1$, $\rho := \lambda_2$. 
+
+A word on the dimensions. Suppose that $M \in \R^{m \times n}$, with $m >> n$. Then $A^T \in \R^{2m \times n+m}$, so $\lambda, b \in \R^{n+m}$ and $s, c, x \in \R^{2m}$ 
+
+
+Therefore, we can start plugging in these special forms to the calculations which must be made in the MCP:
+\begin{align}
+		r_b = Ax - b = \begin{bmatrix}
+				-M^T & 0\\
+				-I & -I
+				\end{bmatrix} \begin{bmatrix}
+				x_1\\
+				x_2\end{bmatrix}
+				- \begin{bmatrix}
+						0\\
+						-1
+				\end{bmatrix}
+				= \begin{bmatrix}
+				-M^Tx_1\\
+				 -x_1-x_2+1
+				\end{bmatrix}\\
+		r_c = A^T\lambda + s - c = \begin{bmatrix}
+				-M & -I\\
+				0  & -I
+				\end{bmatrix} \begin{bmatrix} \lambda_1 \\ \lambda_2\end{bmatrix} + \begin{bmatrix} s_1 \\ s_2 \end{bmatrix} - \begin{bmatrix} -v \\ 0 \end{bmatrix} = 
+				\begin{bmatrix}
+						-M\lambda_1 - \lambda_2 + s_1 + v\\
+						-\lambda_2 + s_2
+				\end{bmatrix}
+\end{align}
+We also get a more detailed block form for the coefficient matrix:
+\begin{align}
+		C = \begin{bmatrix}
+				0    & 0   & -M & -I & I   & 0\\
+				0    & 0   &  0 & -I & 0   & I\\
+				-M^T & 0   &  0 &  0 & 0   & 0\\
+				-I   & -I  &  0 &  0 & 0   & 0\\
+				S_1  &  0  &  0 &  0 & X_1 & 0\\
+				0    & S_2 &  0 &  0 & 0   & X_2
+		\end{bmatrix}
+\end{align}
+The predictor step is therefore the solution to the system of equations
+\begin{align}
+		\begin{bmatrix}
+				0    & 0   & -M & -I & I   & 0\\
+				0    & 0   &  0 & -I & 0   & I\\
+				-M^T & 0   &  0 &  0 & 0   & 0\\
+				-I   & -I  &  0 &  0 & 0   & 0\\
+				S_1  &  0  &  0 &  0 & X_1 & 0\\
+				0    & S_2 &  0 &  0 & 0   & X_2
+		\end{bmatrix}\begin{bmatrix}
+				\Delta x_1\\
+				\Delta x_2\\
+				\Delta \lambda_1\\
+				\Delta \lambda_2\\
+				\Delta s_1\\
+				\Delta s_2\\
+		\end{bmatrix}
+		=\begin{bmatrix}
+				M\lambda_1 + \lambda_2 - s_1 - v\\
+				\lambda_2 - s_2\\
+				M^Tx_1\\
+				x_1 + x_2 - 1\\
+				-x_1 * s_1\\
+				-x_2 * s_2
+		\end{bmatrix}
+\end{align}
+\begin{align}
+		-M^T \Delta x_1 = M^T x_1\\
+		-\Delta x_1 - \Delta x_2 = x_1 + x_2 - 1\\
+		s_1 * \Delta x_1 + x_1 * \Delta s_1 = - x_1 * s_1\\
+		s_2 * \Delta x_2 + x_2 * \Delta s_2 = - x_2 * s_2\\
+		-\Delta \lambda_2 + \Delta s_2 = \lambda_2 - s_2\\
+		-M\Delta \lambda_1 - \Delta \lambda_2 + \Delta s_1 = M\lambda_1 + \lambda_2 - s_1 - v
+\end{align}
+It appears that we may simply let $\Delta x_1 := -x_1$. Then
+\begin{align}
+		x_1 - \Delta x_2 = x_1 + x_2 - 1 \implies \Delta x_2 = 1 - x_2\\
+		-s_1 * x_1 + x_1 * \Delta s_1 = -x_1 * s_1 \implies x_1 * \Delta s_1 = 0 \implies \Delta s_1 = 0\\
+		s_2 * (1-x_2) + x_2 * \Delta s_2 = -x_2 * s_2 \implies x_2 * \Delta s_2 = -s_2
+\end{align}
+
+
+
+
+Switch columns 1-2 and 5-6, then switch rows 3-4 and 5-6:
+\begin{align}
+		\begin{bmatrix}
+				I	&	0	&	-M	&	-I	&	0	&	0\\
+				0	&	I	&	0	&	-I	&	0	&	0\\
+				X_1	&	0	&	0	&	0	&	S_1	&	0\\
+				0	&	X_2	&	0	&	0	&	0	&	S_2\\
+				0	&	0	&	0	&	0	& -M^T	&	0\\
+				0	&	0	&	0	&	0	&	-I	&	-I\\
+		\end{bmatrix}
+\end{align}
+
+\begin{align}
+		\begin{bmatrix}
+				0 & A^T & I\\
+				A & 0   & 0\\
+				S & 0   & X
+		\end{bmatrix}
+		\begin{bmatrix}
+				\Delta x\\
+				\Delta \lambda\\
+				\Delta s
+		\end{bmatrix} 
+		= 
+		\begin{bmatrix}
+				-r_c\\
+				-r_b\\
+				-x*s
+		\end{bmatrix}\\
+		\begin{bmatrix}
+				I & A^T & 0\\
+				0 & 0   & A\\
+				X & 0   & S
+		\end{bmatrix}
+		\begin{bmatrix}
+				\Delta s\\
+				\Delta \lambda\\
+				\Delta x
+		\end{bmatrix}
+		= \begin{bmatrix}
+				-r_c\\
+				-r_b\\
+				-x*s
+		\end{bmatrix}\\
+		\begin{bmatrix}
+				I & A^T & 0\\
+				X & 0   & S\\
+				0 & 0   & A
+		\end{bmatrix}
+		\begin{bmatrix}
+				\Delta s\\
+				\Delta \lambda\\
+				\Delta x
+		\end{bmatrix}
+		= 
+		\begin{bmatrix}
+				-r_c\\
+				-x*s\\
+				-r_b
+		\end{bmatrix}
+\end{align}
+
+
+
+\end{document}
+
