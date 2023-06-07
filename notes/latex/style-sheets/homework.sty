@@ -1,0 +1,332 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{homework}
+\let\openbox\relax
+\usepackage{amsthm}
+\usepackage{thmtools}
+\usepackage{tcolorbox}
+\usepackage{varwidth}
+\tcbuselibrary{skins,theorems,breakable}
+\usepackage{marginnote}
+\usepackage[para]{footmisc}
+\usepackage{framed}
+\usepackage{totcount}
+\usepackage{tikz-cd}
+
+\usetikzlibrary{decorations.pathmorphing}
+
+% Homework List
+\newlist{hw}{enumerate}{2}
+
+\ExplSyntaxOn
+\NewDocumentEnvironment{homework}{O{p}}
+ {
+  \str_case:nnF { #1 }
+   {
+    {p}{\begin{hw}[label=\textbf{\textosf{Problem\hskip.6ex \arabic*.}},align=left,leftmargin=!,labelindent=0pt,labelwidth=0em,labelsep=2mm,listparindent=\parindent,parsep=2pt,series=homework]}
+    {e}{\begin{hw}[label=\textsc{\large Exercise\hskip.7ex \arabic*.},align=left,leftmargin=!,labelindent=0pt,labelwidth=0em,labelsep=2mm,listparindent=\parindent,parsep=2pt,series=homework,itemsep=5mm]}
+    {resume}{\begin{hw}[resume*=homework]}
+   }
+   {\@latex@error{Illegal~option~#1}{I~used~p}}
+ }{\end{hw}}
+\ExplSyntaxOff
+
+\makeatletter
+\def\blfootnote{\xdef\@thefnmark{}\@footnotetext}
+\makeatother
+
+\NewDocumentCommand{\prob}{ o o g g }
+	{\IfNoValueTF{#1}
+	{
+	    \IfNoValueTF{#2}
+		{\IfNoValueTF{#4}
+			{\IfNoValueTF{#3}
+				{\item}
+				{\item\blfootnote{\textsuperscript{\arabic{hwi}}\##3}}}
+			{\item\blfootnote{\textsuperscript{\arabic{hwi}}\##3, pg. #4}}}
+		{\IfNoValueTF{#4}
+			{\IfNoValueTF{#3}
+				{\item\!\tbf{#2} }
+				{\item\tbf{#2}\blfootnote{\textsuperscript{\arabic{hwi}}\##3}}}
+			{\item\tbf{#2}\blfootnote{\textsuperscript{\arabic{hwi}}\##3, pg. #4}}}
+	}
+	{\IfNoValueTF{#2}
+		{\IfNoValueTF{#4}
+			{\IfNoValueTF{#3}
+				{\item[#1]}
+				{\item\blfootnote{\textsuperscript{\arabic{hwi}}\##3}}}
+			{\item\blfootnote{\textsuperscript{\arabic{hwi}}\##3, pg. #4}}}
+		{\IfNoValueTF{#4}
+			{\IfNoValueTF{#3}
+				{\item\!\tbf{#2} }
+				{\item\tbf{#2}\blfootnote{\textsuperscript{\arabic{hwi}}\##3}}}
+			{\item\tbf{#2}\blfootnote{\textsuperscript{\arabic{hwi}}\##3, pg. #4}}}}}
+
+\newcommand{\oldprob}[2]{\item\!(#1,\hspace{0mm} pg.\,\textosf{#2)}\,}
+\newcommand{\exer}[2]{\item\blfootnote{\textsuperscript{\arabic{hwi}}\##1, pg. #2}}
+
+% Chapter Title Commands
+\NewDocumentCommand{\tchap}{o m}{\IfNoValueTF{#1}{\begin{center}
+	{\Large\textbf{$\S$\hspace{1.8mm}\textit{#2}}}
+	\end{center}}{\begin{center}
+	{\Large\textbf{$\S$\hspace{-.6mm} #1 \,\textit{#2}}}
+	\addtocounter{section}{1}
+	\end{center}}}
+
+\NewDocumentCommand{\chap}{o m}{\IfNoValueTF{#1}{\end{homework}
+	\begin{center}
+	{\Large\textbf{$\S$\hspace{1.8mm}\textit{#2}}}
+	\end{center}
+	\begin{homework}[resume]}{\end{homework}
+	\begin{center}
+	{\Large\textbf{$\S$\hspace{-.6mm} #1 \,\textit{#2}}}
+	\end{center}
+	\begin{homework}[resume]}}
+
+% Response Environments
+\declaretheoremstyle[
+	headfont=\itshape,
+	notefont=\itshape,
+	bodyfont=\normalfont,
+	headpunct={},
+	postheadspace={8pt}
+	]{prf}
+
+\declaretheorem[numbered=no,style=prf,qed=\qedsymbol,name=Proof:]{prf}
+\tcolorboxenvironment{prf}{
+	blanker,
+	parbox=false,
+	borderline west={1pt}{-5pt}{black},  
+	breakable,
+	left=5pt,
+	top=-2pt,
+	after skip=15pt,
+	before skip=10pt,
+	pad after break=2pt
+	}
+
+\declaretheorem[numbered=no,style=prf,qed=\qedsymbol,name=Solution:]{soln}
+\tcolorboxenvironment{soln}{
+	blanker,
+	parbox=false,
+	borderline west={1pt}{8pt}{black},
+	breakable,
+	left=20pt,
+	top=1pt,
+	after skip=15pt,
+	before skip=10pt,
+	pad after break=2pt
+	}
+
+\declaretheorem[numbered=no,style=prf,qed=\qedsymbol,name=Example:]{example-alt}
+\tcolorboxenvironment{example-alt}{
+	blanker,
+	parbox=false,
+	borderline west={1pt}{8pt}{black},
+	breakable,
+	left=20pt,
+	top=1pt,
+	after skip=15pt,
+	before skip=10pt,
+	pad after break=2pt
+	}
+
+\declaretheorem[numbered=no,style=prf,qed=\qedsymbol,name=Response:]{response}
+\tcolorboxenvironment{response}{
+	blanker,
+	parbox=false,
+	borderline west={1pt}{8pt}{black},
+	breakable,
+	left=20pt,
+	top=1pt,
+	after skip=15pt,
+	before skip=10pt,
+	pad after break=2pt
+	}
+
+\declaretheorem[numbered=no,style=prf,name=\hspace{-2.8mm}]{linetoleft}
+\tcolorboxenvironment{linetoleft}{
+	blanker,
+	parbox=false,
+	borderline west={1pt}{8pt}{black},
+	breakable,
+	left=20pt,
+	top=1pt,
+	after skip=15pt,
+	before skip=10pt,
+	pad after break=2pt
+	}
+	
+% Additional Commands
+\newcommand{\hili}[1]{\tcboxmath[colback=yellow!40,colframe=yellow!40,left=.5mm,right=.5mm,top=.5mm,bottom=.5mm]{#1}}
+\newcommand{\eqbox}[1]{\tcboxmath[colback=yellow!15,colframe=black,left=1mm,right=1mm,top=1mm,bottom=1mm]{#1}}
+\newcommand{\needpic}{\textcolor{Red}{\huge Insert Picture}}
+
+\newcommand{\mnote}[2]{\marginnote{\textosf{#1}\\pg. \textosf{#2}}}
+\renewcommand*{\marginfont}{\footnotesize\itshape}
+\renewcommand*{\raggedrightmarginnote}{\centering}
+\newcommand{\bigrednote}[1]{\marginnote{\large\textcolor{Red}{\textbf{\textsf{\upshape#1}}}}}
+\newcommand{\finish}{\bigrednote{Finish}}
+\newcommand{\danger}{\marginpar{\color{Red}\dbend\hfill}}
+
+\newtotcounter{danger}
+\newcommand{\ndanger}{%
+	\stepcounter{danger}%
+	\marginpar{\color{Red}\dbend%
+	\\%
+	\\%
+	\hspace*{1.5mm}\total{danger}\hfill}}%
+
+\newenvironment{letters}{\begin{enumerate}[(a),leftmargin=0cm,itemindent=8mm,listparindent=\parindent]}{\end{enumerate}}
+	
+%Theorems for Homework
+\newcounter{hwthms}
+
+\NewDocumentCommand{\hlem}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Lemma \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Lemma \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Lemma \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Lemma \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hprop}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Proposition \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Proposition \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Proposition \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Proposition \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hcor}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Corollary \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Corollary \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Corollary \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Corollary \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hexam}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Example \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Example \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Example \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Example \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hrmk}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Remark \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Remark \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Remark \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Remark \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hthm}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Theorem \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Theorem \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\refstepcounter{hwthms}\item[\textbf{Theorem \textosf{\arabic{hwthms}} (#1).}]}
+			{\item[\textbf{Theorem \textosf{#2} (#1).}]}}}
+\NewDocumentCommand{\hdefn}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+		    {\refstepcounter{hwthms}\item[\textbf{Definition \textosf{\arabic{hwthms}.}}]}
+			{\item[\textbf{Definition \textosf{#2.}}]}}
+		{\IfNoValueTF{#2}
+			{\item[\textbf{Definition. (#1)}]}
+			{\item[\textbf{Definition \textosf{#2} (#1).}]}}}
+
+\NewDocumentEnvironment{framedlem}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\begin{framed}\lem}
+			{\begin{framed}\lem{#2}}}
+		{\IfNoValueTF{#2}
+			{\begin{framed}\lem[#1]}
+			{\begin{framed}\lem[#1]{#2}}}}
+	{\end{framed}}
+\NewDocumentEnvironment{framedprop}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\begin{framed}\prop}
+			{\begin{framed}\prop{#2}}}
+		{\IfNoValueTF{#2}
+			{\begin{framed}\prop[#1]}
+			{\begin{framed}\prop[#1]{#2}}}}
+	{\end{framed}}
+\NewDocumentEnvironment{framedcor}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\cor}
+			{\vspace{2mm}\begin{framed}\cor{#2}}}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\cor[#1]}
+			{\vspace{2mm}\begin{framed}\cor[#1]{#2}}}}
+	{\vspace{-.7mm}\end{framed}}
+\NewDocumentEnvironment{framedexam}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\exam}
+			{\vspace{2mm}\begin{framed}\exam{#2}}}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\exam[#1]}
+			{\vspace{2mm}\begin{framed}\exam[#1]{#2}}}}
+	{\vspace{-.7mm}\end{framed}}
+\NewDocumentEnvironment{framedrmk}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\rmk}
+			{\vspace{2mm}\begin{framed}\rmk{#2}}}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\rmk[#1]}
+			{\vspace{2mm}\begin{framed}\rmk[#1]{#2}}}}
+	{\vspace{-.7mm}\end{framed}}
+\NewDocumentEnvironment{framedthm}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\thm}
+			{\vspace{2mm}\begin{framed}\thm{#2}}}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\thm[#1]}
+			{\vspace{2mm}\begin{framed}\thm[#1]{#2}}}}
+	{\vspace{-.7mm}\end{framed}}
+\NewDocumentEnvironment{frameddefi}{o g}
+	{\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\defi}
+			{\vspace{2mm}\begin{framed}\defi{#2}}}
+		{\IfNoValueTF{#2}
+			{\vspace{2mm}\begin{framed}\defi[#1]}
+			{\vspace{2mm}\begin{framed}\defi[#1]{#2}}}}
+	{\vspace{-.7mm}\end{framed}}
+	
+%Experimental%
+
+\newenvironment{tcframed}{\begin{tcolorbox}[center,bottom=4pt,arc=0pt,outer arc=0pt,colback=white,width=.9\textwidth,parbox=false]}
+	{\end{tcolorbox}}
+	
+\newtcbtheorem[number within=hwthms]{thrm}{Theorem}%
+	{
+	enhanced,
+	parbox=false,
+	frame empty,
+	interior empty,
+	colframe=Dandelion!50,
+	coltitle=black,
+	fonttitle=\bfseries,
+	colbacktitle=Dandelion!50,
+	valign=center,
+	separator sign none,
+	description delimiters parenthesis,
+	arc=3mm,
+	borderline={0.5mm}{0mm}{Dandelion!30},
+	attach boxed title to top left={yshift=-4mm,xshift=5mm,yshifttext=-4mm},
+	boxed title style={boxrule=0.4pt,size=fbox,height=.8cm,arc=1.5mm,boxsep=2.2mm,left=-1mm,right=-1mm},
+	varwidth boxed title,
+	fontupper=\itshape,
+	before skip=15pt,
+	after skip=15pt
+	}{thrm}
+%\NewDocumentEnvironment{thrrm}{ d[] }{\IfNoValueTF{#1}{\begin{savenotes}\begin{thrm}{}{\thetcbcounter}}{\begin{savenotes}\begin{thrm}{#1}{\thetcbcounter}}}{\end{thrm}\end{savenotes}}

@@ -1,0 +1,42 @@
+\documentclass{amsart}
+
+%%% Sets numbering depth to section level (e.g, no numbered subsections)
+\setcounter{secnumdepth}{1}
+
+% include notes style file from Abhishek Shivkumar
+\usepackage{macrosabound, theorem-env}
+
+% make font smaller
+\usepackage[fontsize=9pt]{fontsize}
+% set margins
+% only use if strictly necessary, tufte-book calls geometry already
+% double geometry call results in "overspecified margins" warning if done as below
+% \geometry{left=1in, right=3in, top = 1in, bottom=1in}
+
+%%%%%%%%%%%%%%%%%%
+%%%% FOR DEBUGGING
+%%%%%%%%%%%%%%%%%%
+%\usepackage{layout}
+%\usepackage{showframe}
+
+%%% Removes paragraph indentation and changes paragraph line skip
+
+% ensures that the references show up as an unnumbered section
+\def\bibsection{\section*{\refname}} 
+\begin{document}
+%%% The Title and Author only need to be set once at the start of the document. If you take notes for multiple courses in the same document (for example, in a multi-semester sequence for the same course), you can separate the courses with a new Part, and the semester, lecturer, and course only need to be set once at the start of the new course.
+\newpage
+\title{The Reverse Ising Problem}
+\author{Isaac Martin}
+\date{Summer 2023}
+\maketitle
+\section{Introduction and Terminology}
+
+\begin{defn}
+  Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a function $f:\Sigma^N \to \Sigma^M$ where $N$ and $M$ are finite subsets of $\bN$.
+\end{defn}
+
+\newpage
+\bibliographystyle{abbrvnat}
+\bibliography{ising}
+\end{document}

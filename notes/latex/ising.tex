@@ -1,0 +1,76 @@
+\documentclass{amsart}
+\usepackage[tmargin=1in, bmargin=1in, lmargin=0.8in, rmargin=1in]{geometry}
+%%% Sets numbering depth to section level (e.g, no numbered subsections)
+\setcounter{secnumdepth}{1}
+
+% include notes style file from Abhishek Shivkumar
+\usepackage{macrosabound, theorem-env}
+
+% make font smaller
+\usepackage[fontsize=10pt]{fontsize}
+% set margins
+% only use if strictly necessary, tufte-book calls geometry already
+% double geometry call results in "overspecified margins" warning if done as below
+% \geometry{left=1in, right=3in, top = 1in, bottom=1in}
+
+%%%%%%%%%%%%%%%%%%
+%%%% FOR DEBUGGING
+%%%%%%%%%%%%%%%%%%
+%\usepackage{layout}
+%\usepackage{showframe}
+
+%%% Removes paragraph indentation and changes paragraph line skip
+
+% ensures that the references show up as an unnumbered section
+\def\bibsection{\section*{\refname}} 
+\begin{document}
+%%% The Title and Author only need to be set once at the start of the document. If you take notes for multiple courses in the same document (for example, in a multi-semester sequence for the same course), you can separate the courses with a new Part, and the semester, lecturer, and course only need to be set once at the start of the new course.
+\newpage
+\title{The Reverse Ising Problem}
+\author{Isaac Martin}
+\date{Summer 2023}
+\maketitle
+\section{Introduction and Terminology}
+\begin{defn}
+  Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a function $f:\Sigma^N \to \Sigma^M$ where $N$ and $M$ are finite subsets of $\bN$. For convenience we always assume $N = \{1,...,n\}$ and $M = \{n+1, ..., n+m\}$.
+\end{defn}
+
+\section{Pseudo-boolean optimization and polynomial fitting}
+A pseudo boolean function (PBF) is any function $f:\{0,1\}\to \bR$. It is a well known fact that any such PBF can be uniquely represented by a multilinear polynomial in $n$ variables [pseudo-boolean optimization Boros, Hammer]; that is, a polynomial
+\begin{align*}
+  g(x_1,...,x_n) = \sum_{S \subset [n]} a_S \prod_{j \in S}x_j
+\end{align*}
+with $a_S \in \bR$ which equals $f$ pointwise on $\{0,1\}^n$. To be clear, here $S$ iterates over all subsets of $[n] = \{1,...,n\}$.
+
+It is another well-known fact that the optimization of any pseudo-boolean function can be reduced in polynomial time to an optimization problem on a quadratic polynomial. The original method for accomplishing this was first written by Rosenberg, and since then a reputable zoo of alternative algorithms have been introduced. Most methods share the same basic idea: reduce degree $\geq 3$ monomial terms appearing in the polynomial $g$ by introducing auxiliary variables subject to constraints.
+
+<copy Rosenberg algorithm from Boros, Hammer pg 168>
+
+\begin{thm}\label{thm:rosenberg-reduction}
+  Let $f$ be a multilinear polynomial in $n$ variables. There exists an algorithm $\textsc{Reduce}$ which produces a multilinear polynomial $g$ in $n + a$ variables such that
+  \begin{align*}
+    \min_{(\bfx, \bfa) \in \bB^n \times \bB^a} g(\bfx, \bfa) = \min_{\bfx \in \bB^n} f(\bfx)
+  \end{align*}
+  and if $(\bfx, \bfa) = \arg\min_{(\bfx, \bfa) \in \bB^n \times \bB^a} g(\bfx, \bfa)$ then $\bfx = \arg\min_{\bfx \in \bB^n} f(\bfx).$
+\end{thm}
+\begin{proof}
+  [Boros Hammer Pseudo Boolean Optimization 2002]
+\end{proof}
+We need a slightly stronger statement however.
+\begin{thm}
+  Let $f:\Sigma^N \to \Sigma^M$ be a circuit. Then there exists an Ising circuit with auxiliary spins given by Hamiltonian $H$ which solves $f$.
+\end{thm}
+\begin{proof}
+  Fix $G = N \cup M$ and consider the hamming objective function $\operatorname{ham}:\Sigma^N\times \Sigma^M\to \bR$ defined
+  \begin{align*}
+    \operatorname{ham}(s,t) = d(t, f(s))
+  \end{align*}
+  where $d(t, f(s))$ is the Hamming distance between $t$ and the correct output $f(s)$. Then there exists some multilinear polynomial $g$ in $|G|$ variables which recovers $\operatorname{ham}$ pointwise. We now apply Rosenberg reduction to $g$ and set $H$ equal to the terminal quadratic polynomial we obtain. All that remains to show is that on any input level $s$ the output which minimizes $H$ is $f(s)$.
+
+  Fix an input $s$ and suppose that the minimizer of $g^k(s, \cdot)$ has output coordinates $f(s)$. To obtain $g^{k+1}$ we replace some pair $x_ix_j$ by $x_{k+1}$ and add the expression $M(x_ix_j - 2x_ix_{k+1} - 2x_jx_{k+1} + 3x_{k+1})$. Observe that this expression is zero if $x_ix_j = x_{k+1}$ and is strictly positive otherwise. It follows that $g^k(\bfx) = g^{k+1}(\bfx, x_{k+1})$ if $x_{k+1} = x_ix_j$ and $g^k(\bfx) < g^{k+1}(\bfx, x_{k+1})$ if $x_{k+1} \neq x_ix_j$. Hence the minimizer of $g^{k+1}$ on input level $s$ also has the correct output coordinates, and inductively, we conclude that $H$ is an Ising Hamiltonian reproducing the circuit $f$.
+\end{proof}
+
+\newpage
+\bibliographystyle{abbrvnat}
+\bibliography{ising}
+\end{document}

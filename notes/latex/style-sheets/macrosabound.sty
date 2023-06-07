@@ -1,0 +1,1005 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{macrosabound}
+
+\usepackage{mathtools}
+\usepackage[mathscr]{euscript}
+\usepackage[shortlabels]{enumitem}
+\usepackage{scalerel}
+\usepackage{xparse}
+\usepackage{faktor}  % used for something, not in second largest texlive installation
+\usepackage{multicol}
+\usepackage[only,trianglelefteqslant,llbracket,rrbracket]{stmaryrd} % not in largest texlive distro
+\usepackage[dvipsnames]{xcolor}
+\usepackage{marvosym}
+\usepackage{subdepth}
+\usepackage{xspace}
+\usepackage{letltxmacro}
+\usepackage{manfnt}
+\usepackage{lipsum}
+\usepackage{cancel} % for diagonal slashes in mathmode
+% Any of the following provide uppercase and lowercase fonts, and probably many more
+%\setmathfont{TeX Gyre Pagella Math}
+%\setmathfont{TeX Gyre Termes Math}
+%\setmathfont{STIX}
+%\setmathfont{Asana Math}
+
+\AtBeginDocument{\ifdef{\textosf}{}{\newcommand{\textosf}{\textup}}}
+
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+
+% shorten \operatorname
+\newcommand{\opn}[1]{\operatorname{#1}}
+
+% Tate-Shafarevich Group symbol
+\usepackage[OT2,T1]{fontenc}
+\DeclareSymbolFont{cyrletters}{OT2}{wncyr}{m}{n}
+\DeclareMathSymbol{\tshaf}{\mathalpha}{cyrletters}{"58}
+
+%Text-in-math Shortcuts%
+\DeclareMathOperator{\res}{res}
+\DeclareMathOperator{\cost}{cost}
+\newcommand{\tx}[1]{\ \ \text{#1}\ \ }
+\let\Re\relax
+\DeclareMathOperator{\Re}{Re}
+\let\Im\relax
+\DeclareMathOperator{\Im}{Im}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Inn}{Inn}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\Log}{Log}
+\DeclareMathOperator{\Newt}{Newt}
+\DeclareMathOperator{\sHom}{\scalebox{1.2}{\ensuremath{\mathpzc{Hom}}}}
+\DeclareMathOperator{\End}{End}
+\DeclareMathOperator{\sEnd}{\scalebox{1.2}{\ensuremath{\mathpzc{End}}}}
+\DeclareMathOperator{\Sh}{Sh}
+\DeclareMathOperator{\Der}{Der}
+\DeclareMathOperator{\sDer}{\mathpzc{Der}}
+\DeclareMathOperator{\Grp}{Grp}
+\DeclareMathOperator{\Div}{Div}
+\DeclareMathOperator{\Pic}{Pic}
+\DeclareMathOperator{\Cl}{Cl}
+\DeclareMathOperator{\Ch}{Ch}
+\DeclareMathOperator{\AlgGrp}{AlgGrp} % category of
+\DeclareMathOperator{\GL}{GL}
+\DeclareMathOperator{\SL}{SL}
+\DeclareMathOperator{\SO}{SO}
+\DeclareMathOperator{\SU}{SU}
+\DeclareMathOperator{\Sp}{Sp}
+\DeclareMathOperator{\Mp}{Mp}
+\DeclareMathOperator{\PGL}{PGL}
+\DeclareMathOperator{\Mat}{Mat}
+\DeclareMathOperator{\fraksl}{\mathfrak{s}\mathfrak{l}}
+\DeclareMathOperator{\frakgl}{\mathfrak{g}\mathfrak{l}}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\rk}{rk}
+\DeclareMathOperator{\orb}{orb}
+\DeclareMathOperator{\Sym}{Sym}
+\DeclareMathOperator{\Stab}{Stab}
+\DeclareMathOperator{\Proj}{Proj}
+\DeclareMathOperator{\Conj}{Conj}
+\DeclareMathOperator{\Ann}{Ann}
+\DeclareMathOperator{\Int}{Int}
+\DeclareMathOperator{\Ind}{Ind}
+\DeclareMathOperator{\cl}{cl}
+\DeclareMathOperator{\op}{op}
+\DeclareMathOperator{\sh}{sh}
+\DeclareMathOperator{\gr}{gr}
+\DeclareMathOperator{\Gal}{Gal}
+\DeclareMathOperator{\Syl}{Syl}
+\DeclareMathOperator{\Id}{Id}
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator{\pr}{pr}
+\DeclareMathOperator{\rad}{rad}
+\DeclareMathOperator{\img}{img}
+%\DeclareMathOperator{\ker}{ker}
+\DeclareMathOperator{\coker}{coker}
+\DeclareMathOperator{\codim}{codim}
+\DeclareMathOperator{\spann}{span}
+\DeclareMathOperator{\val}{val}
+\DeclareMathOperator{\Prob}{Prob}
+\DeclareMathOperator{\conv}{conv}
+\DeclareMathOperator{\diam}{diam}
+\DeclareMathOperator{\trop}{trop}
+\DeclareMathOperator{\grad}{grad}
+\DeclareMathOperator{\im}{im}
+\DeclareMathOperator{\Tor}{Tor}
+\DeclareMathOperator{\Ext}{Ext}
+\DeclareMathOperator{\Fix}{Fix}
+\DeclareMathOperator{\Gr}{Gr}
+\DeclareMathOperator{\Spec}{Spec}
+\DeclareMathOperator{\MaxSpec}{MaxSpec}
+\DeclareMathOperator{\Diff}{\mathpzc{Diff}}
+\DeclareMathOperator{\nil}{nil}
+\DeclareMathOperator{\Frac}{Frac}
+\DeclareMathOperator{\Homeo}{Homeo}
+\DeclareMathOperator{\Frob}{Frob}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\eval}{eval}
+\DeclareMathOperator{\sat}{sat}  % for "saturated," as in the saturation of a semigroup.
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\fchar}{char}
+\DeclareMathOperator{\ord}{ord}
+\DeclareMathOperator{\sgn}{sgn}
+%\DeclareMathOperator{\pr}{pr} % for "projection"
+\DeclareMathOperator{\colim}{colim}
+\DeclareMathOperator{\Ob}{Ob}
+\DeclareMathOperator{\Modqc}{\mathsf{Mod\textsubscript{qc}}}
+\DeclareMathOperator{\Modc}{\mathsf{Mod\textsubscript{c}}}
+
+% \DeclaremathOperator places ^ _ directly above and below, like limits
+\DeclareMathOperator*{\lcm}{lcm}
+\DeclareMathOperator*{\area}{area}
+\DeclareMathOperator*{\cone}{cone}
+\DeclareMathOperator*{\Supp}{Supp}
+\DeclareMathOperator*{\supp}{supp}
+\DeclareMathOperator*{\Res}{Res}
+\DeclareMathOperator*{\Cat}{\mathsf{Cat}}
+\DeclareMathOperator*{\Set}{\mathsf{Set}}
+\DeclareMathOperator{\Vect}{\mathsf{Vect}}
+\DeclareMathOperator*{\Top}{\mathsf{Top}}
+\DeclareMathOperator*{\Ring}{\mathsf{Ring}}
+\DeclareMathOperator*{\CRing}{\mathsf{CRing}}
+\DeclareMathOperator*{\Group}{\mathsf{Group}}
+\DeclareMathOperator*{\Ab}{\mathsf{Ab}}
+\DeclareMathOperator*{\Mod}{\!\text{-}\mathsf{Mod}}
+\begingroup
+	\catcode`\_=12
+	\long\def\next#1{\endgroup#1}%
+	\next{%
+\RenewDocumentCommand{\sup}{ e{_} g }{
+	\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}{\SUP}{\SUP\braces{#2}}}
+		{\IfNoValueTF{#2}{\SUP_{#1}}{\SUP_{#1}\braces{#2}}}}
+\RenewDocumentCommand{\inf}{ e{_} g }{
+	\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}{\INF}{\INF\braces{#2}}}
+		{\IfNoValueTF{#2}{\INF_{#1}}{\INF_{#1}\braces{#2}}}}
+\RenewDocumentCommand{\max}{ e{_} g }{
+	\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}{\MAX}{\MAX\braces{#2}}}
+		{\IfNoValueTF{#2}{\MAX_{#1}}{\MAX_{#1}\braces{#2}}}}
+\RenewDocumentCommand{\min}{ e{_} g }{
+	\IfNoValueTF{#1}
+		{\IfNoValueTF{#2}{\MIN}{\MIN\braces{#2}}}
+		{\IfNoValueTF{#2}{\MIN_{#1}}{\MIN_{#1}\braces{#2}}}}
+}
+\newcommand{\dx}{\dl2{x}}
+\newcommand{\dy}{\dl2{y}}
+\newcommand{\dz}{\dl2{z}}
+\newcommand{\du}{\dl2{u}}
+\newcommand{\dv}{\dl2{v}}
+\newcommand{\dw}{\dl2{w}}
+\newcommand{\dt}{\dl2{t}}
+\newcommand{\dzeta}{\dl2{\zeta}}
+\newcommand{\dtheta}{\dl2{\theta}}
+\newcommand{\deta}{\dl2{\eta}}
+\newcommand{\dxi}{\dl2{\xi}}
+\newcommand{\pdl}[1]{\dl.p.2{\hspace{-.15mm} #1}}
+\LetLtxMacro{\oldth}{\th}
+\renewcommand{\th}{\ensuremath{^{\raisebox{-1pt}{\scriptsize\text{th}}}}\xspace}
+\newcommand{\rd}{\ensuremath{^{\raisebox{-1pt}{\scriptsize\text{rd}}}}\xspace}
+
+%Special Characters%
+\newcommand{\vphi}{\varphi}
+\newcommand{\vPhi}{\varPhi}
+\newcommand{\eps}{\epsilon}
+\newcommand{\veps}{\varepsilon}	
+\newcommand{\del}{\delta}
+\newcommand{\Del}{\Delta}
+\newcommand{\vDel}{\varDelta}
+\newcommand{\sig}{\sigma}
+\newcommand{\vsig}{\varsigma}
+\newcommand{\Sig}{\Sigma}
+\newcommand{\vSig}{\varSigma}
+\newcommand{\vtheta}{\vartheta}
+\newcommand{\vTheta}{\varTheta}
+\newcommand{\ups}{\upsilon}
+\newcommand{\Ups}{\Upsilon}
+\newcommand{\vUps}{\varUpsilon}
+\newcommand{\gam}{\gamma}
+\newcommand{\Gam}{\Gamma}
+\newcommand{\vGam}{\varGamma}
+\newcommand{\vkappa}{\varkappa}
+\newcommand{\lam}{\lambda}
+\newcommand{\Lam}{\Lambda}
+\newcommand{\vLam}{\varLambda}
+\newcommand{\vOmega}{\varOmega}
+\newcommand{\vrho}{\varrho}
+\newcommand{\vpi}{\varpi}
+\newcommand{\vPi}{\varPi}
+\newcommand{\vPsi}{\varPsi}
+\newcommand{\vXi}{\varXi}
+\newcommand{\atsym}{\hspace{1pt}\raisebox{.8pt}{\scaleobj{.8}{$\MVAt$}}\hspace{1.1pt}}
+\newcommand{\degr}{\hspace{.2mm}\raisebox{-3pt}{\text{\textdegree}}}
+\renewcommand{\emptyset}{\varnothing}
+\newcommand{\powerset}{\raisebox{.12\baselineskip}{\scaleobj{1.2}{\wp}}}
+\newcommand{\bigO}{\mathcal{O}}
+\renewcommand{\div}{\operatorname{div}}
+
+%Relational Symbols%
+\mathchardef\ordinarycolon\mathcode`\:
+	\mathcode`\:=\string"8000
+	\begingroup \catcode`\:=\active
+	\gdef:{\mathrel{\mathop\ordinarycolon}}
+	\endgroup
+\newcommand{\iso}{\cong}
+\newcommand{\midd}{\mathrel{}\middle|\mathrel{}}
+\newcommand{\divs}{\mathbin{\scaleobj{1.3}{\vert}}}
+\newcommand{\ndivs}{\mathbin{\scaleobj{1.3}{\nmid}}}
+\newcommand{\fak}[2]{\faktor{#1}{#2}}
+\newcommand{\sub}{\subset}
+\newcommand{\subeq}{\subseteq}
+\newcommand{\nsub}{\not\subset}
+\newcommand{\nsubeq}{\nsubseteq}
+\newcommand{\subneq}{\subsetneq}
+\newcommand{\cont}{\supset}
+\newcommand{\conteq}{\supseteq}
+\newcommand{\ncont}{\not\supset}
+\newcommand{\nconteq}{\nsupseteq}
+\newcommand{\contneq}{\supsetneq}
+\newcommand{\nsg}{\trianglelefteqslant}
+\newcommand{\subg}{\leqslant}
+\newcommand{\medcap}{\mathrel{\scaleobj{1.2}{\cap}}}
+\newcommand{\medcup}{\mathrel{\scaleobj{1.2}{\cup}}}
+\newcommand{\medsqcap}{\mathrel{\scaleobj{1.2}{\sqcap}}}
+\newcommand{\medsqcup}{\mathrel{\scaleobj{1.2}{\sqcup}}}
+\newcommand{\medvee}{\mathrel{\scaleobj{1.2}{\vee}}}
+\newcommand{\medwedge}{\mathrel{\scaleobj{1.2}{\wedge}}}
+\newcommand{\rarr}{\rightarrow}
+\newcommand{\darr}{\downarrow}
+\newcommand{\uarr}{\uparrow}
+\newcommand{\larr}{\leftarrow}
+\newcommand{\lrarr}{\leftrightarrow}
+\NewDocumentCommand \into { d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xhookrightarrow{\ \ \ }}{\xhookrightarrow{\ #2\ }}}
+	{\IfNoValueTF{#2}{\xhookrightarrow[\ #1\ ]{}}{\xhookrightarrow[\ #1\ ]{\ #2\ }}}}
+\NewDocumentCommand \leftinto { d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xhookleftarrow{\ \ \ }}{\xhookleftarrow{\ #2\ }}}
+	{\IfNoValueTF{#2}{\xhookleftarrow[\ #1\ ]{}}{\xhookleftarrow[\ #1\ ]{\ #2\ }}}}
+\NewDocumentCommand \onto { d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xtwoheadrightarrow{\ \ \hspace{1.15mm}}}{\xtwoheadrightarrow{\ #2\ }}}
+	{\IfNoValueTF{#2}{\xtwoheadrightarrow[\ #1\ ]{}}{\xtwoheadrightarrow[\ #1\ ]{\ #2\ }}}}
+\NewDocumentCommand \leftonto { d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xtwoheadleftarrow{\ \ \hspace{1.15mm}}}{\xtwoheadleftarrow{\ #2\ }}}
+	{\IfNoValueTF{#2}{\xtwoheadleftarrow[\ #1\ ]{}}{\xtwoheadleftarrow[\ #1\ ]{\ #2\ }}}}
+\RenewDocumentCommand \longmapsto { d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xmapsto{\ \ \ }}{\xmapsto{\ \hspace{.345mm} #2\hspace{.345mm}\ }}}
+	{\IfNoValueTF{#2}{\xmapsto[\ \hspace{.345mm} #1\hspace{.345mm}\ ]{}}{\xmapsto[\ \hspace{.345mm} #1\hspace{.345mm}\ ]{\ \hspace{.345mm} #2\hspace{.345mm}\ }}}}
+\RenewDocumentCommand \mapsto { d[] g }{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xmapsto{\ \ }}{\xmapsto{\,#2\,}}}
+	{\IfNoValueTF{#2}{\xmapsto[\,#1\,]{}}{\xmapsto[\,#1\,]{\,#2\,}}}}
+\NewDocumentCommand \leftmapsto { D[]{} G{} }{\tmapsfrom[#1]{#2}}
+\NewDocumentCommand{\todefinition}{ d[] g }
+	{\IfNoValueTF{#1}{\IfNoValueTF{#2}{\mathrel{
+				\mathchoice
+					{\xrightarrow{\ \ \ }}
+					{\xrightarrow{\ \ \,}}
+					{\rightarrow} {\rightarrow} } } {\mathrel{ \mathchoice {\xrightarrow{\ #2\ }} {\xrightarrow{\ #2\ }} {\rightarrow} {\rightarrow} }}} {\IfNoValueTF{#2}{\mathrel{ \mathchoice {\xrightarrow[\ #1\ ]{}} {\xrightarrow[\ #1\ ]{}} {\rightarrow} {\rightarrow} }}{\mathrel{ \mathchoice {\xrightarrow[\ #1\ ]{\ #2\ }} {\xrightarrow[\ #1\ ]{\ #2\ }} {\rightarrow} {\rightarrow} }}}} \NewDocumentCommand{\xrightarrowfixed}{d[] g} {\IfNoValueTF{#1}{\IfNoValueTF{#2}{\rightarrow}{\xrightarrow{#2}}}{\IfNoValueTF{#2}{\xrightarrow[#1]}{\xrightarrow[#1]{#2}}}} \RenewDocumentCommand{\to}{s}{\IfBooleanTF{#1}{\xrightarrowfixed}{\todefinition}} \NewDocumentCommand \leftto { d[] g } {\IfNoValueTF{#1}{\IfNoValueTF{#2}{\xleftarrow{\ \ \ }}{\xleftarrow{\ #2\ }}} {\IfNoValueTF{#2}{\xleftarrow[\ #1\ ]{}}{\xleftarrow[\ #1\ ]{\ #2\ }}}} \newcommand{\isoto}{\stackrel{\textstyle\sim}{\smash{\longrightarrow}\rule{0pt}{0.4ex}}} %Logical Symbols% \newcommand{\Larr}{\hskip.5ex\mathrel{\raisebox{-.7pt}{\scaleobj{1.4}{\Leftarrow}}}\hskip.6ex} \newcommand{\Rarr}{\hskip.6ex\mathrel{\raisebox{-.7pt}{\scaleobj{1.4}{\Rightarrow}}}\hskip.5ex} \newcommand{\LRarr}{\hskip.6ex\mathrel{\raisebox{-.7pt}{\scaleobj{1.4}{\Leftrightarrow}}}\hskip.5ex} \newcommand{\nRarr}{\hskip.6ex\mathrel{\raisebox{-.7pt}{\scaleobj{1.4}{\nRightarrow}}}\hskip.5ex} \newcommand{\nLarr}{\hskip.5ex\mathrel{\raisebox{-.7pt}{\scaleobj{1.4}{\nLeftarrow}}}\hskip.6ex} \newcommand{\fall}{\forall\hskip.1ex} \newcommand{\ex}{\exists\hskip.15ex} \newcommand{\contra}{\rightarrow\leftarrow} Math Character Embellishments% \newcommand{\oline}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu} \newcommand{\uline}[1]{\underline{#1}} \newcommand{\obrace}[1]{\overbrace{#1}} \newcommand{\ubrace}[1]{\underbrace{#1}} \newcommand{\obrack}[1]{\overbracket{#1}} \newcommand{\ubrack}[1]{\underbracket{#1}} \newcommand{\wtil}[1]{\widetilde{#1}} \newcommand{\oset}[2]{\overset{#1}{#2}} \newcommand{\uset}[2]{\underset{#1}{#2}} \newcommand{\wbar}[1]{\widebar{#1}} Delimiters% \newcommand{\rightvert}[1]{\left.{#1}\right\vert} \newcommand{\leftvert}[1]{\left\vert{#1}\right.} \DeclarePairedDelimiter\BRACES{\{}{\}}	\DeclarePairedDelimiter\BRACKS{[}{]}	\DeclarePairedDelimiter\DBRACKS{\llbracket}{\rrbracket}	\DeclarePairedDelimiter\PARS{(}{)}	\DeclarePairedDelimiter\GRP{\lgroup}{\rgroup}	\DeclarePairedDelimiter\CEILING{\lceil}{\rceil} \DeclarePairedDelimiter\FLOOR{\lfloor}{\rfloor} \DeclarePairedDelimiter\ABS{\lvert}{\rvert}	\DeclarePairedDelimiter\ANGS{\langle}{\rangle} \DeclarePairedDelimiter\NORM{\lVert}{\Vert} \DeclarePairedDelimiter\ROUND{\lfloor}{\rceil} \LetLtxMacro{\MID}{\mid} \NewDocumentCommand{\braces}{s o m}{ \IfBooleanTF{#1} {\BRACES{\hskip.1ex#3\hskip.1ex}} {\IfNoValueTF{#2} {\renewcommand{\mid}{\midd} \BRACES*{\hskip.1ex#3\hskip.1ex} \renewcommand{\mid}{\MID}} {\renewcommand{\mid}{\mathrel{}\mathclose{}#2\vert\mathrel{}\mathclose{}} \BRACES[#2]{\hskip.1ex#3\hskip.1ex} \renewcommand{\mid}{\MID}}}}
+\NewDocumentCommand{\bracks}{s o m}{
+	\IfBooleanTF{#1}
+		{\BRACKS{\hspace{.58mm} #3\hspace{.58mm}}}
+		{\IfNoValueTF{#2}
+			{\BRACKS*{\hspace{.58mm} #3\hspace{.58mm}}}
+			{\BRACKS[#2]{\hspace{.58mm} #3\hspace{.58mm}}}}}
+\NewDocumentCommand{\dbracks}{s o m}{
+	\IfBooleanTF{#1}
+		{\DBRACKS{\hspace{.19mm}#3\hspace{.18mm}}}
+		{\IfNoValueTF{#2}
+			{\DBRACKS*{\hspace{.19mm} #3\hspace{.18mm}}}
+			{\DBRACKS[#2]{\hspace{.19mm} #3\hspace{.18mm}}}}}
+\NewDocumentCommand{\pars}{s o m}{
+	\IfBooleanTF{#1}
+		{\PARS{#3}}
+		{\IfNoValueTF{#2}
+			{\PARS*{#3}}
+			{\PARS[#2]{#3}}}}
+\NewDocumentCommand{\grp}{s o m}{
+	\IfBooleanTF{#1}
+		{\hspace{-.3mm}\GRP{#3}\hspace{-.6mm}}
+		{\IfNoValueTF{#2}
+			{\hspace{-.3mm}\GRP*{#3}\hspace{-.6mm}}
+			{\hspace{-.3mm}\GRP[#2]{#3}\hspace{-.6mm}}}}
+\NewDocumentCommand{\ceiling}{s o m}{
+	\IfBooleanTF{#1}
+		{\CEILING{#3}}
+		{\IfNoValueTF{#2}
+			{\CEILING*{#3}}
+			{\CEILING[#2]{#3}}}}
+\NewDocumentCommand{\floor}{s o m}{
+	\IfBooleanTF{#1}
+		{\FLOOR{#3}}
+		{\IfNoValueTF{#2}
+			{\FLOOR*{#3}}
+			{\FLOOR[#2]{#3}}}}
+\NewDocumentCommand{\abs}{s o m}{
+	\IfBooleanTF{#1}
+		{\ABS{#3}}
+		{\IfNoValueTF{#2}
+			{\ABS*{\hspace{.46mm} #3 \hspace{.4mm}}}
+			{\ABS[#2]{\hspace{.46mm} #3 \hspace{.4mm}}}}}
+\NewDocumentCommand{\angs}{s o m}{
+	\IfBooleanTF{#1}
+		{\ANGS{#3}}
+		{\IfNoValueTF{#2}
+			{\renewcommand{\mid}{\midd}
+				\ANGS*{#3}
+				\renewcommand{\mid}{\MID}}
+			{\renewcommand{\mid}{\mathrel{}\mathclose{}#2\vert\mathrel{}\mathclose{}}
+				\ANGS[#2]{#3}
+				\renewcommand{\mid}{\MID}}}}
+\NewDocumentCommand{\norm}{s o m}{
+	\IfBooleanTF{#1}
+		{\NORM{\mkern.5mu #3}}
+		{\IfNoValueTF{#2}
+			{\NORM*{\mkern.5mu #3}}
+			{\NORM[#2]{\mkern.5mu #3}}}}
+\NewDocumentCommand{\round}{s o m}{
+	\IfBooleanTF{#1}
+		{\ROUND{#3}}
+		{\IfNoValueTF{#2}
+			{\ROUND*{#3}}
+			{\ROUND[#2]{#3}}}}
+
+\newcommand{\spseriesbracks}[1]{\mkern1mu\textup{[}\hspace{-.1mm}\textup{[}\mkern1mu #1\textup{]}\hspace{-.1mm}\textup{]}} % R[[x]] with math brackets
+\newcommand{\pseriesbracks}[1]{\mkern-.5mu\raisebox{.5pt}{$[\hspace{-.7mm}[$}#1\raisebox{.5pt}{$]\hspace{-.4mm}]$}} % R[[x]] with smaller brackets
+\newcommand{\spolyringbracks}[1]{\mkern.5mu\textup{[}\mkern1mu #1\mkern.2mu\textup{]}} % R[x] with math brackets
+\newcommand{\polyringbracks}[1]{\mkern-.5mu\raisebox{.5pt}{$[$}\mkern-.5mu#1\mkern-.5mu\raisebox{.5pt}{$]$}} % R[x] with smaller brackets
+\newcommand{\lseriespars}[1]{\raisebox{.5pt}{$(\hspace{-.4mm}($}#1\raisebox{.5pt}{$)\hspace{-.2mm})$}} % R((x)) with math parentheses
+\newcommand{\slseriespars}[1]{\mkern1.2mu\textup{(\hskip.1pt(}\mkern1mu #1\mkern.5mu\textup{)\hskip.2pt)}} % R((x)) with smaller parentheses
+
+%Document and Text Organization%
+\newcommand{\hru}{\vspace{-2mm}\rule{\textwidth}{1.2pt}\par} 
+\newcommand{\ie}{i.e.\xspace}
+\newcommand{\eg}{e.g.\xspace}
+\newcommand{\fcom}{\,,} % comma after big fractions
+\newcommand{\onlyifstep}{\noindent(\raisebox{-1pt}{\scaleobj{1.4}{\Rightarrow}}\hskip-.2ex)\hskip1.5ex} % (==>)
+\newcommand{\ifstep}{\noindent(\hskip-.1ex\raisebox{-1pt}{\scaleobj{1.4}{\Leftarrow}}\hskip0ex)\hskip1.5ex} % (<==)
+\NewDocumentCommand{\centerpic}{o m}{\IfNoValueTF{#1}{\begin{center}\includegraphics{#2}\end{center}}{\begin{center}\includegraphics[#1]{#2}\end{center}}}
+\SetEnumitemKey{twocol}{
+itemsep = 1\itemsep,
+parsep = 1\parsep,
+before = \raggedcolumns\begin{multicols}{2},
+after = \end{multicols}}
+
+%Text Symbols
+\newcommand{\txast}{\raisebox{.1ex}{\textasteriskcentered}}
+\newcommand{\txdag}{\textdagger}
+\newcommand{\txddag}{\textdaggerdbl}
+\newcommand{\txtwoast}{\raisebox{.1ex}{\textasteriskcentered\textasteriskcentered}}
+\newcommand{\txtwodag}{\textdagger\textdagger}
+\newcommand{\txtwoddag}{\textdaggerdbl\textdaggerdbl}
+\newcommand{\txref}{\textreferencemark}
+\newcommand{\txswirl}{\hskip.05ex\raisebox{-.11ex}{\scaleobj{.7}{$\manfntsymbol{39}$}}}
+\newcommand{\txdiamond}{\raisebox{.2ex}{\scaleobj{.7}{$\manfntsymbol{37}$}}}
+
+%Spacing and Appearance%
+\newcommand{\dsty}{\displaystyle}
+\newcommand{\tsty}{\textstyle}
+
+%Math Commands%
+\newcommand{\Leg}[2]{\genfrac{(}{)}{}{}{#1}{#2}}
+\newcommand{\invlim}{\varprojlim}
+\newcommand{\dirlim}{\varinjlim}
+\newcommand{\od}{\diff}
+\newcommand{\pd}{\diffp}
+\ExplSyntaxOn
+	\NewDocumentCommand{\cyc}{ O{\;} m }{(\alec_cyc:nn { #1 } { #2 })}
+		\seq_new:N \l_alec_cyc_seq\cs_new_protected:Npn \alec_cyc:nn #1 #2{\seq_set_split:Nnn \l_alec_cyc_seq { , } { #2 }\seq_use:Nn\l_alec_cyc_seq { #1 }}
+\ExplSyntaxOff
+\LetLtxMacro{\oldsqrt}{\sqrt}
+\RenewDocumentCommand{\sqrt}{o m}{\IfNoValueTF{#1}{\oldsqrt{#2}}{\oldsqrt[\leftroot{1}\uproot{2}#1]{#2}}}
+\NewDocumentCommand{\fg}{d()}{\pi_1\mkern-.5mu\cyc[,]{#1}}
+\NewDocumentCommand{\restr}{o m m}{\IfValueTF{#1}
+	{\kern-\nulldelimiterspace %
+		#2\hspace{.2mm} %
+		\vphantom{\big|}
+		#1|_{#3}}
+	{\left.\kern-\nulldelimiterspace %
+		#2\hspace{.2mm} %
+		\vphantom{\big|} %
+		\right|_{#3}}}
+\NewDocumentCommand{\ecases}{s m}{\IfBooleanTF{#1}{\begin{cases*}#2\end{cases*}}{\begin{cases}#2\end{cases}}}
+\newcommand{\txif}{\text{if }\,}
+
+%Details, Details%
+\providecommand*{\twoheadrightarrowfill@}{\arrowfill@\relbar\relbar\twoheadrightarrow}
+\providecommand*{\twoheadleftarrowfill@}{\arrowfill@\twoheadleftarrow\relbar\relbar}
+\newcommand{\mapsfromnew}{\mathrel{\reflectbox{\ensuremath{\longmapsto}}}}
+\providecommand*\tmapsfrom[2][]{\ext@arrow 0055{\arrowfill@\relbar\relbar\mapsfromnew}{#1}{#2}}
+\DeclareMathOperator*{\SUP}{sup}
+\DeclareMathOperator*{\INF}{inf}
+\DeclareMathOperator*{\MAX}{max}
+\DeclareMathOperator*{\MIN}{min}
+\providecommand*{\xtwoheadrightarrow}[2][]{\ext@arrow 0579\twoheadrightarrowfill@{#1}{#2}}
+\providecommand*{\xtwoheadleftarrow}[2][]{\ext@arrow 5097\twoheadleftarrowfill@{#1}{#2}}
+\let\save@mathaccent\mathaccent
+\newcommand*\if@single[3]{%
+		\setbox0\hbox{${\mathaccent"0362{#1}}^H$}%
+		\setbox2\hbox{${\mathaccent"0362{\kern0pt#1}}^H$}%
+		\ifdim\ht0=\ht2 #3\else #2\fi
+	}
+	%The bar will be moved to the right by a half of \macc@kerna, which is computed by amsmath:
+	\newcommand*\rel@kern[1]{\kern#1\dimexpr\macc@kerna}
+	%If there's a superscript following the bar, then no negative kern may follow the bar;
+	%an additional {} makes sure that the superscript is high enough in this case:
+	\newcommand*\widebar[1]{\@ifnextchar^{{\wide@bar{#1}{0}}}{\wide@bar{#1}{1}}}
+	%Use a separate algorithm for single symbols:
+	\newcommand*\wide@bar[2]{\if@single{#1}{\wide@bar@{#1}{#2}{1}}{\wide@bar@{#1}{#2}{2}}}
+	\newcommand*\wide@bar@[3]{%
+		\begingroup
+		\def\mathaccent##1##2{%
+			%Enable nesting of accents:
+			\let\mathaccent\save@mathaccent
+			%If there's more than a single symbol, use the first character instead (see below):
+			\if#32 \let\macc@nucleus\first@char \fi
+			%Determine the italic correction:
+			\setbox\z@\hbox{$\macc@style{\macc@nucleus}_{}$}%
+			\setbox\tw@\hbox{$\macc@style{\macc@nucleus}{}_{}$}%
+			\dimen@\wd\tw@
+			\advance\dimen@-\wd\z@
+			%Now \dimen@ is the italic correction of the symbol.
+			\divide\dimen@ 3
+			\@tempdima\wd\tw@
+			\advance\@tempdima-\scriptspace
+			%Now \@tempdima is the width of the symbol.
+			\divide\@tempdima 10
+			\advance\dimen@-\@tempdima
+			%Now \dimen@ = (italic correction / 3) - (Breite / 10)
+			\ifdim\dimen@>\z@ \dimen@0pt\fi
+			%The bar will be shortened in the case \dimen@<0 !
+			\rel@kern{0.6}\kern-\dimen@
+			\if#31
+			\overline{\rel@kern{-0.6}\kern\dimen@\macc@nucleus\rel@kern{0.4}\kern\dimen@}%
+			\advance\dimen@0.4\dimexpr\macc@kerna
+			%Place the combined final kern (-\dimen@) if it is >0 or if a superscript follows:
+			\let\final@kern#2%
+			\ifdim\dimen@<\z@ \let\final@kern1\fi
+			\if\final@kern1 \kern-\dimen@\fi
+			\else
+			\overline{\rel@kern{-0.6}\kern\dimen@#1}%
+			\fi
+		}%
+	\macc@depth\@ne
+	\let\math@bgroup\@empty \let\math@egroup\macc@set@skewchar
+	\mathsurround\z@ \frozen@everymath{\mathgroup\macc@group\relax}%
+	\macc@set@skewchar\relax
+	\let\mathaccentV\macc@nested@a
+	%The following initialises \macc@kerna and calls \mathaccent:
+	\if#31
+	\macc@nested@a\relax111{#1}%
+	\else
+	%If the argument consists of more than one symbol, and if the first token is
+	%a letter, use that letter for the computations:
+	\def\gobble@till@marker##1\endmarker{}%
+	\futurelet\first@char\gobble@till@marker#1\endmarker
+	\ifcat\noexpand\first@char A\else
+	\def\first@char{}%
+	\fi
+	\macc@nested@a\relax111{\first@char}%
+	\fi
+	\endgroup
+}
+
+% Special spaces
+\newcommand{\mgn}{\mathcal{M}}
+\newcommand{\mgnbar}{\overline{\mathcal{M}}}
+% Blackboard Bold Letters%
+\newcommand{\bA}{\mathbb{A}}
+\newcommand{\bB}{\mathbb{B}}
+\newcommand{\bC}{\mathbb{C}}
+\newcommand{\bD}{\mathbb{D}}
+\newcommand{\bE}{\mathbb{E}}
+\newcommand{\bF}{\mathbb{F}}
+\newcommand{\bG}{\mathbb{G}}
+\newcommand{\bH}{\mathbb{H}}
+\newcommand{\bI}{\mathbb{I}}
+\newcommand{\bJ}{\mathbb{J}}
+\newcommand{\bK}{\mathbb{K}}
+\newcommand{\bL}{\mathbb{L}}
+\newcommand{\bM}{\mathbb{M}}
+\newcommand{\bN}{\mathbb{N}}
+\newcommand{\bO}{\mathbb{O}}
+\newcommand{\bP}{\mathbb{P}}
+\newcommand{\bQ}{\mathbb{Q}}
+\newcommand{\bR}{\mathbb{R}}
+\newcommand{\bS}{\mathbb{S}}
+\newcommand{\bT}{\mathbb{T}}
+\newcommand{\bU}{\mathbb{U}}
+\newcommand{\bV}{\mathbb{V}}
+\newcommand{\bW}{\mathbb{W}}
+\newcommand{\bX}{\mathbb{X}}
+\newcommand{\bY}{\mathbb{Y}}
+\newcommand{\bZ}{\mathbb{Z}}
+\newcommand{\bRP}{\mathbb{R}\mkern-2mu\mathbb{P}}
+\newcommand{\bCP}{\mathbb{C}\mkern-1mu\mathbb{P}}
+
+%Calligraphic Letters%
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cI}{\mathcal{I}}
+\newcommand{\cJ}{\mathcal{J}}
+\newcommand{\cK}{\mathcal{K}}
+\newcommand{\cL}{\mathcal{L}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cO}{\mathcal{O}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cQ}{\mathcal{Q}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cU}{\mathcal{U}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\cW}{\mathcal{W}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+\newcommand{\cZ}{\mathcal{Z}}
+
+%Fraktur Letters%
+\newcommand{\frakA}{\mathfrak{A}}
+\newcommand{\frakB}{\mathfrak{B}}
+\newcommand{\frakC}{\mathfrak{C}}
+\newcommand{\frakD}{\mathfrak{D}}
+\newcommand{\frakE}{\mathfrak{E}}
+\newcommand{\frakF}{\mathfrak{F}}
+\newcommand{\frakG}{\mathfrak{G}}
+\newcommand{\frakH}{\mathfrak{H}}
+\newcommand{\frakI}{\mathfrak{I}}
+\newcommand{\frakJ}{\mathfrak{J}}
+\newcommand{\frakK}{\mathfrak{K}}
+\newcommand{\frakL}{\mathfrak{L}}
+\newcommand{\frakM}{\mathfrak{M}}
+\newcommand{\frakN}{\mathfrak{N}}
+\newcommand{\frakO}{\mathfrak{O}}
+\newcommand{\frakP}{\mathfrak{P}}
+\newcommand{\frakQ}{\mathfrak{Q}}
+\newcommand{\frakR}{\mathfrak{R}}
+\newcommand{\frakS}{\mathfrak{S}}
+\newcommand{\frakT}{\mathfrak{T}}
+\newcommand{\frakU}{\mathfrak{U}}
+\newcommand{\frakV}{\mathfrak{V}}
+\newcommand{\frakW}{\mathfrak{W}}
+\newcommand{\frakX}{\mathfrak{X}}
+\newcommand{\frakY}{\mathfrak{Y}}
+\newcommand{\frakZ}{\mathfrak{Z}}
+\newcommand{\fraka}{\mathfrak{a}}
+\newcommand{\frakb}{\mathfrak{b}}
+\newcommand{\frakc}{\mathfrak{c}}
+\newcommand{\frakd}{\mathfrak{d}}
+\newcommand{\frake}{\mathfrak{e}}
+\newcommand{\frakf}{\mathfrak{f}}
+\newcommand{\frakg}{\mathfrak{g}}
+\newcommand{\frakh}{\mathfrak{h}}
+\newcommand{\fraki}{\mathfrak{i}}
+\newcommand{\frakj}{\mathfrak{j}}
+\newcommand{\frakk}{\mathfrak{k}}
+\newcommand{\frakl}{\mathfrak{l}}
+\newcommand{\frakm}{\mathfrak{m}}
+\newcommand{\frakn}{\mathfrak{n}}
+\newcommand{\frako}{\mathfrak{o}}
+\newcommand{\frakp}{\mathfrak{p}}
+\newcommand{\frakq}{\mathfrak{q}}
+\newcommand{\frakr}{\mathfrak{r}}
+\newcommand{\fraks}{\mathfrak{s}}
+\newcommand{\frakt}{\mathfrak{t}}
+\newcommand{\fraku}{\mathfrak{u}}
+\newcommand{\frakv}{\mathfrak{v}}
+\newcommand{\frakw}{\mathfrak{w}}
+\newcommand{\frakx}{\mathfrak{x}}
+\newcommand{\fraky}{\mathfrak{y}}
+\newcommand{\frakz}{\mathfrak{z}}
+
+% Tilde Letters %
+\newcommand{\tilA}{\tilde{A}}
+\newcommand{\tilB}{\tilde{B}}
+\newcommand{\tilC}{\tilde{C}}
+\newcommand{\tilD}{\tilde{D}}
+\newcommand{\tilE}{\tilde{E}}
+\newcommand{\tilF}{\tilde{F}}
+\newcommand{\tilG}{\tilde{G}}
+\newcommand{\tilH}{\tilde{H}}
+\newcommand{\tilI}{\tilde{I}}
+\newcommand{\tilJ}{\tilde{J}}
+\newcommand{\tilK}{\tilde{K}}
+\newcommand{\tilL}{\tilde{L}}
+\newcommand{\tilM}{\tilde{M}}
+\newcommand{\tilN}{\tilde{N}}
+\newcommand{\tilO}{\tilde{O}}
+\newcommand{\tilP}{\tilde{P}}
+\newcommand{\tilQ}{\tilde{Q}}
+\newcommand{\tilR}{\tilde{R}}
+\newcommand{\tilS}{\tilde{S}}
+\newcommand{\tilT}{\tilde{T}}
+\newcommand{\tilU}{\tilde{U}}
+\newcommand{\tilV}{\tilde{V}}
+\newcommand{\tilW}{\tilde{W}}
+\newcommand{\tilX}{\tilde{X}}
+\newcommand{\tilY}{\tilde{Y}}
+\newcommand{\tilZ}{\tilde{Z}}
+\newcommand{\tila}{\tilde{a}}
+\newcommand{\tilb}{\tilde{b}}
+\newcommand{\tilc}{\tilde{c}}
+\newcommand{\tild}{\tilde{d}}
+\newcommand{\tile}{\tilde{e}}
+\newcommand{\tilf}{\tilde{f}}
+\newcommand{\tilg}{\tilde{g}}
+\newcommand{\tilh}{\tilde{h}}
+\newcommand{\tili}{\tilde{i}}
+\newcommand{\tilj}{\tilde{j}}
+\newcommand{\tilk}{\tilde{k}}
+\newcommand{\till}{\tilde{l}}
+\newcommand{\tilm}{\tilde{m}}
+\newcommand{\tiln}{\tilde{n}}
+\newcommand{\tilo}{\tilde{o}}
+\newcommand{\tilp}{\tilde{p}}
+\newcommand{\tilq}{\tilde{q}}
+\newcommand{\tilr}{\tilde{r}}
+\newcommand{\tils}{\tilde{s}}
+\newcommand{\tilt}{\tilde{t}}
+\newcommand{\tilu}{\tilde{u}}
+\newcommand{\tilv}{\tilde{v}}
+\newcommand{\tilw}{\tilde{w}}
+\newcommand{\tilx}{\tilde{x}}
+\newcommand{\tily}{\tilde{y}}
+\newcommand{\tilz}{\tilde{z}}
+%Script Letters%
+\newcommand{\scrA}{\mathscr{A}}
+\newcommand{\scrB}{\mathscr{B}}
+\newcommand{\scrC}{\mathscr{C}}
+\newcommand{\scrD}{\mathscr{D}}
+\newcommand{\scrE}{\mathscr{E}}
+\newcommand{\scrF}{\mathscr{F}}
+\newcommand{\scrG}{\mathscr{G}}
+\newcommand{\scrH}{\mathscr{H}}
+\newcommand{\scrI}{\mathscr{I}}
+\newcommand{\scrJ}{\mathscr{J}}
+\newcommand{\scrK}{\mathscr{K}}
+\newcommand{\scrL}{\mathscr{L}}
+\newcommand{\scrM}{\mathscr{M}}
+\newcommand{\scrN}{\mathscr{N}}
+\newcommand{\scrO}{\mathscr{O}}
+\newcommand{\scrP}{\mathscr{P}}
+\newcommand{\scrQ}{\mathscr{Q}}
+\newcommand{\scrR}{\mathscr{R}}
+\newcommand{\scrS}{\mathscr{S}}
+\newcommand{\scrT}{\mathscr{T}}
+\newcommand{\scrU}{\mathscr{U}}
+\newcommand{\scrV}{\mathscr{V}}
+\newcommand{\scrW}{\mathscr{W}}
+\newcommand{\scrX}{\mathscr{X}}
+\newcommand{\scrY}{\mathscr{Y}}
+\newcommand{\scrZ}{\mathscr{Z}}
+
+%Sans Serif Letters%
+\newcommand{\sfA}{\textsf{A}}
+\newcommand{\sfB}{\textsf{B}}
+\newcommand{\sfC}{\textsf{C}}
+\newcommand{\sfD}{\textsf{D}}
+\newcommand{\sfE}{\textsf{E}}
+\newcommand{\sfF}{\textsf{F}}
+\newcommand{\sfG}{\textsf{G}}
+\newcommand{\sfH}{\textsf{H}}
+\newcommand{\sfI}{\textsf{I}}
+\newcommand{\sfJ}{\textsf{J}}
+\newcommand{\sfK}{\textsf{K}}
+\newcommand{\sfL}{\textsf{L}}
+\newcommand{\sfM}{\textsf{M}}
+\newcommand{\sfN}{\textsf{N}}
+\newcommand{\sfO}{\textsf{O}}
+\newcommand{\sfP}{\textsf{P}}
+\newcommand{\sfQ}{\textsf{Q}}
+\newcommand{\sfR}{\textsf{R}}
+\newcommand{\sfS}{\textsf{S}}
+\newcommand{\sfT}{\textsf{T}}
+\newcommand{\sfU}{\textsf{U}}
+\newcommand{\sfV}{\textsf{V}}
+\newcommand{\sfW}{\textsf{W}}
+\newcommand{\sfX}{\textsf{X}}
+\newcommand{\sfY}{\textsf{Y}}
+\newcommand{\sfZ}{\textsf{Z}}
+\newcommand{\sfa}{\textsf{a}}
+\newcommand{\sfb}{\textsf{b}}
+\newcommand{\sfc}{\textsf{c}}
+\newcommand{\sfd}{\textsf{d}}
+\newcommand{\sfe}{\textsf{e}}
+\newcommand{\sff}{\textsf{f}}
+\newcommand{\sfg}{\textsf{g}}
+\newcommand{\sfh}{\textsf{h}}
+\newcommand{\sfi}{\textsf{i}}
+\newcommand{\sfj}{\textsf{j}}
+\newcommand{\sfk}{\textsf{k}}
+\newcommand{\sfl}{\textsf{l}}
+\newcommand{\sfm}{\textsf{m}}
+\newcommand{\sfn}{\textsf{n}}
+\newcommand{\sfo}{\textsf{o}}
+\newcommand{\sfp}{\textsf{p}}
+\newcommand{\sfq}{\textsf{q}}
+\newcommand{\sfr}{\textsf{r}}
+\newcommand{\sfs}{\textsf{s}}
+\newcommand{\sft}{\textsf{t}}
+\newcommand{\sfu}{\textsf{u}}
+\newcommand{\sfv}{\textsf{v}}
+\newcommand{\sfw}{\textsf{w}}
+\newcommand{\sfx}{\textsf{x}}
+\newcommand{\sfy}{\textsf{y}}
+\newcommand{\sfz}{\textsf{z}}
+
+%Bold Math Letters%
+\newcommand{\bfA}{\mathbf{A}}
+\newcommand{\bfB}{\mathbf{B}}
+\newcommand{\bfC}{\mathbf{C}}
+\newcommand{\bfD}{\mathbf{D}}
+\newcommand{\bfE}{\mathbf{E}}
+\newcommand{\bfF}{\mathbf{F}}
+\newcommand{\bfG}{\mathbf{G}}
+\newcommand{\bfH}{\mathbf{H}}
+\newcommand{\bfI}{\mathbf{I}}
+\newcommand{\bfJ}{\mathbf{J}}
+\newcommand{\bfK}{\mathbf{K}}
+\newcommand{\bfL}{\mathbf{L}}
+\newcommand{\bfM}{\mathbf{M}}
+\newcommand{\bfN}{\mathbf{N}}
+\newcommand{\bfO}{\mathbf{O}}
+\newcommand{\bfP}{\mathbf{P}}
+\newcommand{\bfQ}{\mathbf{Q}}
+\newcommand{\bfR}{\mathbf{R}}
+\newcommand{\bfS}{\mathbf{S}}
+\newcommand{\bfT}{\mathbf{T}}
+\newcommand{\bfU}{\mathbf{U}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfW}{\mathbf{W}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfY}{\mathbf{Y}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfc}{\mathbf{c}}
+\newcommand{\bfd}{\mathbf{d}}
+\newcommand{\bfe}{\mathbf{e}}
+\newcommand{\bff}{\mathbf{f}}
+\newcommand{\bfg}{\mathbf{g}}
+\newcommand{\bfh}{\mathbf{h}}
+\newcommand{\bfi}{\mathbf{i}}
+\newcommand{\bfj}{\mathbf{j}}
+\newcommand{\bfk}{\mathbf{k}}
+\newcommand{\bfl}{\mathbf{l}}
+\newcommand{\bfm}{\mathbf{m}}
+\newcommand{\bfn}{\mathbf{n}}
+\newcommand{\bfo}{\mathbf{o}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfr}{\mathbf{r}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bft}{\mathbf{t}}
+\newcommand{\bfu}{\mathbf{u}}
+\newcommand{\bfv}{\mathbf{v}}
+\newcommand{\bfw}{\mathbf{w}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfy}{\mathbf{y}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfone}{\mathbf{1}}
+
+%Upright Math Letters%
+\DeclareMathOperator{\rA}{A}
+\DeclareMathOperator{\rB}{B}
+\DeclareMathOperator{\rC}{C}
+\DeclareMathOperator{\rD}{D}
+\DeclareMathOperator{\rE}{E}
+\DeclareMathOperator{\rF}{F}
+\DeclareMathOperator{\rG}{G}
+\DeclareMathOperator{\rH}{H}
+\DeclareMathOperator{\rI}{I}
+\DeclareMathOperator{\rJ}{J}
+\DeclareMathOperator{\rK}{K}
+\DeclareMathOperator{\rL}{L}
+\DeclareMathOperator{\rM}{M}
+\DeclareMathOperator{\rN}{N}
+\DeclareMathOperator{\rO}{O}
+\DeclareMathOperator{\rP}{P}
+\DeclareMathOperator{\rQ}{Q}
+\DeclareMathOperator{\rR}{R}
+\DeclareMathOperator{\rS}{S}
+\DeclareMathOperator{\rT}{T}
+\DeclareMathOperator{\rU}{U}
+\DeclareMathOperator{\rV}{V}
+\DeclareMathOperator{\rW}{W}
+\DeclareMathOperator{\rX}{X}
+\DeclareMathOperator{\rY}{Y}
+\DeclareMathOperator{\rZ}{Z}
+
+% overline and underline
+\newcommand{\ola}{\overline{a}}
+\newcommand{\olb}{\overline{b}}
+\newcommand{\olc}{\overline{c}}
+\newcommand{\old}{\overline{d}}
+\newcommand{\ole}{\overline{e}}
+\newcommand{\olf}{\overline{f}}
+\newcommand{\olg}{\overline{g}}
+\newcommand{\olh}{\overline{h}}
+\newcommand{\oli}{\overline{i}}
+\newcommand{\olj}{\overline{j}}
+\newcommand{\olk}{\overline{k}}
+\newcommand{\oll}{\overline{l}}
+\newcommand{\olm}{\overline{m}}
+\newcommand{\oln}{\overline{n}}
+\newcommand{\olo}{\overline{o}}
+\newcommand{\olp}{\overline{p}}
+\newcommand{\olq}{\overline{q}}
+\newcommand{\olr}{\overline{r}}
+\newcommand{\ols}{\overline{s}}
+\newcommand{\olt}{\overline{t}}
+\newcommand{\olu}{\overline{u}}
+\newcommand{\olv}{\overline{v}}
+\newcommand{\olw}{\overline{w}}
+\newcommand{\olx}{\overline{x}}
+\newcommand{\oly}{\overline{y}}
+\newcommand{\olz}{\overline{z}}
+\newcommand{\olA}{\overline{A}}
+\newcommand{\olB}{\overline{B}}
+\newcommand{\olC}{\overline{C}}
+\newcommand{\olD}{\overline{D}}
+\newcommand{\olE}{\overline{E}}
+\newcommand{\olF}{\overline{F}}
+\newcommand{\olG}{\overline{G}}
+\newcommand{\olH}{\overline{H}}
+\newcommand{\olI}{\overline{I}}
+\newcommand{\olJ}{\overline{J}}
+\newcommand{\olK}{\overline{K}}
+\newcommand{\olL}{\overline{L}}
+\newcommand{\olM}{\overline{M}}
+\newcommand{\olN}{\overline{N}}
+\newcommand{\olO}{\overline{O}}
+\newcommand{\olP}{\overline{P}}
+\newcommand{\olQ}{\overline{Q}}
+\newcommand{\olR}{\overline{R}}
+\newcommand{\olS}{\overline{S}}
+\newcommand{\olT}{\overline{T}}
+\newcommand{\olU}{\overline{U}}
+\newcommand{\olV}{\overline{V}}
+\newcommand{\olW}{\overline{W}}
+\newcommand{\olX}{\overline{X}}
+\newcommand{\olY}{\overline{Y}}
+\newcommand{\olZ}{\overline{Z}}
+\newcommand{\ula}{\overline{a}}
+\newcommand{\ulb}{\overline{b}}
+\newcommand{\ulc}{\overline{c}}
+\newcommand{\uld}{\overline{d}}
+\newcommand{\ule}{\overline{e}}
+\newcommand{\ulf}{\overline{f}}
+\newcommand{\ulg}{\overline{g}}
+\newcommand{\ulh}{\overline{h}}
+\newcommand{\uli}{\overline{i}}
+\newcommand{\ulj}{\overline{j}}
+\newcommand{\ulk}{\overline{k}}
+\newcommand{\ull}{\overline{l}}
+\newcommand{\ulm}{\overline{m}}
+\newcommand{\uln}{\overline{n}}
+\newcommand{\ulo}{\overline{o}}
+\newcommand{\ulp}{\overline{p}}
+\newcommand{\ulq}{\overline{q}}
+\newcommand{\ulr}{\overline{r}}
+\newcommand{\uls}{\overline{s}}
+\newcommand{\ult}{\overline{t}}
+\newcommand{\ulu}{\overline{u}}
+\newcommand{\ulv}{\overline{v}}
+\newcommand{\ulw}{\overline{w}}
+\newcommand{\ulx}{\overline{x}}
+\newcommand{\uly}{\overline{y}}
+\newcommand{\ulz}{\overline{z}}
+\newcommand{\ulA}{\overline{A}}
+\newcommand{\ulB}{\overline{B}}
+\newcommand{\ulC}{\overline{C}}
+\newcommand{\ulD}{\overline{D}}
+\newcommand{\ulE}{\overline{E}}
+\newcommand{\ulF}{\overline{F}}
+\newcommand{\ulG}{\overline{G}}
+\newcommand{\ulH}{\overline{H}}
+\newcommand{\ulI}{\overline{I}}
+\newcommand{\ulJ}{\overline{J}}
+\newcommand{\ulK}{\overline{K}}
+\newcommand{\ulL}{\overline{L}}
+\newcommand{\ulM}{\overline{M}}
+\newcommand{\ulN}{\overline{N}}
+\newcommand{\ulO}{\overline{O}}
+\newcommand{\ulP}{\overline{P}}
+\newcommand{\ulQ}{\overline{Q}}
+\newcommand{\ulR}{\overline{R}}
+\newcommand{\ulS}{\overline{S}}
+\newcommand{\ulT}{\overline{T}}
+\newcommand{\ulU}{\overline{U}}
+\newcommand{\ulV}{\overline{V}}
+\newcommand{\ulW}{\overline{W}}
+\newcommand{\ulX}{\overline{X}}
+\newcommand{\ulY}{\overline{Y}}
+\newcommand{\ulZ}{\overline{Z}}
+\newcommand{\ol}[1]{\overline{#1}}
+\providecommand{\ul}[1]{\underline{#1}}
+
+\newcommand{\hatA}{\hat{A}}
+\newcommand{\hatB}{\hat{B}}
+\newcommand{\hatC}{\hat{C}}
+\newcommand{\hatD}{\hat{D}}
+\newcommand{\hatE}{\hat{E}}
+\newcommand{\hatF}{\hat{F}}
+\newcommand{\hatG}{\hat{G}}
+\newcommand{\hatH}{\hat{H}}
+\newcommand{\hatI}{\hat{I}}
+\newcommand{\hatJ}{\hat{J}}
+\newcommand{\hatK}{\hat{K}}
+\newcommand{\hatL}{\hat{L}}
+\newcommand{\hatM}{\hat{M}}
+\newcommand{\hatN}{\hat{N}}
+\newcommand{\hatO}{\hat{O}}
+\newcommand{\hatP}{\hat{P}}
+\newcommand{\hatQ}{\hat{Q}}
+\newcommand{\hatR}{\hat{R}}
+\newcommand{\hatS}{\hat{S}}
+\newcommand{\hatT}{\hat{T}}
+\newcommand{\hatU}{\hat{U}}
+\newcommand{\hatV}{\hat{V}}
+\newcommand{\hatW}{\hat{W}}
+\newcommand{\hatX}{\hat{X}}
+\newcommand{\hatY}{\hat{Y}}
+\newcommand{\hatZ}{\hat{Z}}
+\newcommand{\hata}{\hat{a}}
+\newcommand{\hatb}{\hat{b}}
+\newcommand{\hatc}{\hat{c}}
+\newcommand{\hatd}{\hat{d}}
+\newcommand{\hate}{\hat{e}}
+\newcommand{\hatf}{\hat{f}}
+\newcommand{\hatg}{\hat{g}}
+\newcommand{\hath}{\hat{h}}
+\newcommand{\hati}{\hat{i}}
+\newcommand{\hatj}{\hat{j}}
+\newcommand{\hatk}{\hat{k}}
+\newcommand{\hatl}{\hat{l}}
+\newcommand{\hatm}{\hat{m}}
+\newcommand{\hatn}{\hat{n}}
+\newcommand{\hato}{\hat{o}}
+\newcommand{\hatp}{\hat{p}}
+\newcommand{\hatq}{\hat{q}}
+\newcommand{\hatr}{\hat{r}}
+\newcommand{\hats}{\hat{s}}
+\newcommand{\hatt}{\hat{t}}
+\newcommand{\hatu}{\hat{u}}
+\newcommand{\hatv}{\hat{v}}
+\newcommand{\hatw}{\hat{w}}
+\newcommand{\hatx}{\hat{x}}
+\newcommand{\haty}{\hat{y}}
+\newcommand{\hatz}{\hat{z}}
+
+% Delimiters
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\flr}{\lfloor}{\rfloor}
+
+% Basic partial derivative macro
+\newcommand{\pder}[2]{\frac{\partial#1}{\partial#2}}
+
+% Flexible partial derivative macro: useage \pderiv{f}{*{2}{x},y}
+\makeatletter 
+\newcommand{\pderiv}[2]{\begingroup 
+  \@tempswafalse\toks@={}\count@=\z@ 
+  \@for\next:=#2\do 
+    {\expandafter\check@var\next
+     \advance\count@\der@exp 
+     \if@tempswa 
+       \toks@=\expandafter{\the\toks@\,}% 
+     \else 
+       \@tempswatrue 
+     \fi 
+     \toks@=\expandafter{\the\expandafter\toks@\expandafter\partial\der@var}}% 
+  \frac{\partial\ifnum\count@=\@ne\else^{\number\count@}\fi#1}{\the\toks@}% 
+  \endgroup} 
+\def\check@var{\@ifstar{\mult@var}{\one@var}} 
+\def\mult@var#1#2{\def\der@var{#2^{#1}}\def\der@exp{#1}} 
+\def\one@var#1{\def\der@var{#1}\chardef\der@exp\@ne} 
+\makeatother 
+
+% Text buffer for math mode spacing
+\newcommand{\textbuff}[2]{\hspace{#1}\text{#2}\hspace{#1}}

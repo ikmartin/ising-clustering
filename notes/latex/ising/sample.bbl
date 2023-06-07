@@ -1,0 +1,34 @@
+\begin{thebibliography}{4}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Fantechi(2001)]{fantechi}
+B.~Fantechi.
+\newblock Stacks for everybody.
+\newblock In C.~Casacuberta, R.~M. Mir{\'o}-Roig, J.~Verdera, and
+  S.~Xamb{\'o}-Descamps, editors, \emph{European Congress of Mathematics},
+  pages 349--359, Basel, 2001. Birkh{\"a}user Basel.
+\newblock ISBN 978-3-0348-8268-2.
+
+\bibitem[Hartshorne(1977)]{hartshorne}
+R.~Hartshorne.
+\newblock \emph{Algebraic Geometry}.
+\newblock Springer, 1977.
+
+\bibitem[Kontsevich and Manin(1994)]{kontsevich-manin}
+M.~Kontsevich and Y.~Manin.
+\newblock Gromov-witten classes, quantum cohomology, and enumerative geometry.
+\newblock \emph{Communications in Mathematical Physics}, 164:\penalty0
+  525--562, 1994.
+\newblock \doi{https://doi.org/10.1007/BF02101490}.
+
+\bibitem[Witten(1991)]{witten}
+E.~Witten.
+\newblock {Two-dimensional gravity and intersection theory on moduli space}.
+\newblock \emph{Surveys Diff. Geom.}, 1:\penalty0 243--310, 1991.
+\newblock \doi{10.4310/SDG.1990.v1.n1.a5}.
+
+\end{thebibliography}

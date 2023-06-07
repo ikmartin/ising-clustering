@@ -1,0 +1,450 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{schoolbookmath}
+
+\usepackage[bbgreekl]{mathbbol}
+\usepackage[scaled=1.075,upint,nosymbolsc,subscriptcorrection,ncf]{newtxmath}
+\renewcommand{\mathbf}[1]{\bm{#1}}
+\usepackage[bb=boondox,bbscaled=1.1,scr=boondoxo,scrscaled=1.08,cal=euler,calscaled=1.05]{mathalpha}
+\newcommand{\bmmax}{0}
+\newcommand{\hmmax}{0}
+\usepackage{bm}
+
+\AtBeginDocument{
+	\@ifpackageloaded{tikz-cd}
+		{\usetikzlibrary{arrows.meta}\tikzcdset{arrow style=tikz, diagrams={>={Straight Barb[scale=0.8]}}}}
+		{}
+	}
+
+\newcommand{\bmu}{\scalebox{1.3}{$\bbmu$}}
+
+\DeclareFontEncoding{LS2}{}{\noaccents@}
+\DeclareFontSubstitution{LS2}{stix2}{m}{n}
+\DeclareSymbolFont{stixbigops}{LS2}{stix2ex}{m}{n}
+\DeclareMathSymbol{\Bbbsumop}{\mathop}{stixbigops}{"B0}
+\DeclareMathSymbol{\prodop}{\mathop}{stixbigops}{"B1}
+\DeclareMathSymbol{\coprodop}{\mathop}{stixbigops}{"B2}
+\DeclareMathSymbol{\sumop}{\mathop}{stixbigops}{"B3}
+\DeclareMathSymbol{\bigwedgeop}{\mathop}{stixbigops}{"B4}
+\DeclareMathSymbol{\bigveeop}{\mathop}{stixbigops}{"B5}
+\DeclareMathSymbol{\bigcapop}{\mathop}{stixbigops}{"B6}
+\DeclareMathSymbol{\bigcupop}{\mathop}{stixbigops}{"B7}
+\DeclareMathSymbol{\xsolop}{\mathop}{stixbigops}{"B8}
+\DeclareMathSymbol{\xbsolop}{\mathop}{stixbigops}{"B9}
+\DeclareMathSymbol{\bigodotop}{\mathop}{stixbigops}{"BA}
+\DeclareMathSymbol{\bigoplusop}{\mathop}{stixbigops}{"BB}
+\DeclareMathSymbol{\bigotimesop}{\mathop}{stixbigops}{"BC}
+\DeclareMathSymbol{\bigcupdotop}{\mathop}{stixbigops}{"BD}
+\DeclareMathSymbol{\biguplusop}{\mathop}{stixbigops}{"BE}
+\DeclareMathSymbol{\bigsqcapop}{\mathop}{stixbigops}{"BF}
+\DeclareMathSymbol{\bigsqcupop}{\mathop}{stixbigops}{"C0}
+\DeclareMathSymbol{\conjquantop}{\mathop}{stixbigops}{"C1}
+\DeclareMathSymbol{\disjquantop}{\mathop}{stixbigops}{"C2}
+\DeclareMathSymbol{\bigtimesop}{\mathop}{stixbigops}{"C3}
+\DeclareMathSymbol{\modtwosumop}{\mathop}{stixbigops}{"C4}
+\DeclareMathSymbol{\bigtalloblongop}{\mathop}{stixbigops}{"C5}
+\def\Bbbsum{\DOTSI\Bbbsumop\slimits@}
+\def\prod{\DOTSI\prodop\slimits@}
+\def\coprod{\DOTSI\coprodop\slimits@}
+\def\sum{\DOTSI\sumop\slimits@}
+\def\bigwedge{\DOTSI\bigwedgeop\slimits@}
+\def\bigvee{\DOTSI\bigveeop\slimits@}
+\def\bigcap{\DOTSI\bigcapop\slimits@}
+\def\bigcup{\DOTSI\bigcupop\slimits@}
+\def\xsol{\DOTSI\xsolop\slimits@}
+\def\xbsol{\DOTSI\xbsolop\slimits@}
+\def\bigodot{\DOTSI\bigodotop\slimits@}
+\def\bigoplus{\DOTSI\bigoplusop\slimits@}
+\def\bigotimes{\DOTSI\bigotimesop\slimits@}
+\def\bigcupdot{\DOTSI\bigcupdotop\slimits@}
+\def\biguplus{\DOTSI\biguplusop\slimits@}
+\def\bigsqcap{\DOTSI\bigsqcapop\slimits@}
+\def\bigsqcup{\DOTSI\bigsqcupop\slimits@}
+\def\conjquant{\DOTSI\conjquantop\slimits@}
+\def\disjquant{\DOTSI\disjquantop\slimits@}
+\def\bigtimes{\DOTSI\bigtimesop\slimits@}
+\def\modtwosum{\DOTSI\modtwosumop\slimits@}
+\def\bigtalloblong{\DOTSI\bigtalloblongop\slimits@}
+
+\re@DeclareMathSymbol{\smallerbigsqcupop}{\mathop}{largesymbols}{"46}
+\re@DeclareMathSymbol{\smallerbigcupop}{\mathop}{largesymbols}{"53}
+\re@DeclareMathSymbol{\smallerbigcapop}{\mathop}{largesymbols}{"54}
+\re@DeclareMathSymbol{\smallerbigoplusop}{\mathop}{largesymbols}{"4C}
+\re@DeclareMathSymbol{\smallersumop}{\mathop}{largesymbols}{"50}
+\re@DeclareMathSymbol{\smallerprodop}{\mathop}{largesymbols}{"51}
+\def\smallerprod{\DOTSI\smallerprodop\slimits@}
+\def\smallerbigoplus{\DOTSI\smallerbigoplusop\slimits@}
+\def\smallersum{\DOTSI\smallersumop\slimits@}
+\def\smallerbigsqcup{\DOTSI\smallerbigsqcupop\slimits@}
+\def\smallerbigcap{\DOTSI\smallerbigcapop\slimits@}
+\def\smallerbigcup{\DOTSI\smallerbigcupop\slimits@}
+
+\begingroup
+	\catcode`\_=12
+	\long\def\next#1{\endgroup#1}%
+	\next{%
+\NewDocumentCommand{\til}{m e_}{\mathchoice
+	{\mkern-1.5mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1.2}{$\sim$}}{\smash{#1}\rule{0pt}{.9ex}}}}
+		\IfValueT{#2}{_{\mkern-3mu #2}}\mkern-1mu}
+	{\mkern-1.5mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1.2}{$\sim$}}{\smash{#1}\rule{0pt}{.9ex}}}}
+		\IfValueT{#2}{_{\mkern-3mu #2}}\mkern-1mu}
+	{\oset{\smash{\raisebox{-3pt}{$\textstyle\sim$}}}{#1}}
+	{\oset{\smash{\raisebox{-3pt}{$\textstyle\sim$}}}{#1}}}
+\NewDocumentCommand{\smalltil}{m e_}{\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{#1}\rule{0pt}{.5ex}}}
+	\IfValueT{#2}{_{\mkern-2mu #2}}}
+\NewDocumentCommand{\highsmalltil}{m e_}{\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{#1}\rule{0pt}{1ex}}}
+	\IfValueT{#2}{_{\mkern-1mu #2}}}
+
+\newcommand{\tilA}{\til{A}}
+\newcommand{\tilB}{\til{B}}
+\newcommand{\tilC}{\til{C}}
+\newcommand{\tilD}{\til{D}}
+\newcommand{\tilE}{\til{E}}
+\NewDocumentCommand{\tilF}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{F}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}}\mkern-1mu}
+\newcommand{\tilG}{\til{G}}
+\newcommand{\tilH}{\til{H}}
+\NewDocumentCommand{\tilI}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{I}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-6mu #1}\mkern1mu}\mkern-2mu}
+\NewDocumentCommand{\tilJ}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{J}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-6mu #1}\mkern1mu}\mkern-2mu}
+\newcommand{\tilK}{\til{K}}
+\newcommand{\tilL}{\til{L}}
+\NewDocumentCommand{\tilM}{e_}{\mkern0mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{M}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}}\mkern-.5mu}
+\newcommand{\tilN}{\til{N}}
+\newcommand{\tilO}{\til{O}}
+\NewDocumentCommand{\tilP}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{P}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-5mu #1}\mkern1mu}\mkern-2mu}
+\newcommand{\tilQ}{\til{Q}}
+\newcommand{\tilR}{\til{R}}
+\NewDocumentCommand{\tilS}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{S}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-5mu #1}\mkern1mu}\mkern-2mu}
+\NewDocumentCommand{\tilT}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{T}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-5mu #1}}\mkern-1mu}
+\NewDocumentCommand{\tilU}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{U}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}}\mkern-1mu}
+\NewDocumentCommand{\tilV}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{V}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-5mu #1}}\mkern-1mu}
+\NewDocumentCommand{\tilW}{e_}{\mkern-.5mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{W}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-3mu #1}}\mkern-1mu}
+\newcommand{\tilX}{\til{X}}
+\NewDocumentCommand{\tilY}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern3mu\scalebox{1.2}{$\sim$}}{\smash{Y}\rule{0pt}{.9ex}}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}}\mkern-1mu}
+\newcommand{\tilZ}{\til{Z}}
+
+\newcommand{\tila}{\smalltil{a}}
+\newcommand{\tilb}{\highsmalltil{b}}
+\newcommand{\tilc}{\smalltil{c}}
+\newcommand{\tild}{\highsmalltil{d}}
+\newcommand{\tile}{\smalltil{e}}
+\NewDocumentCommand{\tilf}{e_}{\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{f}\rule{0pt}{1ex}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}}}
+\newcommand{\tilg}{\smalltil{g}}
+\newcommand{\tilh}{\highsmalltil{h}}
+\NewDocumentCommand{\tili}{e_}{\mkern-1mu\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{i}\rule{0pt}{.8ex}}}
+	\IfValueT{#1}{_{\mkern-3mu #1}}\mkern-1mu}
+\NewDocumentCommand{\tilj}{e_}{\mkern-1mu\mathord{\stackrel{\mkern2.5mu\scalebox{1}{$\sim$}}{\smash{j}\rule{0pt}{.8ex}}}
+	\IfValueT{#1}{_{\mkern-3mu #1}}}
+\newcommand{\tilk}{\highsmalltil{k}}
+\NewDocumentCommand{\till}{e_}{\mkern-2mu\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{l}\rule{0pt}{1ex}}}
+	\IfValueT{#1}{_{\mkern-4mu #1}\mkern1mu}\mkern-1mu}
+\NewDocumentCommand{\tilm}{e_}{\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{m}\rule{0pt}{.5ex}}}
+	\IfValueT{#1}{_{\mkern-1mu #1}}}
+\newcommand{\tiln}{\smalltil{n}}
+\newcommand{\tilo}{\smalltil{o}}
+\newcommand{\tilp}{\smalltil{p}}
+\newcommand{\tilq}{\smalltil{q}}
+\NewDocumentCommand{\tilr}{e_}{\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{r}\rule{0pt}{.5ex}}}
+	\IfValueT{#1}{_{\mkern-3mu #1}}}
+\newcommand{\tils}{\smalltil{s}}
+\NewDocumentCommand{\tilt}{e_}{\mkern-1mu\mathord{\stackrel{\mkern1.5mu\scalebox{1}{$\sim$}}{\smash{t}\rule{0pt}{.8ex}}}
+	\IfValueT{#1}{_{\mkern-3mu #1}}}
+\newcommand{\tilu}{\smalltil{u}}
+\newcommand{\tilv}{\smalltil{v}}
+\newcommand{\tilw}{\smalltil{w}}
+\newcommand{\tilx}{\smalltil{x}}
+\newcommand{\tily}{\smalltil{y}}
+\newcommand{\tilz}{\smalltil{z}}
+
+\NewDocumentCommand{\tilalpha}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\alpha}\rule{0pt}{.55ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilbeta}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1}{$\sim$}}{\smash{\beta}\rule{0pt}{.95ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilGam}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1.1}{$\sim$}}{\smash{\Gam}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvGam}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1.1}{$\sim$}}{\smash{\vGam}\rule{0pt}{.9ex}}}\mkern-4mu}
+	\IfValueTF{#1}{_{#1}}{\mkern2mu}}
+\NewDocumentCommand{\tilgam}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\gam}\rule{0pt}{.45ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilDel}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1.1}{$\sim$}}{\smash{\Del}\rule{0pt}{.8ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvDel}{e_}{\mkern-3mu\smash{\mathord{\stackrel{\mkern8mu\scalebox{1.1}{$\sim$}}{\smash{\vDel}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tildel}{e_}{\mkern-1.5mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\del}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tileps}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\eps}\rule{0pt}{.5ex}}}\mkern-2.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilveps}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\veps}\rule{0pt}{.5ex}}}\mkern-2.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilzeta}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern5mu\scalebox{1}{$\sim$}}{\smash{\zeta}\rule{0pt}{.9ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tileta}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\eta}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilTheta}{e_}{\smash{\mathord{\stackrel{\scalebox{1.1}{$\sim$}}{\smash{\Theta}\rule{0pt}{.9ex}}}}
+	\IfValueTF{#1}{_{#1}}{\mkern.5mu}}
+\NewDocumentCommand{\tilvTheta}{e_}{\mkern-.5mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.1}{$\sim$}}{\smash{\vTheta}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tiltheta}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1}{$\sim$}}{\smash{\theta}\rule{0pt}{.9ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvtheta}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1}{$\sim$}}{\smash{\vtheta}\rule{0pt}{.9ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tiliota}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{.9}{$\sim$}}{\smash{\iota}\rule{0pt}{.6ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern2mu}}
+\NewDocumentCommand{\tilkappa}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\kappa}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvkappa}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\vkappa}\rule{0pt}{.6ex}}}\mkern-1.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilLam}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1.1}{$\sim$}}{\smash{\Lam}\rule{0pt}{.9ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvLam}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1.1}{$\sim$}}{\smash{\vLam}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tillam}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\lam}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilmu}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\mu}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilnu}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\nu}\rule{0pt}{.55ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilXi}{e_}{\smash{\mathord{\stackrel{\mkern1mu\scalebox{1.1}{$\sim$}}{\smash{\Xi}\rule{0pt}{.95ex}}}}
+	\IfValueTF{#1}{_{#1}}{\mkern.5mu}}
+\NewDocumentCommand{\tilvXi}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1.1}{$\sim$}}{\smash{\vXi}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilxi}{e_}{\mkern-3mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1}{$\sim$}}{\smash{\xi}\rule{0pt}{.9ex}}}\mkern-4mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilPi}{e_}{\smash{\mathord{\stackrel{\mkern.5mu\scalebox{1.1}{$\sim$}}{\smash{\Pi}\rule{0pt}{.9ex}}}}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvPi}{e_}{\mkern-.5mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1.1}{$\sim$}}{\smash{\vPi}\rule{0pt}{.9ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilpi}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\pi}\rule{0pt}{.5ex}}}\mkern-1.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvpi}{e_}{\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\vpi}\rule{0pt}{.6ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilrho}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\rho}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvrho}{e_}{\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\vrho}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilSig}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern1.5mu\scalebox{1.1}{$\sim$}}{\smash{\Sig}\rule{0pt}{.9ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilvSig}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern7mu\scalebox{1.1}{$\sim$}}{\smash{\vSig}\rule{0pt}{.9ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilsig}{e_}{\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\sig}\rule{0pt}{.5ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern2.5mu}}
+\NewDocumentCommand{\tilvsig}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern3mu\scalebox{1}{$\sim$}}{\smash{\vsig}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tiltau}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\tau}\rule{0pt}{.55ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilUps}{e_}{\smash{\mathord{\stackrel{\mkern1mu\scalebox{1.1}{$\sim$}}{\smash{\Ups}\rule{0pt}{.9ex}}}\mkern-.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilvUps}{e_}{\smash{\mathord{\stackrel{\mkern3mu\scalebox{1.1}{$\sim$}}{\smash{\vUps}\rule{0pt}{.9ex}}}\mkern-3mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilups}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\ups}\rule{0pt}{.5ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilPhi}{e_}{\mkern.5mu\smash{\mathord{\stackrel{\mkern1mu\scalebox{1.1}{$\sim$}}{\smash{\Phi}\rule{0pt}{.9ex}}}\mkern-.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilvPhi}{e_}{\mkern-2mu\smash{\mathord{\stackrel{\mkern6mu\scalebox{1.1}{$\sim$}}{\smash{\vPhi}\rule{0pt}{.9ex}}}\mkern-1.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilphi}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern5mu\scalebox{1}{$\sim$}}{\smash{\phi}\rule{0pt}{.7ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilvphi}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1.2}{$\sim$}}{\smash{\vphi}\rule{0pt}{.45ex}}}\mkern-2mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilchi}{e_}{\mkern-1mu\smash{\mathord{\stackrel{\mkern4mu\scalebox{1}{$\sim$}}{\smash{\chi}\rule{0pt}{.5ex}}}\mkern-1.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilPsi}{e_}{\smash{\mathord{\stackrel{\mkern1mu\scalebox{1.1}{$\sim$}}{\smash{\Psi}\rule{0pt}{.95ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilvPsi}{e_}{\mkern.5mu\smash{\mathord{\stackrel{\mkern2mu\scalebox{1.1}{$\sim$}}{\smash{\vPsi}\rule{0pt}{.9ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+\NewDocumentCommand{\tilpsi}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1.1}{$\sim$}}{\smash{\psi}\rule{0pt}{.5ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilOmega}{e_}{\smash{\mathord{\stackrel{\mkern1mu\scalebox{1.1}{$\sim$}}{\smash{\Omega}\rule{0pt}{.9ex}}}}
+	\IfValueTF{#1}{_{#1}}{\mkern.5mu}}
+\NewDocumentCommand{\tilvOmega}{e_}{\smash{\mathord{\stackrel{\mkern6mu\scalebox{1.1}{$\sim$}}{\smash{\vOmega}\rule{0pt}{.9ex}}}\mkern-1mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1.5mu}}
+\NewDocumentCommand{\tilomega}{e_}{\smash{\mathord{\stackrel{\mkern2mu\scalebox{1}{$\sim$}}{\smash{\omega}\rule{0pt}{.5ex}}}\mkern-.5mu}
+	\IfValueTF{#1}{_{#1}}{\mkern1mu}}
+}
+\ExplSyntaxOn
+\RenewDocumentCommand{\bar}{m}
+	{\str_case:nnF{#1}{
+		{A}{\wbar{A}}
+		{B}{\oline{B\mkern1mu}\mkern-1mu}
+		{C}{\mkern1.5mu\overline{\mkern-1.5muC}}
+		{D}{\oline{D\mkern1mu}\mkern-1mu}
+		{E}{\oline{E\mkern1mu}\mkern-1mu}
+		{F}{\mkern1mu\oline{\mkern-1muF\mkern2mu}\mkern-2mu}
+		{G}{\oline{G}}
+		{H}{\wbar{H}}
+		{I}{\wbar{I}}
+		{J}{\wbar{J}}
+		{K}{\wbar{K}}
+		{L}{\overline{L}}
+		{M}{\wbar{M}}
+		{N}{\wbar{N}}
+		{O}{\oline{O\mkern1mu}\mkern-1mu}
+		{P}{\oline{P\mkern1mu}\mkern-1mu}
+		{Q}{\oline{Q}}
+		{R}{\oline{R\mkern1mu}\mkern-1mu}
+		{S}{\wbar{S}}
+		{T}{\overline{T}}
+		{U}{\oline{U\mkern1mu}\mkern-1mu}
+		{V}{\oline{V}}
+		{W}{\oline{W}}
+		{X}{\wbar{X}}
+		{Y}{\overline{Y}}
+		{Z}{\oline{Z\mkern1mu}\mkern-1mu}
+		{a}{\oline{a}}
+		{b}{\wbar{b}}
+		{c}{\overline{c}}
+		{d}{\wbar{d}}
+		{e}{\overline{e}}
+		{f}{\overline{f}}
+		{g}{\wbar{g}}
+		{h}{\oline{h}}
+		{i}{\overline{i}}
+		{j}{\wbar{j}}
+		{k}{\oline{k}}
+		{l}{\overline{l}}
+		{m}{\oline{m}}
+		{n}{\oline{n}}
+		{o}{\overline{o}}
+		{p}{\oline{p}}
+		{q}{\wbar{q}}
+		{r}{\overline{r}}
+		{s}{\wbar{s}}
+		{t}{\overline{t}}
+		{u}{\oline{u}}
+		{v}{\wbar{v}}
+		{w}{\oline{w}}
+		{x}{\wbar{x}}
+		{y}{\wbar{y}}
+		{z}{\oline{z\mkern1.5mu}\mkern-1.5mu}
+		{\alpha}{\wbar{\alpha}}
+		{\beta}{\wbar{\beta}}
+		{\Gam}{\overline{\Gam}}
+		{\vGam}{\wbar{\vGam}}
+		{\gam}{\wbar{\gam}}
+		{\Del}{\oline{\Del}}
+		{\vDel}{\wbar{\vDel}}
+		{\del}{\wbar{\del}}
+		{\eps}{\wbar{\eps}}
+		{\veps}{\wbar{\veps}}
+		{\zeta}{\wbar{\zeta}}
+		{\eta}{\oline{\eta\mkern2mu}\mkern-2mu}
+		{\Theta}{\oline{\Theta}}
+		{\vTheta}{\wbar{\vTheta}}
+		{\theta}{\wbar{\theta}}
+		{\vtheta}{\wbar{\vtheta}}
+		{\iota}{\overline{\iota\mkern1mu}\mkern-1mu}
+		{\kappa}{\oline{\kappa}}
+		{\vkappa}{\wbar{\vkappa}}
+		{\Lam}{\oline{\Lam}}
+		{\vLam}{\wbar{\vLam}}
+		{\lam}{\wbar{\lam}}
+		{\mu}{\wbar{\mu}}
+		{\nu}{\wbar{\nu}}
+		{\Xi}{\overline{\Xi}}
+		{\vXi}{\wbar{\vXi}}
+		{\xi}{\wbar{\xi}}
+		{\Pi}{\oline{\Pi}}
+		{\vPi}{\wbar{\vPi}}
+		{\pi}{\wbar{\pi}}
+		{\vpi}{\wbar{\vpi}}
+		{\rho}{\wbar{\rho}}
+		{\vrho}{\wbar{\vrho}}
+		{\Sig}{\oline{\Sig}}
+		{\vSig}{\wbar{\vSig}}
+		{\sig}{\oline{\sig}}
+		{\vsig}{\oline{\vsig\mkern1mu}\mkern-1mu}
+		{\tau}{\overline{\tau}}
+		{\Ups}{\oline{\Ups}}
+		{\vUps}{\overline{\vUps}}
+		{\ups}{\wbar{\ups}}
+		{\Phi}{\oline{\Phi}}
+		{\vPhi}{\mkern-1mu\wbar{\mkern1mu\vPhi}}
+		{\phi}{\wbar{\phi}}
+		{\vphi}{\wbar{\vphi}}
+		{\chi}{\wbar{\chi}}
+		{\Psi}{\oline{\Psi}}
+		{\vPsi}{\oline{\vPsi}}
+		{\psi}{\oline{\psi}}
+		{\Omega}{\overline{\Omega}}
+		{\vOmega}{\oline{\vOmega}}
+		{\omega}{\wbar{\omega}}
+		{\calA}{\wbar{\calA}}
+		{\calB}{\wbar{\calB}}
+		{\calC}{\oline{\calC\mkern1.5mu}\mkern-1.5mu}
+		{\calD}{\wbar{\calD}}
+		{\calE}{\oline{\calE}}
+		{\calF}{\overline{\calF}}
+		{\calG}{\wbar{\calG}}
+		{\calH}{\wbar{\calH}}
+		{\calI}{\overline{\calI}}
+		{\calJ}{\overline{\calJ}}
+		{\calK}{\oline{\calK}}
+		{\calL}{\oline{\calL}}
+		{\calM}{\wbar{\calM}}
+		{\calN}{\wbar{\calN}}
+		{\calO}{\oline{\calO}}
+		{\calP}{\wbar{\calP}}
+		{\calQ}{\oline{\calQ}}
+		{\calR}{\wbar{\calR}}
+		{\calS}{\overline{\calS}}
+		{\calT}{\overline{\calT}}
+		{\calU}{\wbar{\calU}}
+		{\calV}{\wbar{\calV}}
+		{\calW}{\wbar{\calW}}
+		{\calX}{\oline{\calX}}
+		{\calY}{\oline{\calY}}
+		{\calZ}{\wbar{\calZ}}
+		{\bA}{\oline{\bA}}
+		{\bB}{\wbar{\bB}}
+		{\bC}{\oline{\bC}}
+		{\bD}{\wbar{\bD}}
+		{\bE}{\overline{\bE}}
+		{\bF}{\wbar{\bF}\mkern-1mu}
+		{\bG}{\oline{\bG}}
+		{\bH}{\wbar{\bH}}
+		{\bI}{\overline{\bI}}
+		{\bJ}{\oline{\bJ\mkern2mu}\mkern-2mu}
+		{\bK}{\oline{\bK}}
+		{\bL}{\overline{\bL}}
+		{\bM}{\oline{\bM}}
+		{\bN}{\oline{\bN}}
+		{\bO}{\oline{\bO}}
+		{\bP}{\mkern1mu\overline{\mkern-1mu\bP\mkern-1mu}\mkern1mu}
+		{\bQ}{\oline{\bQ}}
+		{\bR}{\wbar{\bR}}
+		{\bS}{\oline{\bS}}
+		{\bT}{\overline{\bT\mkern2mu}\mkern-2mu}
+		{\bU}{\wbar{\bU}}
+		{\bV}{\wbar{\bV\mkern1mu}\mkern-1mu}
+		{\bW}{\oline{\bW}}
+		{\bX}{\oline{\bX}}
+		{\bY}{\mkern1mu\overline{\mkern-1mu\bY}}
+		{\bZ}{\oline{\bZ\mkern1.5mu}\mkern-2mu}
+   	}
+	{\wbar{#1}}}
+	
+\NewDocumentCommand{\bdot}{g}
+	{\IfNoValueTF{#1}{\mathbin{\cdotB}}{\str_case:nnF{#1}{
+		{1}{\cdot}
+		{2}{\mathbin{\cdotB}}
+		{3}{\mathbin{\cdotBB}}
+		{4}{\mathbin{\bulletSSS}}
+		{5}{\mathbin{\bulletSS}}
+		{6}{\mathbin{\bulletS}}
+		{7}{\bullet}
+	}
+		{}}}
+\newcommand{\bdots}{\mathbin{\bm{\cdots}}}
+\renewcommand{\th}{\ensuremath{^{\raisebox{-1pt}{\scriptsize\text{th}}}}\xspace}
+\renewcommand{\rd}{\ensuremath{^{\raisebox{-1pt}{\scriptsize\text{rd}}}}\xspace}
+\ExplSyntaxOff

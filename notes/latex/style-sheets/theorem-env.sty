@@ -1,0 +1,94 @@
+\ProvidesPackage{theorem-env}
+
+\usepackage[T1]{fontenc}
+\usepackage{amssymb,amsmath,amsthm,mathtools,verbatim,graphicx,cancel,float,hyperref,xpatch,tikz,tikz-cd}
+\usepackage{newtxtext,bbm} % uncomment if needed, commented out as quick error fix
+
+% use mathptmx pkg while using default mathcal font
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
+
+\def\pfbox % new experimental version (DEK, November 88)
+{{\ooalign{\hfil\lower.06ex % a smiley face
+ \hbox{$\scriptscriptstyle\frown$}\hfil\crcr
+ \hfil\lower.7ex\hbox{\"{}}\hfil\crcr
+ \mathhexbox20D}}}
+ 
+% additional margins
+\def\changemargin#1#2{\list{}{\rightmargin#2\leftmargin#1}\item[]}
+\let\endchangemargin=\endlist 
+
+% change itemize bullets to dashes
+% \renewcommand\labelitemi{--}
+
+%\begin{comment}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Theorem-like structures 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\renewenvironment{proof}[1][\proofname]{\par
+  \pushQED{\qed}%
+  \normalfont \topsep6\p@\@plus6\p@\relax
+  \trivlist
+  \item[\hskip\labelsep
+        \bfseries\itshape
+    #1\@addpunct{.}]\ignorespaces
+}{\popQED\endtrivlist\@endpefalse}
+%
+\newtheoremstyle{plain}
+  {9pt}{9pt}{\itshape}{}{\bfseries}{.}{0.5em}{}
+%
+\newtheoremstyle{definition}
+  {9pt}{9pt}{}{}{\bfseries}{.}{0.5em}{}
+%
+\newtheoremstyle{remark}
+  {9pt}{9pt}{}{}{\bfseries}{.}{0.5em}{}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% theorem environments to follow theorem numbering
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section] % reset theorem numbering for each chapter
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition} % definition numbers are dependent on theorem numbers
+\theoremstyle{definition}
+\newtheorem{exmp}[thm]{Example} % same for example numbers
+\newtheorem{example}[thm]{Example}
+\newtheorem{exercise}[thm]{Exercise}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{construct}[thm]{Construction} % definition numbers are dependent on theorem numbers
+\newtheorem{note}[thm]{Note} % definition numbers are dependent on theorem numbers
+\newtheorem{notation}[thm]{Notation} % definition numbers are dependent on theorem numbers
+\newtheorem{problem}[thm]{Problem} % definition numbers are dependent on theorem numbers
+\newtheorem{conjecture}[thm]{Conjecture}
+\newtheorem{notate}[thm]{Notation} % definition numbers are dependent on theorem numbers
+\theoremstyle{remark}\newtheorem{rmk}[thm]{Remark}
+\newtheorem{task}{Task}
+
+% unnumbered theorem environments
+\theoremstyle{definition}
+\newtheorem*{predefn}{Preliminary-Definition} % pre-definition doesn't get numbers
+\newtheorem*{thm*}{Theorem}
+
+\newtheorem{question}{Question}[section] % use separate counter for questions
+
+\numberwithin{thm}{section}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wrappers for theorem environments
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\newcommand{\example}[1]{\begin{example}#1\end{example}}
+%\newcommand{\exercise}[1]{\begin{exercise}#1\end{exercise}}
+
+% Create inline exercise that increments the step counter
+\newcommand{\exinline}[1]{(\refstepcounter{theorem}Exercise~\thetheorem\label{#1})}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%% End Theorem-like structures %%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+
+%\end{comment}

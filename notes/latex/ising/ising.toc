@@ -1,0 +1,10 @@
+\contentsline {section}{\numberline {2.1}The Ising Model}{3}{section.2.1}%
+\contentsline {section}{\numberline {2.2}The Reverse Ising Problem}{4}{section.2.2}%
+\contentsline {subsection}{Motivating Example: AND}{4}{subsection*.1}%
+\contentsline {subsection}{Ising Circuits}{5}{subsection*.2}%
+\contentsline {subsection}{Input Levels}{6}{subsection*.3}%
+\contentsline {subsection}{A non-example: XOR}{7}{subsection*.4}%
+\contentsline {subsection}{Auxiliary Spins and the XOR fix}{7}{subsection*.5}%
+\contentsline {section}{\numberline {3.1}Virtual Spin Space}{8}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Random Parameters}{9}{section.3.2}%
+\contentsfinish 

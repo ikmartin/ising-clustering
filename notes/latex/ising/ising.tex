@@ -1,0 +1,340 @@
+
+
+\documentclass[raggedright, nofonts, notitlepage, openany, debug]{tufte-book}
+
+%%% Sets numbering depth to section level (e.g, no numbered subsections)
+\setcounter{secnumdepth}{1}
+
+% include notes style file from Abhishek Shivkumar
+\usepackage{notes,macrosabound}
+
+% make font smaller
+\usepackage[fontsize=9pt]{fontsize}
+% set margins
+% only use if strictly necessary, tufte-book calls geometry already
+% double geometry call results in "overspecified margins" warning if done as below
+% \geometry{left=1in, right=3in, top = 1in, bottom=1in}
+
+%%%%%%%%%%%%%%%%%%
+%%%% FOR DEBUGGING
+%%%%%%%%%%%%%%%%%%
+%\usepackage{layout}
+%\usepackage{showframe}
+
+%%% Removes paragraph indentation and changes paragraph line skip
+\makeatletter
+\renewcommand{\@tufte@reset@par}{%
+  \setlength{\RaggedRightParindent}{0pc}%
+  \setlength{\JustifyingParindent}{0pc}%
+  \setlength{\parindent}{0pc}%
+  \setlength{\parskip}{9pt}%
+}
+\@tufte@reset@par
+\makeatother
+
+% ensures that the references show up as an unnumbered section
+\def\bibsection{\section*{\refname}} 
+\begin{document}
+%%% The Title and Author only need to be set once at the start of the document. If you take notes for multiple courses in the same document (for example, in a multi-semester sequence for the same course), you can separate the courses with a new Part, and the semester, lecturer, and course only need to be set once at the start of the new course.
+\newpage
+\title{The Reverse Ising Problem}
+\author{Isaac Martin}
+\maketitle
+\chapter{Introduction and Terminology}
+\section{The Ising Model}
+% don't tell me an hbox is overfull unless it's actually bad
+\hfuzz = 10pt
+
+\marginnote{The vectors $h$ and $J$ encode first and second order energy contributions respectively. Elements of $J$ encode interactions between vertices whereas elements of $h$ encode the individual energy contributions of vertices.}
+
+
+\begin{defn}[Ising Graph][ising-graph]
+  An \textbf{Ising graph} consists of the following data:
+  \begin{itemize}
+    \item a finite set $G$, typically $\{1..n\}\subset \bN$ for some $n$
+    \item a vector $h \in \bR^n$ called the  \textbf{local bias vector}
+    \item a vector $J \in \bR^{n(n-1)/2}$ called the \textbf{interaction vector}.
+  \end{itemize}
+  We refer to $h$ and $J$ collectively as the \textbf{parameters} of $G$.
+\end{defn}
+
+We immediately have a couple of additional comments:
+\begin{itemize}
+  \item The number $n(n-1)/2$ is exactly the number of elements above the diagonal in a $n\times n$ matrix.
+  \item One typically indexes the elements of $J$ by pairs $(i,j)$ with $i < j$.
+  \item The object $G$ is a vertex set and the vector $J$ records the edge data. If $J_{ij} = 0$ then there is no edge $(i,j)$, and if $J_{ij} \neq 0$ then there is an edge. One can even view $G$ as a directed graph: if $J_{ij} > 0$ then the edge points $i\rightarrow j$ and if $J_{ij} < 0$ then $i \leftarrow j$.
+\end{itemize}
+One should then picture an Ising graph as a graph with $|G|$ nodes where vertex $i$ is decorated with $h_i$ and edge $(i,j)$ is decorated with $J_{ij}$.
+
+\marginnote{Though $X = \{-1,1\}$ in all cases, we keep $X$ arbitrary in order to explore more general graph dynamics in the future and because it's more convenient to write.}
+\marginnote{Perhaps it would be better to write $\Sigma_G$ for $S_G$ and $\sigma$ for states.}
+\begin{defn}[State Space][state-space]
+  Let $G$ be an Ising graph and $X$ some set. The \textbf{state space} of $G$, denoted $S_G$, is the collection of all functions $G\to X$:
+  \begin{align*}
+    S_G := \Hom(G, X).
+  \end{align*}
+  We refer to the elements of $S_G$ as the \emph{states} of $G$. It will always be the case that $X = \{-1,1\}$ in this document unless otherwise specified.
+\end{defn}
+\begin{rmk}
+  A function $s:G\to X$ just assigns a vertex $i \in G$ to a value $\pm 1$. We can therefore think of $s$ as a ``vector'' in $X^{|G|}$, where $s_i = s(i)$. For example, the state $s(i) = -1^{i}$ can be written as the vector $(-1,1,-1,1,...,-1^{|G|})$.
+\end{rmk}
+\marginnote{We refer to the value $H(s)$ as the \textbf{energy} of the state $s$.}
+\begin{defn}[Ising Hamiltonian][hamiltonian]
+  Let $G$ be an Ising graph. The function $H:S_G\to \bR$ defined
+  \begin{align*}
+    H(s) = \sum_{i \in G} h_is_i ~+~ \sum_{i< j} J_{ij}s_is_j
+  \end{align*}
+  is called the \textbf{Hamiltonian} of $G$.
+\end{defn}
+
+\begin{model}[The Ising Model]
+  The probability an Ising graph $G$ is in a state $s \in S_G$ is given by
+  \begin{align*}
+    P(s) = \frac{e^{-\beta H(s)}}{Z_\beta}
+  \end{align*}
+  where $\beta \geq 0$ is a parameter called the \emph{inverse temperature} and $Z_\beta$ is the normalization constant
+  \begin{align*}
+    Z_\beta = \sum_{s\in S_G} e^{-\beta H(s)}.
+  \end{align*}
+\end{model}
+In other words, the Ising model says that one is more likely to find an Ising graph in a low energy state than a high energy state. The \textbf{Ising Problem} is then to find the lowest energy states of a given Ising graph.
+
+\section{The Reverse Ising Problem}
+Consider instead the reverse problem: one is given a graph $G$ and some spin (or collection of spins) $s \in S_G$ and wants to find $h$ and $J$ such that the resulting Ising graph is in state $s$ with high probability. Stated another way, one wishes to find $h$ and $J$ which minimize $H(s)$. This is known as the \textbf{reverse Ising problem.}
+
+\subsection{Motivating Example: AND}
+Why might one care about this? Consider a graph $G$ with three vertices, $v_1,v_2,v_3$. Let's call $v_1$ and $v_2$ ``input'' vertices and $v_3$ the ``output'' vertex. We can write the AND circuit as the following table of states:
+\begin{center}
+\begin{tabular}{c | c || c}
+  $s_1$ & $s_2$ & $s_3$ \\
+  \hline
+  1 & 1 & 1 \\
+  1 & -1 & -1 \\
+  -1 & 1 & -1 \\
+  -1 & -1 & -1 \\
+\end{tabular}
+\end{center}
+\marginnote{This is the AND truth table with $1$ denoting ``True'' and $-1$ denoting ``False''.}
+The first row is the state $s:G\to X$ defined $s(v_1) = s(v_2) = s(v_3) = 1$, the second is the state $s:G\to X$ defined $s(v_1) = 1$, $s(v_2) = s(v_3) = -1$, etc.
+
+We would like to build an Ising graph which somehow implements this circuit. What this means is that, if we look at our Ising graph $G$ and observe that the input spins are $s_1$ and $s_2$, then we want $s_3$ to assume the corresponding output value in the above table with high probability. I.e. if our Ising graph is in a state with $(s_1,s_2) = (1,1)$ then we want $s_3 = 1$, and so on for the other states.
+
+There are two things we must do to build a robust circuit. First, we need some way to control the input spins -- ideally, we should be able to fix the inputs at a certain value while letting the outputs vary. This is a physics problem and is not of our concern. \footnote{It is nonetheless possible, for instance, one could choose the components of $h$ corresponding to inputs in such a way as to drastically favor a certain value for the input spins.} Second, we need to choose $h$ and $J$ such that for each input $s = (s_1,s_2)$, the ``correct'' output value has a higher probability of occurring than the incorrect output. Since lower energy states occur with higher probability, this is the same as requiring that the following constrains are satisfied:
+\begin{align*}
+  H(1,1,1) &< H(1,1,-1) \\
+  H(1,-1,-1) &< H(1,-1,-1) \\
+  H(-1,1,-1) &< H(-1,1,-1) \\
+  H(-1,-1,-1) &< H(-1,-1,1).
+\end{align*}
+One can check that this is indeed possible: \textbf{INSERT CORRECT h AND J HERE}.
+
+\subsection{Ising Circuits}
+\begin{defn}[Pre-Ising Circuit]
+  A \textbf{pre-Ising circuit} $(G,N,M,f)$ is a set of vertices $G$ with a decomposition $G = N \cup M$ satisfying $N \cap M = \emptyset$ and a function $f:S_N\to S_M$.
+\end{defn}
+Comments:
+\begin{itemize}
+  \item We call $N$ the collection of \textbf{input vertices} and $M$ the collection of \textbf{output vertices}.
+  \item We call $S_N$ the \textbf{input state/spin space} and $S_M$ the \textbf{output state/spin space}.
+  \item The function $f$ is the \textbf{logic} of the circuit and it is not required to satisfy any additional requirements. We consider the output state $f(s)$ to the correct output corresponding to the input state $s$.
+\end{itemize}
+\marginnote{Notice that $Hom(N,X) \times Hom(M,X)$ is canonically isomorphic to $Hom(G,X)$ in the category $\Set$, which is another nicety of the way we've set everything up.}
+\begin{defn}[Ising Circuit]
+  An \textbf{Ising circuit} consists of the data $(G,N,M,h,J,f)$ such that
+  \begin{enumerate}[(i)]
+    \item $(G,h,J)$ is an Ising graph
+    \item $(G,N,M,f)$ is a  pre-Ising circuit
+    \item For each pair $(s,t) \in S_N\times S_M = S_G$ we have that $H(s,t) \geq H(s,f(s))$ with equality if and only if $f(s) = t$.
+  \end{enumerate}
+\end{defn}
+\marginnote{If you stop to think about condition (iii), you'll conclude that it really couldn't be anything else. What other way is there to make an Ising graph and an abstract circuit compatible?}
+Conditions (i) and (ii) in the above definition are self explanatory. Condition (iii) merely requires that the circuit structure of $G$ is compatible with the Ising graph structure of $G$. It asks that the output $t$ which minimizes $H(s,t)$ is the correct one; in other words, the correct output corresponding to an input $s$ is the one which occurs with highest probability. We have an immediate question:
+
+\begin{question}\label{q:can-you-always-zingify}
+  Can every pre-Ising circuit $G$ be realized as an Ising circuit for an appropriate choice of $h$ and $J$? (This is known as \emph{solving} a pre-Ising circuit.)
+\end{question}
+
+In order to solve a pre-Ising circuit, we need to find $h$ and $J$ such that condition (iii) is satisfied. This means we need to satisfy all constraints of the form
+\begin{align*}
+  H(s,f(s)) < H(s,t)
+\end{align*}
+simultaneously for all possible input states $s \in S_N$ and output states $t \neq f(s)$. We can arrange these constraint equations in a convenient way through \emph{input levels}.
+\subsection{Input Levels}
+\begin{defn}[Input Level]
+  Let $\bfs \in S_N$ be an input spin. Then $L_{\bfs} = \{\bfs\}\times S_M$ is called the \textbf{input level} at $\bfs$.
+\end{defn}
+We say that a choice of $h$ and $J$ \textbf{solves} an input level $L_\bfs$ if all constraints of the form
+\begin{equation}\label{eqn:constraint}
+  H(\bfs,t) > H(\bfs,f(\bfs))
+\end{equation}
+are satisfied for $t \neq f(\bfs)$, i.e. if $(\bfs, f(\bfs))$ \emph{strictly} minimizes the Hamiltonian for the input level:
+\begin{align*}
+  (\bfs,t) = \min_{\bfu \in L_\bfs} H(\bfu) \implies t = f(s).
+\end{align*}
+There are $M-1$ constraint equations for each input level and $N$ distinct input levels, so to solve a pre-Ising circuit one must find $h$ and $J$ which simultaneously satisfy $N(M-1)$ constraints.
+
+It is always possible to choose $\bfh$ and $\bfJ$ which satisfy a specified input level.
+\marginnote{This proposition essentially says ``the greedy approach works'' for an input level. Choose $\bfh$ and $\bfJ$ so that the contribution of the $\bfh_i$ and $\bfJ_{ij}$ component to the Hamiltonian is always negative for the correct input/output pair. Any state differing from this specific pair will flip the sign of \textbf{at least} one $\bfh_i$ or $\bfJ_{ij}$ and thus result in a strictly larger Hamiltonian.}
+\begin{prop}[Global Minimization]\label{prop:pvec_solves_input_level}
+  Let $G$ be a pre-Ising circuit, $\bfs \in S_N$ an input state and $\bfu = (\bfs,f(\bfs)) \in S_G$ the state of $G$ obtained by concatenating the input $\bfs$ with the correct output state $f(\bfs)$. Then $\bfh \in \bR^G$ and $\bfJ \in \bR^{G(G-1)/2}$ defined
+  \begin{align*}
+    \bfh = - \bfu ~\text{ and } \bfJ_{ij} = -\bfu_i\cdot \bfu_j ~\text{ for } i < j
+  \end{align*}
+  solves the input level $L_\bfs$.
+\end{prop}
+\begin{proof}
+  Consider any other $\bfv \in L_\bfs$ for $\bfv \neq \bfu$. Since $\bfh_i = -\bfu_i$ and $\bfJ_{ij} = -\bfu_i\bfu_j$ we have that
+  \begin{align*}
+    H(\bfv) - H(\bfu) 
+      &= \sum_{i=1}^G \bfh_i(\bfv_i - \bfu_i) ~+~ \sum_{i < j} \bfJ_{ij}(\bfv_i\bfv_j - \bfu_i\bfu_j) \\
+      &= \sum_{i=1}^G (-\bfu_i\bfv_i + 1) ~+~ \sum_{i < j} (-\bfv_i\bfv_j\bfu_i\bfu_j + 1).
+  \end{align*}
+  \marginnote{Notice that this choice of $\bfh$ and $\bfJ$ \emph{globally} minimizes the state $\bfu$. In some ways this it the thematic opposite of what we want. We need to minimize \emph{all} correct input/output pairs at once, but the minimization only needs to occur among spins in the same input level. What we have accomplished is minimizing a single input/output pair globally. For this reason, we say that $\bfu$ has been \emph{globally minimized.}}
+  But $\bfu_i\bfv_i, \bfv_i\bfv_j\bfu_i\bfu_j \in \{-1,1\}$, hence $-\bfu_i\bfv_i + 1$ and $-\bfv_i\bfv_j\bfu_i\bfu_j + 1$ are both either $0$ or $1$. This means $H(\bfv) - H(\bfu)\geq 0$ with equality only when $\bfv = \bfu$, hence all constraints of the form (\ref{eqn:constraint}) are satisfied.
+\end{proof}
+We can also simultaneously minimize inputs which share the same output.
+\begin{prop}[Minimize an output]\label{prop:minimize-an-output}
+  Suppose input states $\bfs_1,...,\bfs_k\in S_N$ all share the same output, i.e. $f(\bfs_1) = ... = f(\bfs_k) = \bft \in S_M$ for some $\bft$. Then there exist $\bfh$ and $\bfJ$ which simultaneously solve the input levels $L_{\bfs_1},...,L_{\bfs_k}$.
+\end{prop}
+\begin{proof}
+  Define $\bfh$ and $\bfJ$ as follows:
+  \begin{align*}
+    \bfh_i =
+    \begin{cases}
+      0 & \text{if } i \leq N \\
+      -\bft_{i - N} & \text{if } i > N
+    \end{cases} ~\text{ and } ~
+    J_{ij} =
+    \begin{cases}
+      0 & i \geq N \\
+      -\bft_{i - N}\bft_{j - N} & i > N
+    \end{cases}.
+  \end{align*}
+  Then a similar check as in Proposition (\ref{prop:minimize-an-output}) proves the desired result.
+\end{proof}
+Notice, however, that the choice of $\bfh$ and $\bfJ$ made in the above proof is terrible for an Ising circuit with more than one output. It ensures that the Hamiltonian value of $\bfu \in S_G$ depends only on the output components of $\bfu$. In particular, if $\bfs$ is some input such that $f(\bfs) \neq \bft$, then this choice of $\bfh$ and $\bfJ$ are guaranteed \emph{not} to solve $L_{\bfs}$. Is there anything we can say about Question (\ref{q:can-you-always-zingify}) in general for circuits with 2 or more outputs? The answer is an emphatic \textbf{no}.
+
+\subsection{A non-example: XOR}
+Consider the 2-bit XOR circuit. This is a graph consisting of 3 vertices, two input vertices and one output vertex. It thus necessarily has only two possible outputs, $-1$ and $1$. 
+
+I'll fill this in at some point, seems tedious now though.
+
+\subsection{Auxiliary Spins and the XOR fix}
+
+
+\chapter{Virtual States and Random Parameters}
+The main point of this section is to explore how auxiliary spins should be added to a pre-Ising circuit. We'll consider adding auxiliary spins one at a time with each spin added monotonically decreasing some cost function. Specifically, we'll try to answer the following question: 
+\marginnote{Our philosophy is, essentially, that we should choose auxiliary spins so that when one input level is solved by a random choice of $(h,J)$ it increases the likelihood that other input levels are also solved. We want high correlation between the ``solvedness'' of input levels.} 
+\begin{question}
+  Given a random choice of $h$ and $J$, how do we choose an auxiliary spin at each input level $L_\bfs$ such that, if $(h,J)$ solves $L_\bfs$ it also solves other input levels with high probability?
+\end{question}
+Our setup will introduce two new ideas: virtual spin space and random parameters. Throughout this section $(G,N,M,f)$ is a pre-Ising circuit.
+
+\section{Virtual Spin Space}
+Consider a pre-Ising circuit $G$. Define a new set
+\begin{align*}
+  E = \{(i,j) ~ \mid ~ i \leq j, i,j \in G\}.
+\end{align*}
+This is the set of all possible edges we could form between vertices in $G$ if we allow self-connections. It is also all indices of elements which are either on or above the diagonal of a $G\times G$ matrix. The cardinality of $E$ is $|G|\cdot(|G|+1)/2$, or written another way $|G| + |G|\cdot(|G|-1)/2$. From this it is clear that the state space $S_E$ has one spin for every vertex and another for every pair of vertices in $G$.
+
+We also define the $|E|$-dimensional vector space
+\marginnote{We can also interpret $\bR^E$ to mean the ``set of all functions $E\to \bR$'', which is the set theoretic interpretation of the notation anyway. This is a $\bR$-vector space and is canonically isomorphic to the vector space defined here.}
+\begin{align*}
+  \bR^E = \bigoplus_{(i,j) \in E} (i,j)\bR.
+\end{align*}
+A vector $\bfx \in \bR^E$ is indexed via elements in $E$: $\bfx_{(i,j)}$ is the component of $\bfx$ corresponding to $(i,j)$. This gives us a convenient way to package $\bfh$ and $\bfJ$ as a single vector, $\bfx_{(i,i)}$ is a choice for $h_i$ and $\bfx_{(i,j)}$ for $i < j$ is a choice for $\bfJ_{ij}$. Stated more formally, we have an isomorphism
+\begin{equation}\label{eqn:parameter_space_iso}
+  \bR^{|G|} \oplus \bR^{|G|(|G| - 1)/2}\to \bR^E
+\end{equation}
+given by sending a vector $(\bfh, \bfJ)$ to the vector $\bfp$ where $\bfp_{(i,i)} = \bfh_i$ and $\bfJ_{ij} = \bfp_{(i,j)}$. Because $\bfh$ and $\bfJ$ are called the parameters of an Ising graph, we call $\bR^E$ the \textbf{parameter space} of $G$.
+
+Now consider the map
+\begin{equation}\label{eqn:virtual_map}
+  \varphi:S_G \to S_E, ~\varphi(s)(i,j) = 
+  \begin{cases}
+    s(i) & \text{if } i = j \\
+    s(i)s(j) & \text{if } i = j
+  \end{cases}
+\end{equation}
+The map $\varphi$ takes states of $G$ and produces states on $E$. If we identify $G$ with its image in $E$ under the diagonal embedding $i \mapsto (i,i)$ we see that $\varphi(\bfs)|_{G} = \bfs$, meaning that the state $\varphi(\bfs)$ recovers $\bfs$ when restricted to $G$. However, it also contains the second order interactions between spins of $\bfs$. If we think of states instead as vectors in $X^{|G|}$ and $X^{|E|}$, then we can write $\varphi$ in a more enlightening way:
+\begin{equation}\label{eqn:hamiltonian_is_dot_product_in_virtual_spinspace}
+\varphi(\bfs_1,...,\bfs_{G}) = (\bfs_1,...,\bfs_G,\bfs_1\bfs_2,\bfs_1\bfs_3,...,\bfs_1\bfs_G,\bfs_2\bfs_G,...,\bfs_{G-1}\bfs_{G}).
+\end{equation}
+From this description, it is clear that $\varphi$ simply concatenates all pairwise products of components in $\bfs$ 
+
+Notice that, for some choice of $\bfh, \bfJ$, the Hamiltonian of $G$ can now be written as the dot product
+\begin{align*}
+  H(\bfs) = \langle (\bfh,\bfJ) , \varphi(\bfs)\rangle
+\end{align*}
+where $(\bfh,\bfJ)$ is identified with its image in $\bR^E$. The state space $S_E$ contains states which correspond to states of $G$, but it also contains many others. For this reason, we call it the \textbf{virtual state space} of $G$.
+
+\section{Random Parameters}
+Consider a choice of $P \in \bR^E$ sampled from some distribution, e.g. a multivariate Gaussian \footnote{This seems like a good choice as it is spherically symmetric.} From the argument used in the proof of Proposition (\ref{prop:pvec_solves_input_level}) it is clear that the virtual spin $\bfv \in S_E$ whose sign in each component opposes the sign of the corresponding elements in $P$ will minimize $\langle P,\bfv \rangle$:
+\begin{equation}\label{eqn:minimum_virtual_spin}
+  \bfv_{i,j} = - \frac{P_{i,j}}{|P_{i,j}|}, ~ \text{ for } (i,j) \in E.
+\end{equation}
+
+A harder question is the following:
+
+\begin{question}
+  Fix an input $\bfs \in S_N$. For which $\bfx \in L_\bfs$ is $\langle P, \varphi(\bfx) \rangle$ minimized?
+\end{question}
+
+Intuitively, the $\bfx$ which minimizes $\langle P, \varphi(\bfx) \rangle$ should be close to the virtual spin which minimizes the inner product with $P$. Indeed, under some additional assumptions on $P$ this is true.
+
+\begin{prop}\label{prop:hamming_distance_to_minimum_virtual_spin}
+  Suppose that $|P_{i,j}| = |P_{i',j'}|$ for all $(i,j), (i',j') \in E$ and let $\bfv \in S_E$ be the virtual spin which minimizes $\langle P, \bfv \rangle$. Then
+  \begin{align*}
+    \bfx = \arg\min_{\bfx \in L_\bfs} \langle P, \varphi(\bfx) \rangle
+  \end{align*}
+  if and only if
+  \begin{align*}
+    \bfx = \arg\min_{\bfx \in L_{\bfs}} d(\bfv, \bfx),
+  \end{align*}
+  where $d$ is Hamming distance.
+\end{prop}
+\begin{proof}
+  \begin{align*} 
+    &\bfx = \arg\min_{\bfx \in L_\bfs} \langle P, \varphi(\bfx) \rangle \\
+    &\iff \bfx = \arg\min_{\bfx \in L_\bfs} \big(\langle P, \varphi(\bfx) \rangle - \langle P, \bfv \rangle\big)\\
+    &\iff \bfx = \arg\min_{\bfx \in L_\bfs} \langle P, \varphi(\bfx) - \bfv \rangle \\
+    &\iff \bfx = \arg\min_{\bfx \in L_\bfs} \left\langle P, \frac{1}{2}(\varphi(\bfx) - \bfv) \right\rangle.
+  \end{align*}
+  Consider $\varphi(\bfx)_{i,j} - \bfv_{i,j}$ for $(i,j) \in E$. If $\varphi(\bfx_{i,j}) = \bfv_{i,j}$ then this is zero. If $\varphi(\bfx_{i,j}) \neq \bfv_{i,j}$ then $\varphi(\bfx)_{i,j} = - \bfv_{i,j} = P_{i,j}/|P_{i,j}|$ by equation (\ref{eqn:minimum_virtual_spin}), and hence $\varphi(\bfx)_{i,j} - \bfv_{i,j} = 2$. We then have
+  \begin{align*}
+    \left\langle P, \frac{1}{2}(\varphi(\bfx) - \bfv) \right\rangle = |P_{1,1}| \cdot d(\varphi(\bfx), \bfv)
+  \end{align*}
+  because all components of $P$ are equal, and we are done.
+\end{proof}
+
+For an arbitrary $P$ we get something similar.
+
+\begin{prop}\label{prop:minimization_condition}
+  Let $P \in \bR^E$ be a parameter vector for $G$ and $\bfv\in S_E$ be the virtual spin which minimizes $\langle P, \bfv \rangle$. Then for a fixed $\bfs \in S_N$,
+  \begin{align*} 
+    \bfx = \arg\min_{\bfx \in L_\bfs} \langle P, \varphi(\bfx) \rangle
+  \end{align*}
+  if and only if
+  \begin{align*}
+    \bfx = \arg\min_{\bfx \in L_{\bfs}} \sum_{(i,j) \in D(\bfx,\bfv)} |P_{i,j}|
+  \end{align*}
+  where $D(\bfx,\bfv) = \{(i,j) \in E ~\mid~ \varphi(\bfx)_{i,j} \neq \bfv_{i,j}\}$ is the collection of indices where $\varphi(\bfx)$ and $\bfx$ disagree.
+\end{prop}
+\marginnote{One should think of Proposition \ref{prop:minimization_condition} as providing a way to rank the disagreements between components of $\varphi(\bfx)$ and $\bfv$, if $|P_{i,j}|$ is small then the penalty for disagreement is also small.}
+\begin{proof}
+  This is the same proof as Proposition (\ref{prop:hamming_distance_to_minimum_virtual_spin}) once one notices that
+  \begin{align*}
+    \left\langle P, \frac{1}{2}(\varphi(\bfx) - \bfv)\right\rangle = \sum_{(i,j) \in D(\bfx,\bfv)} |P_{i,j}|^2.
+  \end{align*}
+\end{proof}
+
+Proposition (\ref{prop:minimization_condition}) tells us that if we could quickly calculate the value of the \emph{level minimizer function} $\psi:\bR^E\to S_G$ defined
+\begin{equation}\label{eqn:level_minimizer_function}
+  \psi(P) = \arg\min_{\bfx \in L_\bfs} \sum_{(i,j) \in D(\bfx,\bfv)} |P_{i,j}|
+\end{equation}
+then we could quickly detect how many input levels are satisfied by a choice of $P$. This would then help us in choosing auxiliary spins which maximize correlation among the input levels.
+
+\newpage
+\bibliographystyle{abbrvnat}
+\bibliography{ising}
+\end{document}
