@@ -29,6 +29,7 @@ def call_solver(N1: int, N2: int, aux_array: np.ndarray):
     num_input_levels = 1 << N
 
 
+
     result = c_lmisr(
         c_int(N1),
         c_int(N2),

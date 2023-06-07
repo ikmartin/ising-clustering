@@ -20,6 +20,8 @@ from fittertry import IMulBit
 
 from lmisr_interface import call_solver
 
+import cProfile
+
 
 """
 Specifications
@@ -212,6 +214,9 @@ def search(circuit_args, num_solvers, num_delegators, limit):
 
 
         time.sleep(1.0)
+
+        if best_score < 1e5:
+            exit()
 
 def rank_spin(spin):
     n1, n2 = spin.splitint()
@@ -410,8 +415,6 @@ class Solver(Process):
         Attempts to fit a quadratic. This method operates under the assumption that most arguments passed to it will be infeasible, so it attempts to disqualify them cheaply using sequential constraint building. This will be much more expensive for a feasible aux array, but much cheaper for an infeasible. This means that insofar as most aux arrays are infeasible, total cost should be reduced. 
         """
 
-
-
         feasible = call_solver(self.N1, self.N2, array)
         return None if not feasible else feasible
         
@@ -449,4 +452,4 @@ def main(n1, n2, bit, solvers, delegators, limit):
 if __name__ == "__main__":
     freeze_support()
     multiprocessing.set_start_method('spawn')
-    main()
+    cProfile.run('main()')

@@ -553,72 +553,74 @@ void solveSysMainReward(double *rhs1, double *rhs2, double *y1, double *y2,
 			bool **CC, double **Grm, double *gr, 
 			bool **compute_me, bool quick){
 
-    int i, j, q;
-    int info;
-    int N = N1 + N2;
-    int M = 2*N+na;
-    int L = (int)round(pow(2,M));
-    int sz = (N*(3*N+1))/2;
+		int i, j, q;
+		int info;
+		int N = N1 + N2;
+		int M = 2*N+na;
+		int L = (int)round(pow(2,M));
+		int sz = (N*(3*N+1))/2;
 
-    for(i = 0; i < na; i++){
-        sz += 2*N+i+1;
-    }
+		for(i = 0; i < na; i++){
+				sz += 2*N+i+1;
+		}
 
-    int *ipiv= malloc(sizeof(int)*sz);
+		int *ipiv= malloc(sizeof(int)*sz);
 
-    for(i = 0; i < L; i++){
-	rhs2[i] /= (d21[i] + d22[i]); 
-    }
+		for(i = 0; i < L; i++){
+				rhs2[i] /= (d21[i] + d22[i]); 
+		}
 
-    for(i = 0; i < L; i++){
-	y2[i] = rhs2[i]*d21[i];
-    }
+		for(i = 0; i < L; i++){
+				y2[i] = rhs2[i]*d21[i];
+		}
 
-    
-    computeAx(y2, N1, N2, na, a, CC, y1, compute_me); // y1 = -B D^-1 rhs2
+		
+		// B is the constraint matrix in the original problem (or is it -B? unclear)
+		// D is apparently the diagonal matrix (d21 + d22) / d21
+		computeAx(y2, N1, N2, na, a, CC, y1, compute_me); // y1 = -B D^-1 rhs2
 
-    if(!quick){
-	for(i = 0; i < L; i++){
-	    y2[i] = d21[i] - d21[i]*d21[i]/(d21[i] + d22[i]);
-	}
-	solveSysMain(rhs1, N1, N2, na, a, y2, CC, Grm, compute_me); // rhs1 <- (A - B D^-1 C)^-1 rhs1
-    }else{
-	q = 0;
-	for(i = 0; i < sz; i++){
-            for(j = 0; j < sz; j++){
-        	gr[q] = Grm[i][j];
-        	q++;
-            }
-	}
-	i = 1;
-	dgesv_(&sz, &i, gr, &sz, ipiv, rhs1, &sz, &info);
-    }
-    q = 0;
-    for(i = 0; i < sz; i++){
-        for(j = 0; j < sz; j++){
-            gr[q] = Grm[i][j];
-            q++;
-        }
-    }
-    i = 1;
-    dgesv_(&sz, &i, gr, &sz, ipiv, y1, &sz, &info); // y1 <- -(A - B D^-1 C)^-1 B D^-1 rhs2
-  
-    for(i = 0; i < sz; i++){
-	y1[i] += rhs1[i];  // y1 = (A - B D^-1 C)^-1 rhs1 - (A - B D^-1 C)^-1 B D^-1 rhs2
-    }
+		if(!quick){
+				for(i = 0; i < L; i++){
+						y2[i] = d21[i] - d21[i]*d21[i]/(d21[i] + d22[i]);
+				}
+				solveSysMain(rhs1, N1, N2, na, a, y2, CC, Grm, compute_me); // rhs1 <- (A - B D^-1 C)^-1 rhs1
+		}else{
+				q = 0;
+				for(i = 0; i < sz; i++){
+						for(j = 0; j < sz; j++){
+								gr[q] = Grm[i][j];
+								q++;
+						}
+				}
+				i = 1;
+				dgesv_(&sz, &i, gr, &sz, ipiv, rhs1, &sz, &info);
+		}
+		q = 0;
+		for(i = 0; i < sz; i++){
+				for(j = 0; j < sz; j++){
+						gr[q] = Grm[i][j];
+						q++;
+				}
+		}
+		i = 1;
+		dgesv_(&sz, &i, gr, &sz, ipiv, y1, &sz, &info); // y1 <- -(A - B D^-1 C)^-1 B D^-1 rhs2
 
-    computeATx(y1, N1, N2, na, a, CC, y2); 
-    
-    for(i = 0; i < L; i++){
-	y2[i] *= d21[i]/(d21[i]+d22[i]); // y2 = - D^-1 C (A - B D^-1 C)^-1 rhs1 
-					 //      + D^-1 C (A - B D^-1 C)^-1 B D^-1 rhs2
-    }
+		for(i = 0; i < sz; i++){
+				y1[i] += rhs1[i];  // y1 = (A - B D^-1 C)^-1 rhs1 - (A - B D^-1 C)^-1 B D^-1 rhs2
+		}
 
-    for(i = 0; i < L; i++){
-	y2[i] += rhs2[i];
-    }
+		computeATx(y1, N1, N2, na, a, CC, y2); 
 
-    free(ipiv);
+		for(i = 0; i < L; i++){
+				y2[i] *= d21[i]/(d21[i]+d22[i]); // y2 = - D^-1 C (A - B D^-1 C)^-1 rhs1 
+							 //      + D^-1 C (A - B D^-1 C)^-1 B D^-1 rhs2
+		}
+
+		for(i = 0; i < L; i++){
+				y2[i] += rhs2[i];
+		}
+
+		free(ipiv);
 
 }
 

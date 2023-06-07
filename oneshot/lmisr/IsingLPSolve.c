@@ -146,6 +146,24 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
     }
     getSumDiffInds(N1, N2, na, 2, compute_me2);
 
+		/*
+				* Andrew: I think that this variable "sz" may be the number of columns in the original constraint matrix. I can calculate the two and see whether they are equal. The original consraint matrix has a number of columns equal to G + Gc2, and Gc2 = G!/(2 * (G-2)!) = (1/2) (G)(G-1). I can then convert this into N and na, since G = 2N + na. So this number of columns is 2N + na + (1/2) (2N + na)(2N + na - 1) = 2N + na + (1/2)(4N^2 + 2Nna - 2N + 2Nna + na^2 - na 
+				* = 2N^2 + 2Nna - N + (1/2)(na)(na-1) + 2N + na
+				* = 2N^2 + 2Nna + N + (1/2)(na)(na+1)
+				*
+				* Now note that "sz" = (1/2) (3N^2 + N) + (2N)na + sum(1 .. na) 
+				* = (1/2) (3N^2 + N) + 2Nna + (1/2)(na)(na+1) 
+				* = (3/2) N^2 + N/2 + 2Nna + (1/2)(na^2 + na) 
+				* = 2N^2 + 2Nna + N + (1/2)(na)(na+1) - (1/2)(N^2 + N)
+				*
+				* This is almost the same. This suggests that Teresa has already thought of the optimization that we do not need to consider the coefficients of monomials only containing input spins. There are exactly N linear terms and Nc2 quadratics, so these terms amount to N + (1/2)(N)(N-1) = N + (1/2)(N^2 - N) = (1/2)(N^2 + N), which exactly the extra factor.
+				*
+				* Therefore, sz is in fact the number of columns in the original constraint matrix with the optimization that we do not look for coefficients of input-only term
+				* This is almost the same. This suggests that Teresa has already thought of the optimization that we do not need to consider the coefficients of monomials only containing input spins. There are exactly N linear terms and Nc2 quadratics, so these terms amount to N + (1/2)(N)(N-1) = N + (1/2)(N^2 - N) = (1/2)(N^2 + N), which exactly the extra factor.
+				*
+				* Therefore, sz is in fact the number of columns in the original constraint matrix with the optimization that we do not look for coefficients of input-only terms.
+				*
+				*/
     int sz = (N*(3*N+1))/2;
     for(i = 0; i < na; i++){
 	sz += 2*N+i+1;
@@ -196,6 +214,9 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
     for(k = 0; k < maxit; k++){
 
 	// Begin computing predictor step
+		/*
+						* r_c = A^T lambda + s - c
+						*/
 	computeATxReward(lam1, lam2, N1, N2, na, a, CC, rc1, rc2);
 	for(i = 0; i < L; i++){
 	    rc1[i] += s1[i] + 1.0;
@@ -203,6 +224,9 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	for(i = 0; i < L; i++){
 	    rc2[i] += s2[i];
 	}
+
+				// Remove the constraints on the correct outputs by setting the c values to 0
+				// (This is a little opaque, but that's what it's doing)
 	q = 0;
 	for(j = 0; j < R2; j++){
 	    for(i = 0; i < R1; i++){
@@ -214,10 +238,14 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	    }
 	}
 
+
+		// r_b = Ax - b
 	computeAxReward(x1, x2, N1, N2, na, a, CC, rb1, rb2, compute_me2);
 	for(i = 0; i < L; i++){
 	    rb2[i] += 1.0;
 	}
+
+				// Similarly, remove the b coefficients on the correct output lines, which means removing them from the objective.
 	q = 0;
         for(j = 0; j < R2; j++){
 	    for(i = 0; i < R1; i++){
@@ -247,6 +275,7 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	rel_err = my_error/my_error0;	
 
 	// This is for output that will be printed when done.
+				// Since we have figured out that rho = lambda_2, this appears to be calculating the rho result values... not of concern to the actual solver algorithm.
 	fval = 0.0;
 	for(i = 0; i < L; i++){
 	    rxs2[i] = lam2[i];
@@ -268,6 +297,7 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	    fmin = fval;
 	    memcpy(rxst, rxs2, sizeof(double)*L);
             // This is also for output that will be printed when done.
+						// NOTE: this rewrites rxs2, which is subsquently reset in the next step. The only time that the following code matters is when the "break" right below this is triggered. The code should be optimized by putting this code within that if statement, so that this code is never run except when it is actually relevant. 
 	    computeATx(lam1, N1, N2, na, a, CC, rxs2);
             q = 0;
             for(j = 0; j < R2; j++){
@@ -291,10 +321,22 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	}
 	
 	rel_err_old = rel_err;
+
+
+				// The "rxs" values were used above for some sort of output calculation, but in the next step they are reset to be x*s, which is the third output target of the predictor step. 
+				//
+				// The predictor system is as follows:
+				// A^T dlam + ds = -rc
+				// A dx = -rb
+				// x*ds + s*dx = -x*s
+				//
+				// This computes x*s
 	for(i = 0; i < L; i++){
 	    rxs1[i] = x1[i]*s1[i];
 	    rxs2[i] = x2[i]*s2[i];
 	}
+				// This sets ds = (x*s - x*rc)/s
+				//
 	for(i = 0; i < L; i++){
 	    ds1[i] = -1.0*x1[i]*rc1[i]+rxs1[i];
 	    ds2[i] = -1.0*x2[i]*rc2[i]+rxs2[i];
@@ -303,6 +345,8 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	    ds1[i] /= s1[i];
 	    ds2[i] /= s2[i];
 	}
+
+				// dlam = A ds - rb
 	computeAxReward(ds1, ds2, N1, N2, na, a, CC, dlam1, dlam2, compute_me2);
 	for(i = 0; i < sz; i++){
 	    dlam1[i] -= rb1[i];
@@ -310,19 +354,27 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	for(i = 0; i < L; i++){
 	    dlam2[i] -= rb2[i];
 	}
+
+		// dx = x/s
 	for(i = 0; i < L; i++){
 	    dx1[i] = x1[i]/s1[i];
 	    dx2[i] = x2[i]/s2[i];
 	}
 
+
+		// ds = dlam
 	for(i = 0; i < sz; i++){
 	    ds1[i] = dlam1[i];
 	}
 	for(i = 0; i < L; i++){
 	    ds2[i] = dlam2[i];
 	}
+
+				/* ?????? */
 	solveSysMainReward(ds1, ds2, dlam1, dlam2, N1, N2, na, a, dx1, dx2, CC, Grm, gr, compute_me1, false);
 
+
+				// ds = - A^T dlam - rc 
 	computeATxReward(dlam1, dlam2, N1, N2, na, a, CC, ds1, ds2);
 	for(i = 0; i < L; i++){
 	    ds1[i] *= -1.0;
@@ -330,6 +382,8 @@ double* lmisr(int N1, int N2, int na, int N, int M1, bool *aux){
 	    ds2[i] *= -1.0;
 	    ds2[i] -= rc2[i];
 	}
+
+				// dx = -(x*s + x*ds)/s
 	for(i = 0; i < L; i++){
 	    dx1[i]  = rxs1[i] + x1[i]*ds1[i];
 	    dx1[i] /= -1.0*s1[i];

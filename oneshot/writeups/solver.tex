@@ -183,6 +183,177 @@ Switch columns 1-2 and 5-6, then switch rows 3-4 and 5-6:
 		\end{bmatrix}
 \end{align}
 
+Here is a transcription into mathematical language of Teresa's algorithm:
+\begin{align*}
+		\Delta s &\leftarrow (x * s - x * r_c) / s\\
+		\Delta \lambda &\leftarrow A \Delta s - r_b\\
+		\Delta x &\leftarrow x / s\\
+		\Delta s &\leftarrow \Delta \lambda\\
+		\Delta \lambda &\leftarrow \text{ solve system }(\Delta s, \Delta x)\\
+		\Delta s &\leftarrow -A^T \Delta \lambda - r_c\\
+		\Delta x &\leftarrow -(x*s + x * \Delta s) / s
+\end{align*}
+The constant reuse of variables is just for code optimization. Therefore, the actual function can be refactored into
+\begin{align*}
+		\Delta \lambda &\leftarrow \text{solve}(A((x*s - x*r_c) / s) - r_b, x/s)\\
+		\Delta s &\leftarrow -A^T \Delta \lambda - r_c\\
+		\Delta x &\leftarrow -(x*s + x*\Delta s) / s
+\end{align*}
+
+I still don't understand exactly what solve is doing. But maybe I can figure it out from context. We know that for the $\Delta$s to be a correct solution, $A^T\Delta \lambda + \Delta s = -r_c$, i.e.
+\begin{align}
+		\begin{bmatrix}
+				-M & -I\\
+				0 & -I
+		\end{bmatrix}\begin{bmatrix}
+				\Delta \lambda_1\\
+				\Delta \lambda_2
+		\end{bmatrix} 
+		= \begin{bmatrix}
+				M\lambda_1 + \lambda_2 - s_1 - v - \Delta s_1\\
+				\lambda_2 - s_2 - \Delta s_2
+		\end{bmatrix}
+\end{align}
+This is the equation used to compute $\Delta s$. Similarly, row 3 of the system is used to compute $\Delta x$. So we know that whatever we pick $\Delta \lambda$ to be, we will get $\Delta s = -r_c - A^T\Delta \lambda$ and hence $\Delta x = (x * (r_c + A^T\Delta \lambda) - x*s) / s$. But we need it to also be true that $A\Delta x = -r_b$. So we need to pick $\Delta \lambda$ such that 
+\begin{align*}
+		A((x*(r_c + A^T\Delta \lambda) - x*s)/s) = -r_b\\
+		A(S^{-1}X(r_c + A^T\Delta \lambda) - x) = -r_b\\
+		AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda - Ax = -r_b\\
+		AS^{-1}XA^T\Delta \lambda = Ax - r_b - AS^{-1}Xr_c\\
+		AS^{-1}XA^T \Delta \lambda = 
+		\begin{bmatrix}
+				-m^t & 0\\
+				-i & -i
+		\end{bmatrix}
+		\begin{bmatrix}
+				x_1/s_1 & 0\\
+				0 & x_2/s_2
+		\end{bmatrix}
+		\begin{bmatrix}
+				-m & -i\\
+				0 & -i
+		\end{bmatrix}
+		\begin{bmatrix}
+				\delta \lambda_1\\
+				\delta \lambda_2
+		\end{bmatrix}
+		\\= 
+		\begin{bmatrix}
+				M^T x_1\\
+				x_1 + x_2 - 1
+		\end{bmatrix}
+		+ \begin{bmatrix}
+				-M^T & 0\\
+				-I & -I
+		\end{bmatrix}
+		\begin{bmatrix}	
+				x_1 + (x_1/s_1) * (M\lambda_1 + \lambda_2 - s_1 - v)\\
+				x_2 + (x_2/s_2) * (\lambda_2 - s_2)
+		\end{bmatrix}
+\end{align*}
+
+Now, we need to investigate how SolveSysMainReward works. The arguments are rhs1, rhs2, y1, y2, d21, d22, as well as some other metadata and data storage arrays. 
+
+Ok, I think I've got it.
+
+We need to solve systems of the form
+\begin{align}
+		\begin{bmatrix}
+				0 & A^T & I\\
+				A & 0   & 0\\
+				S & 0   & X
+		\end{bmatrix}
+		\begin{bmatrix}
+				\Delta x\\
+				\Delta \lambda\\
+				\Delta s
+		\end{bmatrix} 
+		= 
+		\begin{bmatrix}
+				-r_c\\
+				-r_b\\
+				L
+		\end{bmatrix}
+\end{align}
+Which, written out as equations, is
+\begin{align}
+		A^T\Delta \lambda + \Delta s = -r_c\\
+		S\Delta x + X\Delta s = L\\
+		A\Delta x = -r_b
+\end{align}
+We can re-arrange to determine that $\Delta s = -r_c - A^T\Delta \lambda$ and $\Delta x = S^{-1}(L - X\Delta s) = S^{-1}(L - X(-r_c - A^T\Delta \lambda))$, upon which the last equation becomes
+\begin{align}
+		AS^{-1}(L - X(-r_c - A^T\Delta \lambda)) = -r_b\\
+		AS^{-1}L + AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda = -r_b\\
+		(AS^{-1}XA^T) \Delta \lambda = -r_b - AS^{-1}(L + r_c)\\
+		(AS^{-1}XA^T) \Delta \lambda = -Ax + b - AS^{-1}(L + A^T\lambda + s - c)\\
+		= b - A(x + S^{-1}(A^T\lambda - c) + 1) - AS^{-1}L
+\end{align}
+This is now a much smaller linear system, but we can break it down further by working out the coefficient matrix:
+\begin{align}
+		AS^{-1}XA^T = 
+		\begin{bmatrix}
+				-M^T & 0\\
+				-I & -I
+		\end{bmatrix}
+		\begin{bmatrix}
+				S_1^{-1}X_1 & 0\\
+				0 & S_2^{-1}X_2
+		\end{bmatrix}
+		\begin{bmatrix}
+				-M & -I\\
+				0 & -I
+		\end{bmatrix}\\
+		= 
+		\begin{bmatrix}
+				-M^T & 0\\
+				-I & -I
+		\end{bmatrix}
+		\begin{bmatrix}
+				-S_1^{-1}X_1M & -S_1^{-1}X_1\\
+				0 & -S_2^{-1} X_2
+		\end{bmatrix}
+		= 
+		\begin{bmatrix}
+				M^TS_1^{-1}X_1M & M^TS_1^{-1}X_1\\
+				S_1^{-1} X_1 M & S_1^{-1}X_1 + S_2^{-1}X_2
+		\end{bmatrix}
+\end{align}
+Now, we can apply block UDL-decomposition. It will be convenient if the matrix that we have to invert is actually the bottom right (since it is diagonal), and therefore we need the formula 
+\begin{align}
+		\begin{bmatrix}
+				W & X\\
+				Y & Z
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+				I & XZ^{-1}\\
+				0 & I
+		\end{bmatrix}
+		\begin{bmatrix}
+				W - XZ^{-1}Y & 0\\
+				0 & Z
+		\end{bmatrix}
+		\begin{bmatrix}
+				I & 0\\
+				Z^{-1}Y & I
+		\end{bmatrix}
+\end{align}
+Applying this, we obtain (with $D := S_1^{-1}X_1$ and $Z := S_1^{-1}X_1 + S_2^{-1}X_2$)
+\begin{align}
+		\begin{bmatrix}
+				I & M^T DZ^{-1}\\
+				0 & I
+		\end{bmatrix}
+		\begin{bmatrix}
+				M^T(D - D^2Z^{-1})M & 0\\
+				0 & Z
+		\end{bmatrix}
+		\begin{bmatrix}
+				I & 0\\
+				DZ^{-1} M & I
+		\end{bmatrix}
+\end{align}
 
 
 \end{document}
