@@ -5,6 +5,7 @@ from abc import abstractmethod
 from ortools.linear_solver import pywraplp
 import spinspace as ss
 import numpy as np
+import math
 
 
 class PICircuit:
@@ -56,7 +57,7 @@ class PICircuit:
 
     """
 
-    def __init__(self, N: int, M: int, A: int = 0):
+    def __init__(self, N: int, M: int, A: int = 0, auxlist=None):
         self.N = N
         self.M = M
         self.A = A
@@ -67,6 +68,9 @@ class PICircuit:
         self._graph = None
         self._aux_array = []
         self._aux_dict = {}
+
+        if auxlist:
+            self.set_all_aux(auxlist)
 
     #############################################
     # Properties and property-like methods
@@ -142,18 +146,16 @@ class PICircuit:
             aux_array = aux_array.T
 
         # record the number of set auxiliary spins and construct the necessary spinspaces
-        self.Aset = len(aux_array[0])
-        self._outauxspace = Spinspace(shape=(self.M, self.Aset))
+        self.A = len(aux_array[0])
+        self._outauxspace = Spinspace(shape=(self.M, self.A))
 
         # update self.auxspace if necessary
-        if self.Aset > self.A:
-            self.A = self.Aset
-            self.auxspace = Spinspace(shape=(self.A,))
+        self.auxspace = Spinspace(shape=(self.A,))
 
         # check for consistent length and store aux_array as list of Spins
         for i in range(aux_array.shape[0]):
             row = aux_array[i]
-            if len(row) != self.Aset:
+            if len(row) != self.A:
                 raise ValueError("Not all auxiliary states are the same length!")
 
             self._aux_dict[self.inspace[i]] = Spin(spin=row, shape=(self.A,))
@@ -216,7 +218,7 @@ class PICircuit:
         If a feasible auxiliary array has been set, then both (correct_out, correct_aux) AND (correct_out, wrong_aux) are considered correct, as both contain the correct output. Hence neither is returned.
         """
 
-        numaux = self.Ain(inspin) + tempaux.dim()
+        numaux = self.A + tempaux.dim()
         iterator = (
             Spinspace(shape=(self.M,))
             if numaux == 0
@@ -273,6 +275,12 @@ class PICircuit:
     def neglvec(self, inspin):
         """Returns the lvec of inspin with -1 added as a temporary auxiliary spin"""
         return self.lvec(inspin, tempaux=Spin(0, (1,)))
+
+    def avglvec_dist(self, inspin):
+        return (
+            sum(np.linalg.norm(self.lvec(inspin) - self.lvec(s)) for s in self.inspace)
+            / self.N
+        )
 
     #############################################
     ### SOLVER METHODS
@@ -409,8 +417,8 @@ class PICircuit:
 class IMul(PICircuit):
     """Ising Multiply Circuit"""
 
-    def __init__(self, N1: int, N2: int, A: int = 0):
-        super().__init__(N=N1 + N2, M=N1 + N2, A=A)
+    def __init__(self, N1: int, N2: int, A: int = 0, auxlist=None):
+        super().__init__(N=N1 + N2, M=N1 + N2, A=A, auxlist=auxlist)
         self.inspace = Spinspace(shape=(N1, N2))
         self.N1 = N1
         self.N2 = N2
