@@ -15,6 +15,8 @@
 \begin{document}
 \maketitle
 
+\section{Problem Setup}
+
 Our goal is to solve the linear programming problem $M\phi \geq v$, where in general $v$ is the vector of all ones. In practice we can reformulate the problem as 
 \begin{align*}
 		\min_{\phi, \rho}\ \langle 1, \rho\rangle &\text{ s.t. } M\phi + \rho \geq v, \rho \geq 0
@@ -36,269 +38,20 @@ If we make the identification
 				0  & -I
 		\end{bmatrix}
 \end{align*}
-Since if $\lambda = (\lambda_1, \lambda_2)$ and $s = (s_1, s_2)$, then $A^T\lambda + s = c$ can be written as the pair of equations $-M\lambda_1 - \lambda_2 + s_1 = -v$ and $-\lambda_2 + s_2 = 0$, which can be re-arranged as $s_2 = \lambda_2$ and $s_1 = M\lambda_1 + \lambda_2 - v$, so $s \geq 0$ actually means $\lambda_2 \geq 0$ and $M\lambda_1 + \lambda_2 \geq v$. This recovers our original problem with the identification $\phi := \lambda_1$, $\rho := \lambda_2$. 
+Since if $\lambda = (\lambda_1, \lambda_2)$ and $s = (s_1, s_2)$, then $A^T\lambda + s = c$ can be written as the pair of equations $-M\lambda_1 - \lambda_2 + s_1 = -v$ and $-\lambda_2 + s_2 = 0$, which can be re-arranged as $s_2 = \lambda_2$ and $s_1 = M\lambda_1 + \lambda_2 - v$, so $s \geq 0$ actually means $\lambda_2 \geq 0$ and $M\lambda_1 + \lambda_2 \geq v$. This recovers our original problem with the identification $\phi := \lambda_1$, $\rho := \lambda_2$. A word on the dimensions. Suppose that $M \in \R^{m \times n}$, with $m >> n$. Then $A^T \in \R^{2m \times n+m}$, so $\lambda, b \in \R^{n+m}$ and $s, c, x \in \R^{2m}$. We can also go ahead and set $r_b \leftarrow Ax - b$ and $r_c \leftarrow A^T\lambda + s - c$. 
 
-A word on the dimensions. Suppose that $M \in \R^{m \times n}$, with $m >> n$. Then $A^T \in \R^{2m \times n+m}$, so $\lambda, b \in \R^{n+m}$ and $s, c, x \in \R^{2m}$ 
+\section{Solving Systems of the Form $(AKA^T)p=q$}
 
-
-Therefore, we can start plugging in these special forms to the calculations which must be made in the MCP:
+Let $A$ be as defined above and $K$ be some general diagonal matrix with diagonal vector $k$ split into $k_1, k_2 \in \R^m$. The only actual systems of equations that we need to solve in this algorithm will be of the form $(AKA^T)p = q$. We will derive a general algorithm for solving this system in an efficient manner by taking advantage of the structure of $A$. Note that $p,q \in \R^{n+m}$.
 \begin{align}
-		r_b = Ax - b = \begin{bmatrix}
-				-M^T & 0\\
-				-I & -I
-				\end{bmatrix} \begin{bmatrix}
-				x_1\\
-				x_2\end{bmatrix}
-				- \begin{bmatrix}
-						0\\
-						-1
-				\end{bmatrix}
-				= \begin{bmatrix}
-				-M^Tx_1\\
-				 -x_1-x_2+1
-				\end{bmatrix}\\
-		r_c = A^T\lambda + s - c = \begin{bmatrix}
-				-M & -I\\
-				0  & -I
-				\end{bmatrix} \begin{bmatrix} \lambda_1 \\ \lambda_2\end{bmatrix} + \begin{bmatrix} s_1 \\ s_2 \end{bmatrix} - \begin{bmatrix} -v \\ 0 \end{bmatrix} = 
-				\begin{bmatrix}
-						-M\lambda_1 - \lambda_2 + s_1 + v\\
-						-\lambda_2 + s_2
-				\end{bmatrix}
-\end{align}
-We also get a more detailed block form for the coefficient matrix:
-\begin{align}
-		C = \begin{bmatrix}
-				0    & 0   & -M & -I & I   & 0\\
-				0    & 0   &  0 & -I & 0   & I\\
-				-M^T & 0   &  0 &  0 & 0   & 0\\
-				-I   & -I  &  0 &  0 & 0   & 0\\
-				S_1  &  0  &  0 &  0 & X_1 & 0\\
-				0    & S_2 &  0 &  0 & 0   & X_2
-		\end{bmatrix}
-\end{align}
-The predictor step is therefore the solution to the system of equations
-\begin{align}
-		\begin{bmatrix}
-				0    & 0   & -M & -I & I   & 0\\
-				0    & 0   &  0 & -I & 0   & I\\
-				-M^T & 0   &  0 &  0 & 0   & 0\\
-				-I   & -I  &  0 &  0 & 0   & 0\\
-				S_1  &  0  &  0 &  0 & X_1 & 0\\
-				0    & S_2 &  0 &  0 & 0   & X_2
-		\end{bmatrix}\begin{bmatrix}
-				\Delta x_1\\
-				\Delta x_2\\
-				\Delta \lambda_1\\
-				\Delta \lambda_2\\
-				\Delta s_1\\
-				\Delta s_2\\
-		\end{bmatrix}
-		=\begin{bmatrix}
-				M\lambda_1 + \lambda_2 - s_1 - v\\
-				\lambda_2 - s_2\\
-				M^Tx_1\\
-				x_1 + x_2 - 1\\
-				-x_1 * s_1\\
-				-x_2 * s_2
-		\end{bmatrix}
-\end{align}
-\begin{align}
-		-M^T \Delta x_1 = M^T x_1\\
-		-\Delta x_1 - \Delta x_2 = x_1 + x_2 - 1\\
-		s_1 * \Delta x_1 + x_1 * \Delta s_1 = - x_1 * s_1\\
-		s_2 * \Delta x_2 + x_2 * \Delta s_2 = - x_2 * s_2\\
-		-\Delta \lambda_2 + \Delta s_2 = \lambda_2 - s_2\\
-		-M\Delta \lambda_1 - \Delta \lambda_2 + \Delta s_1 = M\lambda_1 + \lambda_2 - s_1 - v
-\end{align}
-It appears that we may simply let $\Delta x_1 := -x_1$. Then
-\begin{align}
-		x_1 - \Delta x_2 = x_1 + x_2 - 1 \implies \Delta x_2 = 1 - x_2\\
-		-s_1 * x_1 + x_1 * \Delta s_1 = -x_1 * s_1 \implies x_1 * \Delta s_1 = 0 \implies \Delta s_1 = 0\\
-		s_2 * (1-x_2) + x_2 * \Delta s_2 = -x_2 * s_2 \implies x_2 * \Delta s_2 = -s_2
-\end{align}
-
-
-
-
-Switch columns 1-2 and 5-6, then switch rows 3-4 and 5-6:
-\begin{align}
-		\begin{bmatrix}
-				I	&	0	&	-M	&	-I	&	0	&	0\\
-				0	&	I	&	0	&	-I	&	0	&	0\\
-				X_1	&	0	&	0	&	0	&	S_1	&	0\\
-				0	&	X_2	&	0	&	0	&	0	&	S_2\\
-				0	&	0	&	0	&	0	& -M^T	&	0\\
-				0	&	0	&	0	&	0	&	-I	&	-I\\
-		\end{bmatrix}
-\end{align}
-
-\begin{align}
-		\begin{bmatrix}
-				0 & A^T & I\\
-				A & 0   & 0\\
-				S & 0   & X
-		\end{bmatrix}
-		\begin{bmatrix}
-				\Delta x\\
-				\Delta \lambda\\
-				\Delta s
-		\end{bmatrix} 
-		= 
-		\begin{bmatrix}
-				-r_c\\
-				-r_b\\
-				-x*s
-		\end{bmatrix}\\
-		\begin{bmatrix}
-				I & A^T & 0\\
-				0 & 0   & A\\
-				X & 0   & S
-		\end{bmatrix}
-		\begin{bmatrix}
-				\Delta s\\
-				\Delta \lambda\\
-				\Delta x
-		\end{bmatrix}
-		= \begin{bmatrix}
-				-r_c\\
-				-r_b\\
-				-x*s
-		\end{bmatrix}\\
-		\begin{bmatrix}
-				I & A^T & 0\\
-				X & 0   & S\\
-				0 & 0   & A
-		\end{bmatrix}
-		\begin{bmatrix}
-				\Delta s\\
-				\Delta \lambda\\
-				\Delta x
-		\end{bmatrix}
-		= 
-		\begin{bmatrix}
-				-r_c\\
-				-x*s\\
-				-r_b
-		\end{bmatrix}
-\end{align}
-
-Here is a transcription into mathematical language of Teresa's algorithm:
-\begin{align*}
-		\Delta s &\leftarrow (x * s - x * r_c) / s\\
-		\Delta \lambda &\leftarrow A \Delta s - r_b\\
-		\Delta x &\leftarrow x / s\\
-		\Delta s &\leftarrow \Delta \lambda\\
-		\Delta \lambda &\leftarrow \text{ solve system }(\Delta s, \Delta x)\\
-		\Delta s &\leftarrow -A^T \Delta \lambda - r_c\\
-		\Delta x &\leftarrow -(x*s + x * \Delta s) / s
-\end{align*}
-The constant reuse of variables is just for code optimization. Therefore, the actual function can be refactored into
-\begin{align*}
-		\Delta \lambda &\leftarrow \text{solve}(A((x*s - x*r_c) / s) - r_b, x/s)\\
-		\Delta s &\leftarrow -A^T \Delta \lambda - r_c\\
-		\Delta x &\leftarrow -(x*s + x*\Delta s) / s
-\end{align*}
-
-I still don't understand exactly what solve is doing. But maybe I can figure it out from context. We know that for the $\Delta$s to be a correct solution, $A^T\Delta \lambda + \Delta s = -r_c$, i.e.
-\begin{align}
-		\begin{bmatrix}
-				-M & -I\\
-				0 & -I
-		\end{bmatrix}\begin{bmatrix}
-				\Delta \lambda_1\\
-				\Delta \lambda_2
-		\end{bmatrix} 
-		= \begin{bmatrix}
-				M\lambda_1 + \lambda_2 - s_1 - v - \Delta s_1\\
-				\lambda_2 - s_2 - \Delta s_2
-		\end{bmatrix}
-\end{align}
-This is the equation used to compute $\Delta s$. Similarly, row 3 of the system is used to compute $\Delta x$. So we know that whatever we pick $\Delta \lambda$ to be, we will get $\Delta s = -r_c - A^T\Delta \lambda$ and hence $\Delta x = (x * (r_c + A^T\Delta \lambda) - x*s) / s$. But we need it to also be true that $A\Delta x = -r_b$. So we need to pick $\Delta \lambda$ such that 
-\begin{align*}
-		A((x*(r_c + A^T\Delta \lambda) - x*s)/s) = -r_b\\
-		A(S^{-1}X(r_c + A^T\Delta \lambda) - x) = -r_b\\
-		AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda - Ax = -r_b\\
-		AS^{-1}XA^T\Delta \lambda = Ax - r_b - AS^{-1}Xr_c\\
-		AS^{-1}XA^T \Delta \lambda = 
-		\begin{bmatrix}
-				-m^t & 0\\
-				-i & -i
-		\end{bmatrix}
-		\begin{bmatrix}
-				x_1/s_1 & 0\\
-				0 & x_2/s_2
-		\end{bmatrix}
-		\begin{bmatrix}
-				-m & -i\\
-				0 & -i
-		\end{bmatrix}
-		\begin{bmatrix}
-				\delta \lambda_1\\
-				\delta \lambda_2
-		\end{bmatrix}
-		\\= 
-		\begin{bmatrix}
-				M^T x_1\\
-				x_1 + x_2 - 1
-		\end{bmatrix}
-		+ \begin{bmatrix}
-				-M^T & 0\\
-				-I & -I
-		\end{bmatrix}
-		\begin{bmatrix}	
-				x_1 + (x_1/s_1) * (M\lambda_1 + \lambda_2 - s_1 - v)\\
-				x_2 + (x_2/s_2) * (\lambda_2 - s_2)
-		\end{bmatrix}
-\end{align*}
-
-Now, we need to investigate how SolveSysMainReward works. The arguments are rhs1, rhs2, y1, y2, d21, d22, as well as some other metadata and data storage arrays. 
-
-Ok, I think I've got it.
-
-We need to solve systems of the form
-\begin{align}
-		\begin{bmatrix}
-				0 & A^T & I\\
-				A & 0   & 0\\
-				S & 0   & X
-		\end{bmatrix}
-		\begin{bmatrix}
-				\Delta x\\
-				\Delta \lambda\\
-				\Delta s
-		\end{bmatrix} 
-		= 
-		\begin{bmatrix}
-				-r_c\\
-				-r_b\\
-				L
-		\end{bmatrix}
-\end{align}
-Which, written out as equations, is
-\begin{align}
-		A^T\Delta \lambda + \Delta s = -r_c\\
-		S\Delta x + X\Delta s = L\\
-		A\Delta x = -r_b
-\end{align}
-We can re-arrange to determine that $\Delta s = -r_c - A^T\Delta \lambda$ and $\Delta x = S^{-1}(L - X\Delta s) = S^{-1}(L - X(-r_c - A^T\Delta \lambda))$, upon which the last equation becomes
-\begin{align}
-		AS^{-1}(L - X(-r_c - A^T\Delta \lambda)) = -r_b\\
-		AS^{-1}L + AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda = -r_b\\
-		(AS^{-1}XA^T) \Delta \lambda = -r_b - AS^{-1}(L + Xr_c)\\
-		(AS^{-1}XA^T) \Delta \lambda = -Ax + b - AS^{-1}(L + Xr_c)\\
-		= b - A(x + S^{-1}(L + Xr_c))
-\end{align}
-This is now a much smaller linear system, but we can break it down further by working out the coefficient matrix:
-\begin{align}
-		AS^{-1}XA^T = 
+		AKA^T = 
 		\begin{bmatrix}
 				-M^T & 0\\
 				-I & -I
 		\end{bmatrix}
 		\begin{bmatrix}
-				S_1^{-1}X_1 & 0\\
-				0 & S_2^{-1}X_2
+				K_1 & 0\\
+				0 & K_2
 		\end{bmatrix}
 		\begin{bmatrix}
 				-M & -I\\
@@ -310,13 +63,13 @@ This is now a much smaller linear system, but we can break it down further by wo
 				-I & -I
 		\end{bmatrix}
 		\begin{bmatrix}
-				-S_1^{-1}X_1M & -S_1^{-1}X_1\\
-				0 & -S_2^{-1} X_2
+				-K_1M & -K_1\\
+				0 & -K_2
 		\end{bmatrix}
 		= 
 		\begin{bmatrix}
-				M^TS_1^{-1}X_1M & M^TS_1^{-1}X_1\\
-				S_1^{-1} X_1 M & S_1^{-1}X_1 + S_2^{-1}X_2
+				M^TK_1M & M^TK_1\\
+				K_1M & K_1 + K_2
 		\end{bmatrix}
 \end{align}
 Now, we can apply block UDL-decomposition. It will be convenient if the matrix that we have to invert is actually the bottom right (since it is diagonal), and therefore we need the formula 
@@ -339,7 +92,7 @@ Now, we can apply block UDL-decomposition. It will be convenient if the matrix t
 				Z^{-1}Y & I
 		\end{bmatrix}
 \end{align}
-Applying this, we obtain (with $D := S_1^{-1}X_1$ and $Z := S_1^{-1}X_1 + S_2^{-1}X_2$)
+Applying this, we obtain (with $D := K_1$ and $Z := K_1 + K_2$)
 \begin{align}
 		\begin{bmatrix}
 				I & M^T DZ^{-1}\\
@@ -375,34 +128,91 @@ Now, consider the equation
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
-			u_1\\
-			u_2
+			q_1\\
+			q_2
 		\end{bmatrix}
 \end{align}
-We get $y_2 = u_2$ and $u_1 = y_1 + M^TDZ^{-1} y_2 = y_1 + M^TDZ^{-1} u_2$, so $y_1 = u_1 - M^TDZ^{-1}u_2$. Now, we want to solve
+We get $y_2 = q_2$ and $q_1 = y_1 + M^TDZ^{-1} y_2 = y_1 + M^TDZ^{-1} q_2$, so $y_1 = q_1 - M^TDZ^{-1}q_2$. Now, we want to solve
 \begin{align}
 		\begin{bmatrix}
 			M^T(D-D^2Z^{-1})M & 0\\
 			DM & Z
 		\end{bmatrix}
 		\begin{bmatrix}
-			\Delta \lambda_1\\
-			\Delta \lambda_2
+			p_1\\
+			p_2
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
-			u_1 - M^TDZ^{-1}u_2\\
-			u_2
+			q_1 - M^TDZ^{-1}q_2\\
+			q_2
 		\end{bmatrix}
 \end{align}
-Clearly $DM \Delta \lambda_1 + Z\Delta \lambda_2 = u_2$ implies $\Delta \lambda_2 = Z^{-1}(u_2 - DM\Delta\lambda_1)$, so we have reduced the problem to solving the linear system $(M^T(D-D^2Z^{-1})M)\Delta \lambda_1 = u_1 - M^TDZ^{-1}u_2$. Since $n$ is in general fairly small, this is actually an easy system to solve. This leads us to the following algorithm:
+Clearly $DM p_1 + Zp_2 = q_2$ implies $p_2 = Z^{-1}(q_2 - DMp_1)$, so we have reduced the problem to solving the linear system $(M^T(D-D^2Z^{-1})M)p_1 = q_1 - M^TDZ^{-1}q_2$. Since $n$ is in general fairly small, this is actually an easy system to solve. This leads us to the following algorithm:
 \begin{align}
-	r_c &\leftarrow A^T \lambda + s - c\\
-	u &\leftarrow b - A(x + S^{-1}(Xr_c + L))\\
-	\Delta \lambda_1 &\leftarrow (M^T(D-D^2Z^{-1})M)^{-1}(u_1 - M^TDZ^{-1}u_2)\\
-	\Delta \lambda_2 &\leftarrow Z^{-1}(u_2 - DM\Delta\lambda_1) \\
-	\Delta s &\leftarrow -r_c - A^T\Delta \lambda\\
-	\Delta x &\leftarrow S^{-1}(L - X\Delta s)\\
+	p_1 &\leftarrow (M^T(D-D^2Z^{-1})M)^{-1}(q_1 - M^TDZ^{-1}q_2)\\
+	p_2 &\leftarrow Z^{-1}(q_2 - DMp_1)
 \end{align}
+
+\section{Solving the Main System}
+
+We need to solve systems of the form
+\begin{align}
+		\begin{bmatrix}
+				0 & A^T & I\\
+				A & 0   & 0\\
+				S & 0   & X
+		\end{bmatrix}
+		\begin{bmatrix}
+				\Delta x\\
+				\Delta \lambda\\
+				\Delta s
+		\end{bmatrix} 
+		= 
+		\begin{bmatrix}
+				-r_c\\
+				-r_b\\
+				L
+		\end{bmatrix}
+\end{align}
+Which, written out as equations, is
+\begin{align}
+		A^T\Delta \lambda + \Delta s = -r_c\\
+		S\Delta x + X\Delta s = L\\
+		A\Delta x = -r_b
+\end{align}
+We can re-arrange to determine that $\Delta s = -r_c - A^T\Delta \lambda$ and $\Delta x = S^{-1}(L - X\Delta s) = S^{-1}(L - X(-r_c - A^T\Delta \lambda))$, upon which the last equation becomes
+\begin{align}
+		AS^{-1}(L - X(-r_c - A^T\Delta \lambda)) = -r_b\\
+		AS^{-1}L + AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda = -r_b\\
+		(AS^{-1}XA^T) \Delta \lambda = -r_b - AS^{-1}(L + Xr_c)\\
+		(AS^{-1}XA^T) \Delta \lambda = -Ax + b - AS^{-1}(L + Xr_c)\\
+		= b - A(x + S^{-1}(L + Xr_c))
+\end{align}
+This gives us the following algorithm:
+\begin{align}
+	\Delta \lambda &\leftarrow (AS^{-1}XA^T)^{-1}(b-A(x + S^{-1}(Xr_c + L)))\\
+	\Delta s &\leftarrow -r_c - A^T\Delta \lambda\\
+	\Delta x &\leftarrow S^{-1}(L - X\Delta s)
+\end{align}
+
+\section{Calculating the Initial Guess}
+
+The initial guesses are calculated using the closed form of a least-squares problem. In other words, we need to calculate $(AA^T)^{-1}$. As with the previous linear system, the structure of $A$ can be exploited to make this simpler.
+\begin{align}
+		AA^T = \begin{bmatrix}
+				-M^T & 0\\
+				-I & -I
+		\end{bmatrix}
+		\begin{bmatrix}
+				-M & -I\\
+				0 & -I
+				\end{bmatrix}
+				= \begin{bmatrix}
+								M^TM & M^T\\
+								M & 2I
+				\end{bmatrix}
+\end{align}
+
 \end{document}
 
