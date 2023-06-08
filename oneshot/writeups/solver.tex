@@ -285,9 +285,9 @@ We can re-arrange to determine that $\Delta s = -r_c - A^T\Delta \lambda$ and $\
 \begin{align}
 		AS^{-1}(L - X(-r_c - A^T\Delta \lambda)) = -r_b\\
 		AS^{-1}L + AS^{-1}Xr_c + AS^{-1}XA^T\Delta \lambda = -r_b\\
-		(AS^{-1}XA^T) \Delta \lambda = -r_b - AS^{-1}(L + r_c)\\
-		(AS^{-1}XA^T) \Delta \lambda = -Ax + b - AS^{-1}(L + A^T\lambda + s - c)\\
-		= b - A(x + S^{-1}(A^T\lambda - c) + 1) - AS^{-1}L
+		(AS^{-1}XA^T) \Delta \lambda = -r_b - AS^{-1}(L + Xr_c)\\
+		(AS^{-1}XA^T) \Delta \lambda = -Ax + b - AS^{-1}(L + Xr_c)\\
+		= b - A(x + S^{-1}(L + Xr_c))
 \end{align}
 This is now a much smaller linear system, but we can break it down further by working out the coefficient matrix:
 \begin{align}
@@ -352,9 +352,57 @@ Applying this, we obtain (with $D := S_1^{-1}X_1$ and $Z := S_1^{-1}X_1 + S_2^{-
 		\begin{bmatrix}
 				I & 0\\
 				DZ^{-1} M & I
+		\end{bmatrix}\\
+		= 
+		\begin{bmatrix}
+				I & M^T DZ^{-1}\\
+				0 & I
+		\end{bmatrix}
+		\begin{bmatrix}
+			M^T(D-D^2Z^{-1})M & 0\\
+			DM & Z
 		\end{bmatrix}
 \end{align}
-
-
+Now, consider the equation
+\begin{align}
+		\begin{bmatrix}
+				I & M^T DZ^{-1}\\
+				0 & I
+		\end{bmatrix}
+		\begin{bmatrix}
+			y_1\\
+			y_2
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+			u_1\\
+			u_2
+		\end{bmatrix}
+\end{align}
+We get $y_2 = u_2$ and $u_1 = y_1 + M^TDZ^{-1} y_2 = y_1 + M^TDZ^{-1} u_2$, so $y_1 = u_1 - M^TDZ^{-1}u_2$. Now, we want to solve
+\begin{align}
+		\begin{bmatrix}
+			M^T(D-D^2Z^{-1})M & 0\\
+			DM & Z
+		\end{bmatrix}
+		\begin{bmatrix}
+			\Delta \lambda_1\\
+			\Delta \lambda_2
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+			u_1 - M^TDZ^{-1}u_2\\
+			u_2
+		\end{bmatrix}
+\end{align}
+Clearly $DM \Delta \lambda_1 + Z\Delta \lambda_2 = u_2$ implies $\Delta \lambda_2 = Z^{-1}(u_2 - DM\Delta\lambda_1)$, so we have reduced the problem to solving the linear system $(M^T(D-D^2Z^{-1})M)\Delta \lambda_1 = u_1 - M^TDZ^{-1}u_2$. Since $n$ is in general fairly small, this is actually an easy system to solve. This leads us to the following algorithm:
+\begin{align}
+	r_c &\leftarrow A^T \lambda + s - c\\
+	u &\leftarrow b - A(x + S^{-1}(Xr_c + L))\\
+	\Delta \lambda_1 &\leftarrow (M^T(D-D^2Z^{-1})M)^{-1}(u_1 - M^TDZ^{-1}u_2)\\
+	\Delta \lambda_2 &\leftarrow Z^{-1}(u_2 - DM\Delta\lambda_1) \\
+	\Delta s &\leftarrow -r_c - A^T\Delta \lambda\\
+	\Delta x &\leftarrow S^{-1}(L - X\Delta s)\\
+\end{align}
 \end{document}
 
