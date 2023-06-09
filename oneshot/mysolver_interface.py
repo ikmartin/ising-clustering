@@ -1,8 +1,11 @@
 from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p
 import numpy as np
+from numpy.ctypeslib import ndpointer
 from sys import path
 import os
 from pathlib import Path
+
+# Statically load the interface so that the solver can be called.
 
 path.insert(1, '/opt/OpenBLAS')
 lib = CDLL(os.path.join(
@@ -11,42 +14,30 @@ lib = CDLL(os.path.join(
     ))
 
 c_solver = lib.interface
-c_solver.restype = c_double
+
+c_solver.argtypes = [
+    ndpointer(c_double),
+    c_int,
+    c_int,
+    c_int
+]
+
+c_solver.restype = POINTER(c_double)
 
 
-def call_my_solver(N1: int, N2: int, aux_array: np.ndarray):
+def call_my_solver(constraint_matrix):
     """
     Calls my Mehrotra Predictor-Corrector implementation. 
 
-    The circuit which will be solved is IMul(N1, N2) with the specified auxilliary array.
-
-    Aux array is expected to be nonempty.
+    This is more or less a general purpose LP solver, so it really just expects a constraint matrix. The RHS is locked as a vector of 1s for now.
     """
-
-    num_aux_spins = aux_array.shape[0]
-
-    aux_array = aux_array.astype(np.dtype('uint8'))
-    c_formatted_aux_array = c_void_p(aux_array.ctypes.data)
-
-    N = N1 + N2
-    num_input_levels = 1 << N
-
-    
-
-    result = c_lmisr(
-        c_int(N1),
-        c_int(N2),
-        c_int(num_aux_spins),
-        c_int(N),
-        c_int(num_input_levels),
-        c_formatted_aux_array
-    )
+    num_rows, num_cols = constraint_matrix.shape
+    num_workers = 1
+    print(constraint_matrix)
+    result = c_solver(constraint_matrix, num_rows, num_cols, num_workers)
+    print(result)
 
 
-    objective = result[0]
+    #c_free_ptr(result)
 
-
-    c_free_ptr(result)
-
-    return objective < 1e-4
 

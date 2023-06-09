@@ -25,7 +25,7 @@ void multiply_by_M(double* target, double* vector);
 void multiply_by_Mt(double* target, double* vector);
 
 // Main solver functions
-double solve(int max_iter);
+double solve(int max_iter, double tolerance);
 void solve_main_system();
 void solve_AKAt(double* target, double* rhs, double* tmp);
 
@@ -33,3 +33,14 @@ void solve_AKAt(double* target, double* rhs, double* tmp);
 double fmin(double a, double b);
 double fmax(double a, double b);
 int imax(int a, int b);
+
+// Debug-only functions
+void printmat(double* mat, int rows, int cols, char* name);
+void printvec(double* vec, int length, char* name);
+
+
+
+
+
+
+

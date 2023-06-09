@@ -67,10 +67,11 @@ void free_vars() {
 
  /*
 	* Main solver function: Assumes that the constraint matrix and so on has already been set up
+	*
 	* Runs the MPC algorithm, see Nocedal & Wright chapter 14 for algorithm and documentation for 
 	* implementation-specific details.
 	*/
-double solve(int max_iter) {
+double solve(int max_iter, double tolerance) {
 	allocate_vars();
 
   // iteration variables
@@ -79,6 +80,7 @@ double solve(int max_iter) {
 	// various small variables
 	double alpha_primal_affine, alpha_dual_affine, alpha_primal, alpha_dual, affine_mu, mu, sigma;
 	double eta = 0.9;
+	double initial_error, error, relative_error;
 
 	// Calulate initial guesses
 	
@@ -155,6 +157,13 @@ double solve(int max_iter) {
 		s[i] += delta_s;
 	}
 
+	/*
+	printvec(x, 2*m, "x");
+	printvec(s, 2*m, "s");
+	printvec(l, n+m, "l");
+	return 0.0;
+	*/
+
 	// Start the main iteration
   for(iteration = 0; iteration < max_iter; iteration++) {
     
@@ -167,8 +176,34 @@ double solve(int max_iter) {
       rc[i] += s[i];
     }
     for(i = 0; i < m; i++) {
-      rc[i] -= VI;
+      rc[i] -= -VI;
     }
+		
+		// rb <- Ax - b
+		// This is stored in swap because we do not need it for anything except the error calculation. This is a whole matrix-vector multiply for the error calculation, which I'd like to avoid; look into this later.
+		multiply_by_A(swap, x);
+		for(i = n; i < n+m; i++) {
+			swap[i] += 1;
+		}
+
+		// Calculate relative error
+		error = 0;
+		for(i = 0; i < 2*m; i++) {
+			error += rc[i] * rc[i];
+		}
+		for(i = 0; i < n+m; i++) {
+			error += swap[i] * swap[i];
+		}
+		error = sqrt(error);
+		if(iteration == 0) {
+			initial_error = error;
+		}
+		relative_error = error / initial_error;
+		
+		// Determine break condition
+		if(relative_error < tolerance || relative_error != relative_error) {
+			break;
+		}
 		
     // L <- -x*s
     for(i = 0; i < 2*m; i++) {
@@ -184,10 +219,26 @@ double solve(int max_iter) {
 
     // Generate the LU decomposition for the system solve. Will be used for both the predictor and corrector step.
     generate_coefficient_matrix(lu_decomp, d, zinv);
+		//printmat(lu_decomp, n, n, "lu_decomp");
     dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+
+		/*
+		printvec(x, 2*m, "x");
+		printvec(rc, 2*m, "rc");
+		printvec(L, 2*m, "L");
+		printvec(s, 2*m, "s");
+	*/
 
     // Solves the predictor system to calculate affine deltas.
     solve_main_system();
+
+		/*
+		printvec(dx, 2*m, "dx");
+		printvec(ds, 2*m, "ds");
+		printvec(dl, n+m, "dl");
+		return 0.0;
+*/
+
 
     // Calculate affine alphas
     alpha_primal_affine = 1.0;
@@ -247,6 +298,9 @@ double solve(int max_iter) {
     for(i = 0; i < n+m; i++) {
       l[i] += alpha_dual * dl[i];
     }
+
+
+		printvec(l, n+m, "lambda");
 
     // asymptotic modification of step size, formula copied from Teresa. 
     eta = 1.0 - 0.1 * pow(0.1, (double)(iteration + 1)/50.0);
@@ -313,7 +367,7 @@ void solve_AKAt(double* p, double* q, double* tmp) {
 	}
 
 	// Solve the system using precomputed LU decomposition
-	dgetrs_(&TRANS, &n, &LD, lu_decomp, &n, pivot, p, &LD, &INFO);
+	dgetrs_(&TRANS, &n, &LD, lu_decomp, &n, pivot, p, &n, &INFO);
 
 	// Calculate p2 from the result
 	multiply_by_M(p2, p);
@@ -391,6 +445,42 @@ void multiply_by_Mt(double* target, double* vector) {
 	}
 }
 
+
+// Debug functions for printing matrices and vectors
+
+// prints a contigous matrix
+void printmat(double* mat, int rows, int cols, char* name) {
+	printf("%s = ", name);
+	for(int i=0; i< rows ; i++) {
+		for(int j=0; j<cols; j++) {
+			printf("%lf ", mat[i*rows + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
+// prints a non-contiguous matrix
+void printmat2(double** mat, int rows, int cols, char* name) {
+	printf("non-contigous\n");
+	printf("%s = ", name);
+	for(int i=0; i< rows ; i++) {
+		for(int j=0; j<cols; j++) {
+			printf("%lf ", mat[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void printvec(double* vec, int length, char* name) {
+	printf("%s = ", name);
+	for(int i=0; i< length ; i++) {
+		printf("%lf ", vec[i]);
+	}
+	printf("\n");
+}
+
 // -------------------------- INTERFACE -------------------------
 
 
@@ -399,14 +489,43 @@ double interface(double** constraints, int num_rows, int num_cols, int num_worke
 	m = num_rows;
 	n = num_cols;
 
+	printf("%p ", M);
+	printf("%p ", &num_rows);
+	printf("did that print?\n");
+	double* M2 = (double*) M;
+	printf("%lf ", (double)(*M2));
+	printf("%lf ", (double)(**M));
+	printmat2(M, m, n, "M");
+
 	openblas_set_num_threads(num_workers); 
-	return solve(200);
+	return solve(200, 1e-6);
 }
 
  /*
 	* Main entry point for running stand-alone---this is basically just a test function designed to see if the solver works on a very small problem.
 	*/
 int main() {
+	int m = 3;
+	int n = 2;
+	double** mat = (double**) malloc(sizeof(double*) * m);
+	for(int i=0; i<m; i++) {
+		mat[i] = (double*) malloc(sizeof(double) * n);
+	}
+	mat[0][0] = 1;
+	mat[0][1] = 1;
+	mat[1][0] = -1;
+	mat[1][1] = 0;
+	mat[2][0] = 1;
+	mat[2][1] = -1;
+
+	double result = interface(mat, m, n, 1);
+	printf("%lf\n", result);
+
+	for(int i=0; i<m; i++) {
+		free(mat[i]);
+	}
+	free(mat);
+
 	return 0;
 }
 
