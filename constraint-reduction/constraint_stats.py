@@ -1,22 +1,24 @@
-from ising import IMul, PICircuit
-from functools import cache
-from copy import Error
+from ising import IMul
 from spinspace import Spinspace, Spin
-from abc import abstractmethod
-from ortools.linear_solver import pywraplp
-import numpy as np
+from functools import cache
 from matplotlib import pyplot as plt
-import math
+from itertools import combinations
+
 import random
 import json
 import csv
+import pickle
+import time
 
-from fast_constraints import filtered_constraints, keys
-from solver import LPWrapper, build_solver
+from fast_constraints import filtered_constraints
+from solver import LPWrapper
 
 from joblib import Parallel, delayed
 
 
+################################
+## HELPER METHODS
+################################
 def get_valid_aux(auxfile="", num=-1):
     """Get the first <num> auxiliary arrays from a user-input file"""
     if auxfile == "":
@@ -25,6 +27,82 @@ def get_valid_aux(auxfile="", num=-1):
     # get the first <runs> many auxes
     with open(auxfile, "r") as file:
         return [json.loads(line) for line in file.readlines()[:num]]
+
+
+def dec2bin(num, fill):
+    return list(bool(int(a)) for a in bin(num)[2:].zfill(fill))
+
+
+# can speed this up by first inverting num and then flipping bits at indices not in ind
+# whenever ind is more than twice the length of the binary string
+def flip_bits(num, ind):
+    for k in ind:
+        # XOR with (00001) shifted into kth position
+        num = num ^ (1 << k)
+    return num
+
+
+##########################
+## DATA PERSISTENCE
+##########################
+datapath = "/home/ikmarti/Desktop/ising-clustering/constraint-reduction/data/"
+ham_dist_dict = {}
+
+
+def save():
+    with open(datapath + "ham_dist_dict.pickle", "wb") as file:
+        pickle.dump(ham_dist_dict, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def load():
+    try:
+        with open(datapath + "ham_dist_dict.pickle", "rb") as file:
+            ham_dist_dict = pickle.load(file)
+    except (OSError, IOError, FileNotFoundError) as e:
+        ham_dist_dict = {}
+
+
+##########################
+## INTEGER-WISE SPINS
+##########################
+
+
+def add_all_aux(outnum, A):
+    """Given an integer representing an output, generates a list of integers representing all possible auxiliary values appended to the end of the output."""
+    # bit shift to make room for the auxiliary
+    num = outnum << A
+    return [num + i for i in range(2**A)]
+
+
+def ham_dist_from_bin(N, num, dist):
+    """Returns all binary strings length N which are hamming distance <dist> from the given number num.
+
+    Parameters
+    ----------
+    N : int
+        the length of the binary string
+    num : int
+        the number to be used as the center of the hamming distance circle
+    dist : int
+        the hamming distance radius
+    """
+
+    try:
+        return ham_dist_dict[(N, num, dist)]
+    except KeyError:
+        b = dec2bin(num, N)
+        ham_dist_dict[(N, num, dist)] = []
+        for ind in combinations(range(N), r=dist):
+            flipped_guy = flip_bits(num, ind)
+            print(
+                f"""
+                  flipped {bin(num)[2:].zfill(N)}\n
+                  to      {bin(flipped_guy)[2:].zfill(N)}"""
+            )
+            ham_dist_dict[(N, num, dist)].append(flipped_guy)
+            time.sleep(0.1)
+
+        return ham_dist_dict[(N, num, dist)]
 
 
 #################################
@@ -107,8 +185,40 @@ def random_sieve(circuit, percent=0.2):
     return sieve
 
 
-def radial_seive(circuit, percent=0.2):
+def radial_seive(circuit, percent=0.2, noise=0):
     """Currying method. Aims to keep <percent> percentage of all constraints in an input level. Constraints determined by wrong outputs closest to the correct output."""
+    num_outaux = 2 ** (circuit.M + circuit.A)
+    num_constraints = int(num_outaux * percent)
+
+    def sieve(inspin):
+        out = circuit.fout(inspin)
+        correct_out = out.asint()
+        wrong_outaux = []
+        radius = 1
+        constraints_left = num_constraints
+        while constraints_left > 0:
+            # get all outputs distance <radius> from correct_out
+            outshell = ham_dist_from_bin(circuit.M, num=correct_out, dist=radius)
+            outauxshell = [
+                num
+                for sublist in [add_all_aux(out, circuit.A) for out in outshell]
+                for num in sublist
+            ]
+            # update the number of constraints still left to add
+            constraints_left -= len(outauxshell)
+
+            # only add enough constraints to hit the desired percentage
+            if constraints_left < 0:
+                wrong_outaux += outauxshell[:constraints_left]
+                break
+            else:
+                wrong_outaux += outauxshell
+
+            radius += 1
+
+        return wrong_outaux, num_constraints
+
+    return sieve
 
 
 ###################################
@@ -156,6 +266,7 @@ def plot_false_positives(percents, false_positives, fname, title=""):
     plt.title(title)
     plt.plot(percents, false_positives)
     plt.savefig(fname + ".png")
+    plt.clf()
 
 
 def csv_false_positives(percents, false_positives, fname):
@@ -234,41 +345,11 @@ def sieve_stats(
         plot_false_positives(percents, false_pos, fname, title)
 
 
-def plot_random_sieve(N1=3, N2=3, A=3, runs=400, minper=0.1, maxper=0.19, subdiv=50):
-    percents = np.linspace(minper, maxper, subdiv)
-    false_pos_percents = []
-
-    for i, percent in enumerate(percents):
-        circuit = IMul(N1, N2)
-        circuit.set_all_aux(get_random_auxarray(N1 + N2, A))
-        sieve = random_sieve(circuit=circuit, percent=percent)
-        false_pos_count = 0
-        for run in range(runs):
-            false_pos_count += perform_run(circuit, percent, sieve, run)
-
-        print(f"----------------\nSUMMARY OF RUN {i}\n")
-        print(f"  percentage of constraints used: {percent}")
-        print(f"  number of false positives: {false_pos_count}")
-
-        false_pos_percents.append(false_pos_count / runs)
-
-    # figure and file writing
-    fname = f"IMUL{N1}x{N2}x{A}_runs={runs}"
-    plot_false_positives(
-        percents, false_pos_percents, fname, title="Random Sieve Analysis"
-    )
-    csv_false_positives(percents, false_pos_percents, fname)
-
-    for i in range(len(percents)):
-        print(f"  Percent {percents[i]} ~~> {false_pos_percents[i]} false positives.")
-
-
-def run_random_sieve():
+def run_random_sieve(A=5):
     N1 = 3
     N2 = 4
-    A = 0
-    minper = 0.01
-    maxper = 0.01
+    minper = 0.001
+    maxper = 0.10
     runs = 500
     subdiv = 30
     sieve_stats(
@@ -286,12 +367,35 @@ def run_random_sieve():
     )
 
 
-def run_lvec_random():
+def run_const_radial_sieve():
     N1 = 3
     N2 = 3
-    A = 3
-    minper = 0.08
-    maxper = 0.3
+    A = 1
+    minper = 0.005
+    maxper = 0.1
+    runs = 500
+    subdiv = 10
+    sieve_stats(
+        weight_gen=const_weights,
+        level_sieve=radial_seive,
+        N1=N1,
+        N2=N2,
+        A=A,
+        runs=runs,
+        minper=minper,
+        maxper=maxper,
+        subdiv=subdiv,
+        fname=f"IMul{N1}x{N2}x{A}_const_radial_runs={runs}_minper={minper}_maxper={maxper}",
+        title="False Positives\nConstraints close to correct output are kept",
+    )
+
+
+def run_lvec_random():
+    N1 = 4
+    N2 = 4
+    A = 6
+    minper = 0.001
+    maxper = 0.1
     runs = 200
     subdiv = 30
     sieve_stats(
@@ -310,5 +414,16 @@ def run_lvec_random():
 
 
 if __name__ == "__main__":
-    run_random_sieve()
+    load()
+    # run_const_radial_sieve()
+    run_random_sieve(A=0)
+    run_random_sieve(A=1)
+    run_random_sieve(A=2)
+    run_random_sieve(A=3)
+    run_random_sieve(A=4)
+    run_random_sieve(A=5)
+    run_random_sieve(A=6)
+    run_random_sieve(A=7)
+
     # run_lvec_random()
+    save()
