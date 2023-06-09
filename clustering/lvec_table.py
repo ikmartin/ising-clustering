@@ -18,10 +18,7 @@ def cosine_sim(vec1, vec2):
 
 def gen_lvec_table_dist(circuit):
     N = circuit.inspace.size
-    lvec = [
-        circuit.normlvec(s) / np.linalg.norm(circuit.normlvec(s))
-        for s in circuit.inspace
-    ]
+    lvec = [circuit.lvec(s) / np.linalg.norm(circuit.lvec(s)) for s in circuit.inspace]
     A = np.array(
         [[np.linalg.norm(lvec[i] - lvec[j]) for i in range(N)] for j in range(N)]
     )

@@ -66,7 +66,6 @@ class PICircuit:
         self.auxspace = Spinspace((self.A,))
         self.spinspace = Spinspace((self.N, self.M, self.A))
         self._graph = None
-        self._aux_array = []
         self._aux_dict = {}
 
         if auxlist:
@@ -131,8 +130,6 @@ class PICircuit:
         aux_array : list[list]
             the auxiliary array to use for this PICircuit. Must be of consistent shape, either (2^N, A) or (A, 2^N) (in numpy notation).
         """
-        # reinitialize _aux_array
-        self._aux_array = []
 
         # convert to numpy array
         aux_array = np.array(aux_array)
@@ -212,13 +209,22 @@ class PICircuit:
         for outaux in outauxspace:
             yield Spin.catspin((inspin, outaux))
 
+    def allwrongout(self, inspin):
+        iterator = Spinspace(shape=(self.M,))
+        for out in iterator:
+            # we only check the output component
+            if out == self.fout(inspin):
+                continue
+
+            yield out
+
     def allwrong(self, inspin, tempaux=Spin(0, shape=(0,))):
         """Generator returning all 'wrong' outaux spins corresponding to a given input. Lets you simulate the addition of an auxiliary spin of value tempaux.
 
         If a feasible auxiliary array has been set, then both (correct_out, correct_aux) AND (correct_out, wrong_aux) are considered correct, as both contain the correct output. Hence neither is returned.
         """
 
-        numaux = self.A + tempaux.dim()
+        numaux = self.Ain(inspin) + tempaux.dim()
         iterator = (
             Spinspace(shape=(self.M,))
             if numaux == 0
@@ -267,6 +273,25 @@ class PICircuit:
         return lvec
 
     @cache
+    def lvec_noaux(self, inspin):
+        """Returns the sign of the average normal vector for all constraints in the given input level, ignoring the auxiliary spins"""
+        s = inspin
+        correct_inout = Spin.catspin((s, self.fout(s)))
+
+        # store the correct vspin
+        correct_vspin = correct_inout.vspin().spin()
+
+        # initialize the lvector as a numpy array of zeros
+        tempG = self.N + self.M
+        lvec = np.zeros(int(tempG * (tempG + 1) / 2))
+        for t in self.allwrongout(s):
+            inout = Spin.catspin((s, t))
+            diff = inout.vspin().spin() - correct_vspin
+            lvec += diff / np.linalg.norm(diff)
+
+        return lvec
+
+    @cache
     def poslvec(self, inspin):
         """Returns the lvec of inspin with +1 added as a temporary auxiliary spin"""
         return self.lvec(inspin, tempaux=Spin(1, (1,)))
@@ -276,11 +301,21 @@ class PICircuit:
         """Returns the lvec of inspin with -1 added as a temporary auxiliary spin"""
         return self.lvec(inspin, tempaux=Spin(0, (1,)))
 
+    @cache
     def avglvec_dist(self, inspin):
-        return (
-            sum(np.linalg.norm(self.lvec(inspin) - self.lvec(s)) for s in self.inspace)
-            / self.N
-        )
+        diffs = [
+            np.linalg.norm(self.lvec(inspin) - self.lvec(s))
+            for s in self.inspace.copy()
+        ]
+        return sum(diffs) / self.N
+
+    @cache
+    def fastavglvec_dist(self, inspin):
+        diffs = [
+            np.linalg.norm(self.lvec_noaux(inspin) - self.lvec_noaux(s))
+            for s in self.inspace.copy()
+        ]
+        return sum(diffs) / self.N
 
     #############################################
     ### SOLVER METHODS

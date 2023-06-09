@@ -239,7 +239,7 @@ class Spin:
 
     def __eq__(self, other):
         if isinstance(other, Spin):
-            if self.shape != other.shape:
+            if sum(self.shape) != sum(other.shape):
                 return False
 
             if self.val != other.val:
@@ -374,6 +374,10 @@ class Spinspace:
         self._current_index += 1
 
         return spin
+
+    def copy(self):
+        """Returns a copy of this spinspace"""
+        return Spinspace(shape=self.shape)
 
     def getspin(self, spin) -> Spin:
         """Convenience function, ensures the argument passed is of type Spin and not just an array or an integer representing a spin.
