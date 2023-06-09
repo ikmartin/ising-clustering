@@ -8,7 +8,7 @@
 
 int m;							// Number of rows in M
 int n;							// Number of columns in M
-double** M;					// The constraint matrix
+double* M;					// The constraint matrix
 
 // predictor-corrector state variables
 double* x;
@@ -52,7 +52,7 @@ void allocate_vars() {
 
 void free_vars() {
 	free(x);
-	free(l);
+	//free(l);			// DON'T FREE LAMBDA --- IT'S THE RETURN!
 	free(s);
 	free(dx);
 	free(dl);
@@ -71,7 +71,7 @@ void free_vars() {
 	* Runs the MPC algorithm, see Nocedal & Wright chapter 14 for algorithm and documentation for 
 	* implementation-specific details.
 	*/
-double solve(int max_iter, double tolerance) {
+double* solve(int max_iter, double tolerance) {
 	allocate_vars();
 
   // iteration variables
@@ -167,7 +167,7 @@ double solve(int max_iter, double tolerance) {
 	// Start the main iteration
   for(iteration = 0; iteration < max_iter; iteration++) {
     
-		printf("iteration %d\n", iteration);
+		//printf("iteration %d\n", iteration);
 
 
     // rc <- A^t lambda + s - c
@@ -300,15 +300,15 @@ double solve(int max_iter, double tolerance) {
     }
 
 
-		printvec(l, n+m, "lambda");
+		//printvec(l, n+m, "lambda");
 
     // asymptotic modification of step size, formula copied from Teresa. 
     eta = 1.0 - 0.1 * pow(0.1, (double)(iteration + 1)/50.0);
   }
 
 	free_vars();
-	printf("finished\n");
-	return eta;		// FIX THIS --- RETURN ACTUAL VALUE!
+	//printf("finished\n");
+	return l;		
 }
 
 void solve_main_system() {
@@ -403,7 +403,7 @@ void generate_coefficient_matrix(double* target, double* d, double* zinv) {
 		for(int j = 0; j < n; j++) {
 			target[i*n + j] = 0.0;
 			for(int k = 0; k < m; k++) {
-				target[i*n + j] += M[k][i] * (d[k] - d[k]*d[k]*zinv[k]) * M[k][j];
+				target[i*n + j] += M[k*n + i] * (d[k] - d[k]*d[k]*zinv[k]) * M[k*n + j];
 			}
 		}
 	}
@@ -431,7 +431,7 @@ void multiply_by_M(double* target, double* vector) {
 	for(int i = 0; i < m; i++) {
 		target[i] = 0.0;
 		for(int j = 0; j < n; j++) {
-			target[i] += M[i][j] * vector[j];
+			target[i] += M[i*n + j] * vector[j];
 		}
 	}
 }
@@ -440,7 +440,7 @@ void multiply_by_Mt(double* target, double* vector) {
 	for(int i = 0; i < n; i++) {
 		target[i] = 0.0;
 		for(int j = 0; j < m; j++) {
-			target[i] += M[j][i] * vector[j];
+			target[i] += M[j*n + i] * vector[j];
 		}
 	}
 }
@@ -453,7 +453,7 @@ void printmat(double* mat, int rows, int cols, char* name) {
 	printf("%s = ", name);
 	for(int i=0; i< rows ; i++) {
 		for(int j=0; j<cols; j++) {
-			printf("%lf ", mat[i*rows + j]);
+			printf("%lf ", mat[i*cols + j]);
 		}
 		printf("\n");
 	}
@@ -484,27 +484,24 @@ void printvec(double* vec, int length, char* name) {
 // -------------------------- INTERFACE -------------------------
 
 
-double interface(double** constraints, int num_rows, int num_cols, int num_workers) {
+double* interface(double* constraints, int num_rows, int num_cols, int num_workers) {
 	M = constraints;
 	m = num_rows;
 	n = num_cols;
 
-	printf("%p ", M);
-	printf("%p ", &num_rows);
-	printf("did that print?\n");
-	double* M2 = (double*) M;
-	printf("%lf ", (double)(*M2));
-	printf("%lf ", (double)(**M));
-	printmat2(M, m, n, "M");
-
 	openblas_set_num_threads(num_workers); 
 	return solve(200, 1e-6);
+}
+
+double* free_ptr(void* ptr) {
+	free(ptr);
 }
 
  /*
 	* Main entry point for running stand-alone---this is basically just a test function designed to see if the solver works on a very small problem.
 	*/
 int main() {
+	/*
 	int m = 3;
 	int n = 2;
 	double** mat = (double**) malloc(sizeof(double*) * m);
@@ -525,7 +522,7 @@ int main() {
 		free(mat[i]);
 	}
 	free(mat);
-
+*/
 	return 0;
 }
 

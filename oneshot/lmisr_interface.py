@@ -4,7 +4,7 @@ from sys import path
 
 path.insert(1, '/opt/OpenBLAS')
 
-lib = CDLL('/home/agmoore/work/ising-clustering/oneshot/lmisr/isingLPA.so')
+lib = CDLL('./lmisr/isingLPA.so')
 
 c_free_ptr = lib.free_ptr
 c_lmisr = lib.lmisr

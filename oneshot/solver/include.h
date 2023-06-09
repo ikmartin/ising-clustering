@@ -15,7 +15,7 @@ extern int dgetrf_(int* M, int* N, double* A, int* LDA, int* IPIV, int* INFO);
 extern int dgetrs_(char* TRANS, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
 
 // External interface functions
-double interface(double** constraints, int num_rows, int num_cols, int num_workers);
+double* interface(double* constraints, int num_rows, int num_cols, int num_workers);
 
 // Utility functions for dealing with the constraint matrix
 void generate_coefficient_matrix(double* target, double* d, double* zinv);
@@ -25,7 +25,7 @@ void multiply_by_M(double* target, double* vector);
 void multiply_by_Mt(double* target, double* vector);
 
 // Main solver functions
-double solve(int max_iter, double tolerance);
+double* solve(int max_iter, double tolerance);
 void solve_main_system();
 void solve_AKAt(double* target, double* rhs, double* tmp);
 

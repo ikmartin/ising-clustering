@@ -28,12 +28,16 @@ M = np.array([
     [1, -1]
 ], dtype = np.float64)
 
+"""
 from mysolver_interface import call_my_solver
 
 print(M.dtype)
 result = call_my_solver(M)
 print(result)
+for res in result:
+    print(f'{res:.2f}')
 exit()
+"""
 
 m = M.shape[0]
 n = M.shape[1]
