@@ -35,16 +35,15 @@ for i in range(1000):
     glop_time += end-start
 
     aux_array[aux_array == -1] = 0
-    print(aux_array)
     start = pc()
     lmisranswer = call_solver(2, 2, aux_array)
     end = pc()
     lmisr_time += end-start
 
-    myanswer = objective > 1e-3
+    myanswer = objective > 1e-2
     glopanswer = result is None
-
-    print(f'{myanswer} {glopanswer} {not lmisranswer}')
+    if myanswer != glopanswer:
+        print(f'{objective} {myanswer} {glopanswer} {not lmisranswer}')
 
 print(f'my_time = {my_time} glop_time = {glop_time} lmisr_time = {lmisr_time}')
 

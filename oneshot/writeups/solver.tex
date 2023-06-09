@@ -196,23 +196,10 @@ This gives us the following algorithm:
 	\Delta x &\leftarrow S^{-1}(L - X\Delta s)
 \end{align}
 
-\section{Calculating the Initial Guess}
+\section{Optimizations}
 
-The initial guesses are calculated using the closed form of a least-squares problem. In other words, we need to calculate $(AA^T)^{-1}$. As with the previous linear system, the structure of $A$ can be exploited to make this simpler.
-\begin{align}
-		AA^T = \begin{bmatrix}
-				-M^T & 0\\
-				-I & -I
-		\end{bmatrix}
-		\begin{bmatrix}
-				-M & -I\\
-				0 & -I
-				\end{bmatrix}
-				= \begin{bmatrix}
-								M^TM & M^T\\
-								M & 2I
-				\end{bmatrix}
-\end{align}
+$M = W - R = W - SC$ where $C$ is just the rows of right answers nad $S$ is the sparse orthogonal matrix where we have $2^{M+A} - 2^A$ rows of just 1 in the first columns, then another block of just rows in the second column, etc, where the number of columns in $S$ is equal to the number of rows in $C$, which is $2^M$.
+
+Therefore, $M^TKM = (W^T - C^TS^T)K(W-SC) = W^TKW - W^TKSC - C^TS^TKW + C^TS^TKSC$. Therefore, we have $(M^TKM)_i^j = \langle K, W^i, W^j - (SC)^j \rangle - \langle K, (SC)^i, W^j - (SC)^j \rangle$ 
 
 \end{document}
-

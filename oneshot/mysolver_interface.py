@@ -19,6 +19,8 @@ c_solver.argtypes = [
     ndpointer(c_double, flags = "C_CONTIGUOUS"),
     c_int,
     c_int,
+    c_int,
+    c_double,
     c_int
 ]
 
@@ -35,7 +37,9 @@ def call_my_solver(constraint_matrix):
     """
     num_rows, num_cols = constraint_matrix.shape
     num_workers = 1
-    result = c_solver(constraint_matrix, num_rows, num_cols, num_workers)
+    tolerance = 1e-8
+    max_iter = 200
+    result = c_solver(constraint_matrix, num_rows, num_cols, num_workers, tolerance, max_iter)
     result_array = as_array(result, shape = (num_rows+num_cols,))
     objective = sum(result_array[num_cols:])
     c_free_ptr(result)

@@ -157,6 +157,13 @@ double* solve(int max_iter, double tolerance) {
 		s[i] += delta_s;
 	}
 
+	/*
+	printvec(x, 2*m, "x");
+	printvec(s, 2*m, "s");
+	printvec(l, n+m, "l");
+	return 0.0;
+	*/
+
 	// Start the main iteration
   for(iteration = 0; iteration < max_iter; iteration++) {
     
@@ -212,10 +219,26 @@ double* solve(int max_iter, double tolerance) {
 
     // Generate the LU decomposition for the system solve. Will be used for both the predictor and corrector step.
     generate_coefficient_matrix(lu_decomp, d, zinv);
+		//printmat(lu_decomp, n, n, "lu_decomp");
     dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+
+		/*
+		printvec(x, 2*m, "x");
+		printvec(rc, 2*m, "rc");
+		printvec(L, 2*m, "L");
+		printvec(s, 2*m, "s");
+	*/
 
     // Solves the predictor system to calculate affine deltas.
     solve_main_system();
+
+		/*
+		printvec(dx, 2*m, "dx");
+		printvec(ds, 2*m, "ds");
+		printvec(dl, n+m, "dl");
+		return 0.0;
+*/
+
 
     // Calculate affine alphas
     alpha_primal_affine = 1.0;
@@ -276,7 +299,7 @@ double* solve(int max_iter, double tolerance) {
       l[i] += alpha_dual * dl[i];
     }
 
-		//debug statement which prints current solution
+
 		//printvec(l, n+m, "lambda");
 
     // asymptotic modification of step size, formula copied from Teresa. 
@@ -284,6 +307,7 @@ double* solve(int max_iter, double tolerance) {
   }
 
 	free_vars();
+	//printf("finished\n");
 	return l;		
 }
 
@@ -438,6 +462,7 @@ void printmat(double* mat, int rows, int cols, char* name) {
 
 // prints a non-contiguous matrix
 void printmat2(double** mat, int rows, int cols, char* name) {
+	printf("non-contigous\n");
 	printf("%s = ", name);
 	for(int i=0; i< rows ; i++) {
 		for(int j=0; j<cols; j++) {
@@ -459,13 +484,13 @@ void printvec(double* vec, int length, char* name) {
 // -------------------------- INTERFACE -------------------------
 
 
-double* interface(double* constraints, int num_rows, int num_cols, int num_workers, double tolerance, int max_iter) {
+double* interface(double* constraints, int num_rows, int num_cols, int num_workers) {
 	M = constraints;
 	m = num_rows;
 	n = num_cols;
 
 	openblas_set_num_threads(num_workers); 
-	return solve(max_iter, tolerance);
+	return solve(200, 1e-6);
 }
 
 double* free_ptr(void* ptr) {
