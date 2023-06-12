@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Ofast -std=c99 -fPIC # O3 
+CFLAGS = -Ofast -std=c99 -fPIC -g # O3 
 
 LFLAGS =  -lm -lopenblas 
 

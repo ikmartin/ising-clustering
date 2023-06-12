@@ -1,0 +1,8 @@
+2x2x1 Benchmark x1000
+
+glop = 17.66 (n/i constraint matrix building)
+lmisr = 5.05
+mine = 7.62 (n/i constraint matrix building) (no optimizations to LA)
+mine = 4.50 (n/i constraint matrix building) (take advantage of symmetric coeff matrix)
+
+

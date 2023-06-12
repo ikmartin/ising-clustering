@@ -3,12 +3,19 @@
 // Turns off customizable RHS of the original problem, setting it to be equal to the traditional problem.
 #define			VI		1.0
 
+typedef struct {
+	int8_t* values;	
+	int* row_index;
+	int* col_ptr;
+} CSC;
 
 // GLOBAL VARIABLES
 
 int m;							// Number of rows in M
 int n;							// Number of columns in M
 double* M;					// The constraint matrix
+
+CSC M_csc;
 
 // predictor-corrector state variables
 double* x;
@@ -90,7 +97,7 @@ double* solve(int max_iter, double tolerance) {
 		d[i] = 1.0;
 		zinv[i] = 0.5;
 	}
-	generate_coefficient_matrix(lu_decomp, d, zinv);
+	generate_coefficient_matrix(lu_decomp, d, zinv, swap);
   dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
 
 	
@@ -211,7 +218,7 @@ double* solve(int max_iter, double tolerance) {
 		}
 
     // Generate the LU decomposition for the system solve. Will be used for both the predictor and corrector step.
-    generate_coefficient_matrix(lu_decomp, d, zinv);
+    generate_coefficient_matrix(lu_decomp, d, zinv, swap);
     dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
 
     // Solves the predictor system to calculate affine deltas.
@@ -374,16 +381,79 @@ int imax(int a, int b) {
 	}
 	return b;
 }
-void generate_coefficient_matrix(double* target, double* d, double* zinv) {
+
+/* dense triangular coeff matrix generation
+void generate_coefficient_matrix(double* target, double* d, double* zinv, double* tmp) {
 	for(int i = 0; i < n; i++) {
-		for(int j = 0; j < n; j++) {
+		for(int j = 0; j <= i; j++) {
 			target[i*n + j] = 0.0;
 			for(int k = 0; k < m; k++) {
 				target[i*n + j] += M[k*n + i] * (d[k] - d[k]*d[k]*zinv[k]) * M[k*n + j];
 			}
+			target[j*n + i] = target[i*n + j];
+		}
+	}
+}*/
+
+
+
+double M_col_dot_prod(int A, int B, double* coeffs) {
+	double total = 0.0;
+	int i = M_csc.col_ptr[A];
+	int i_end = M_csc.col_ptr[A+1];
+	int j = M_csc.col_ptr[B];
+	int j_end = M_csc.col_ptr[B+1];
+	int row_i = M_csc.row_index[i];
+	int row_j = M_csc.row_index[j];
+	row_i = M_csc.row_index[i];
+	row_j = M_csc.row_index[j];
+	while(1) {
+		if(row_i == row_j) {
+			total += ((double)(M_csc.values[i] * M_csc.values[j])) * coeffs[row_j];
+			i++;
+			j++;
+			if(i >= i_end || j >= j_end) {
+				return total;
+			}
+			row_i = M_csc.row_index[i];
+			row_j = M_csc.row_index[j];
+			continue;
+		}
+		if(row_i < row_j) {
+			i++;
+			if(i >= i_end) {
+				return total;
+			}
+			row_i = M_csc.row_index[i];
+			continue;
+		}
+		if(row_i > row_j) {
+			j++;
+			if(j >= j_end) {
+				return total;
+			}
+			row_j = M_csc.row_index[j];
 		}
 	}
 }
+
+
+void generate_coefficient_matrix(double* target, double* d, double* zinv, double* tmp) {
+	int i, j;
+
+	for(i=0; i<m; i++) {
+		tmp[i] = d[i] - d[i] * d[i] * zinv[i];
+	}
+
+	for(i = 0; i < n; i++) {
+		for(j = 0; j <= i; j++) {
+			target[i*n + j] = M_col_dot_prod(i, j, tmp);
+			target[j*n + i] = target[i*n + j];
+		}
+	}
+}
+
+
 
 void multiply_by_A(double* target, double* vector) {
 	multiply_by_Mt(target, vector);
@@ -403,6 +473,7 @@ void multiply_by_At(double* target, double* vector) {
 	}
 }
 
+/*
 void multiply_by_M(double* target, double* vector) {
 	for(int i = 0; i < m; i++) {
 		target[i] = 0.0;
@@ -410,8 +481,35 @@ void multiply_by_M(double* target, double* vector) {
 			target[i] += M[i*n + j] * vector[j];
 		}
 	}
+}*/
+
+void multiply_by_M(double* target, double* vector) {
+	int i, col, row_index;
+
+	for(i = 0; i < m; i++) {
+		target[i] = 0.0;
+	}
+
+	for(col = 0; col < n; col++) {
+		for(i = M_csc.col_ptr[col]; i < M_csc.col_ptr[col+1]; i++) {
+			row_index = M_csc.row_index[i];
+			target[row_index] += M_csc.values[i] * vector[col];
+		}
+	}
 }
 
+void multiply_by_Mt(double* target, double* vector) {
+	int i, col;
+
+	for(col = 0; col < n; col++) {
+		target[col] = 0.0;
+		for(i = M_csc.col_ptr[col]; i < M_csc.col_ptr[col+1]; i++) {
+			target[col] += M_csc.values[i] * vector[M_csc.row_index[i]];
+		}
+	}
+}
+
+/* dense matrix multiply method
 void multiply_by_Mt(double* target, double* vector) {
 	for(int i = 0; i < n; i++) {
 		target[i] = 0.0;
@@ -419,6 +517,175 @@ void multiply_by_Mt(double* target, double* vector) {
 			target[i] += M[j*n + i] * vector[j];
 		}
 	}
+}
+*/
+
+void printbin(unsigned long val) {
+	for(int i=0; i<sizeof(unsigned long) * 8; i++) {
+		printf("%b", val & 1);
+		val = val >> 1;
+	}
+	printf("\n");
+}
+
+void generate_CSC_constraints(int n1, int n2, int8_t* aux_array, int num_aux) {
+	int N = n1 + n2;
+	int G = 2*N + num_aux;
+	int num_input_levels = 1 << N;
+	int* correct_answers = (int*) malloc(sizeof(int) * num_input_levels);
+	int* correct_outaux = (int*) malloc(sizeof(int) * num_input_levels);
+	int i, j;
+	int input2_mask = (1 << n2) - 1;
+	M_csc.col_ptr = (int*) malloc(sizeof(int) * (n+1));
+
+	for(i = 0; i < num_input_levels; i++) {
+		correct_answers[i] = ((i & input2_mask) * (i >> n2));
+		correct_outaux[i] = correct_answers[i] << num_aux;
+		for(j = 0; j < num_aux; j++) {
+			if(aux_array[j * num_aux + i] == 1) {
+				correct_outaux[i] += 1 << (num_aux-j-1);
+			}
+		}
+	}
+
+
+	// initial guess for the amount of memory needed--will expand or reduce later as necessary
+	int num_vals_added = 0;
+	int current_memory_size = (n * m) / 2;
+	M_csc.values = (int8_t*) malloc(sizeof(int8_t) * current_memory_size);
+	M_csc.row_index = (int*) malloc(sizeof(int) * current_memory_size);
+
+	int inp, out, aux;
+	int inp_part, out_part;
+
+	int state;
+	int row_index, col_index;
+
+	int8_t wrong_bit, right_bit, val;
+	int8_t other_wrong_bit, other_right_bit;
+
+
+	col_index = 0;
+	// generate the columns corresponding to linear terms
+	for(i = N; i < G; i++) {
+		M_csc.col_ptr[col_index] = num_vals_added;
+		row_index = 0;
+		for(inp = 0; inp < (1 << N); inp++) {
+			inp_part = inp << (N + num_aux);
+			right_bit = (int8_t) (((inp_part + correct_outaux[inp]) >> (G-i-1)) & 1);
+			for(out = 0; out < (1 << N); out++) {
+				if(out == correct_answers[inp]) {
+					continue;
+				}else{
+				}
+				out_part = out << num_aux;
+				for(aux = 0; aux < (1 << num_aux); aux++) {
+					state = inp_part + out_part + aux;
+					wrong_bit = (int8_t) ((state >> (G-i-1)) & 1);
+					val = wrong_bit - right_bit;
+					if(val != 0) {
+						//printf("%d %d \n", col_index, row_index);
+
+						M_csc.values[num_vals_added] = val;
+						M_csc.row_index[num_vals_added] = row_index;
+						num_vals_added++;
+
+						if(num_vals_added >= current_memory_size) {
+							printf("reallocating\n");
+							// give me another thousand entries!
+							current_memory_size += (1 << 10);
+							M_csc.values = realloc(M_csc.values, sizeof(int8_t) * current_memory_size);
+							M_csc.row_index = realloc(M_csc.row_index, sizeof(int) * current_memory_size);
+						}
+					}
+
+					row_index++;
+				}
+			}
+		}
+		col_index++;
+	}
+
+
+
+	//generate the columns corresponding to quadratic terms
+	for(i = N; i < G; i++) {
+		for(j = 0; j < i; j++) {
+			M_csc.col_ptr[col_index] = num_vals_added;
+			
+			row_index = 0;
+			for(inp = 0; inp < (1 << N); inp++) {
+				inp_part = inp << (N + num_aux);
+				right_bit = (int8_t) (((inp_part + correct_outaux[inp]) >> (G-i-1)) & 1);
+				other_right_bit = (int8_t) ((correct_outaux[inp] >> (G-j-1)) & 1);
+				right_bit *= other_right_bit;
+				for(out = 0; out < (1 << N); out++) {
+					if(out == correct_answers[inp]) {
+						continue;
+					}
+					out_part = out << num_aux;
+					for(aux = 0; aux < (1 << num_aux); aux++) {
+						state = inp_part + out_part + aux;
+						wrong_bit = (int8_t) ((state >> (G-i-1)) & 1);
+						other_wrong_bit = (int8_t) ((state >> (G-j-1)) & 1);
+						wrong_bit *= other_wrong_bit;
+						val = wrong_bit - right_bit;
+						if(val != 0) {
+							//printf("%d %d \n", col_index, row_index);
+							M_csc.values[num_vals_added] = val;
+							M_csc.row_index[num_vals_added] = row_index;
+							//printf("added %d max %d\n", num_vals_added, current_memory_size);
+							num_vals_added++;
+
+							if(num_vals_added >= current_memory_size) {
+								// give me another thousand entries!
+								printf("reallocating\n");
+								current_memory_size += (1 << 10);
+								M_csc.values = realloc(M_csc.values, sizeof(int8_t) * current_memory_size);
+								M_csc.row_index = realloc(M_csc.row_index, sizeof(int) * current_memory_size);
+							}
+						}
+
+						row_index++;
+					}
+				}
+			}
+			col_index++;
+		}
+	}
+	M_csc.col_ptr[col_index] = num_vals_added;
+	free(correct_answers);
+	free(correct_outaux);
+
+	printf("ccol ");
+	for(i = 0; i < n+1; i++) {
+		printf("%d ", M_csc.col_ptr[i]);
+	}
+	printf("\n");
+
+	printf("row_indices ");
+	for(i = 0; i < n; i++) {
+		for(j = M_csc.col_ptr[i]; j < M_csc.col_ptr[i+1]; j++) {
+			printf("%d ", M_csc.row_index[j]);
+		}
+	}
+	printf("\n");
+
+
+
+	printf("values ");
+	for(i = 0; i < n; i++) {
+		for(j = M_csc.col_ptr[i]; j < M_csc.col_ptr[i+1]; j++) {
+			printf("%d ", M_csc.values[j]);
+		}
+	}
+	printf("\n");
+}
+
+void free_M_CSC() {
+	free(M_csc.values);
+	free(M_csc.row_index);
+	free(M_csc.col_ptr);
 }
 
 
@@ -429,11 +696,13 @@ void printmat(double* mat, int rows, int cols, char* name) {
 	printf("%s = ", name);
 	for(int i=0; i< rows ; i++) {
 		for(int j=0; j<cols; j++) {
-			printf("%lf ", mat[i*cols + j]);
+			//printf("%.1lf ", mat[i*cols + j]);
+			printf("%d ", (int)mat[i*cols + j]);
 		}
 		printf("\n");
 	}
 	printf("\n");
+	printf("done\n");
 }
 
 // prints a non-contiguous matrix
@@ -456,6 +725,14 @@ void printvec(double* vec, int length, char* name) {
 	printf("\n");
 }
 
+void printintvec(int* vec, int length, char* name) {
+	printf("%s = ", name);
+	for(int i=0; i< length ; i++) {
+		printf("%ld ", vec[i]);
+	}
+	printf("\n");
+}
+
 // -------------------------- INTERFACE -------------------------
 
 
@@ -468,6 +745,27 @@ double* interface(double* constraints, int num_rows, int num_cols, int num_worke
 	return solve(max_iter, tolerance);
 }
 
+double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_index, int* col_ptr, int num_workers, double tolerance, int max_iter) {
+	m = num_rows;
+	n = num_cols;
+	M_csc.values = values;
+	M_csc.row_index = row_index;
+	M_csc.col_ptr = col_ptr;
+
+	openblas_set_num_threads(num_workers); 
+	return solve(max_iter, tolerance);
+}
+
+double* IMul_interface(int n1, int n2, int8_t* aux_array, int num_aux, int num_rows, int num_cols, int num_workers, double tolerance, int max_iter) {
+	m = num_rows;
+	n = num_cols;
+	generate_CSC_constraints(n1, n2, aux_array, num_aux);
+	openblas_set_num_threads(num_workers);
+	double* result = solve(max_iter, tolerance);
+	free_M_CSC();
+	return result;
+}
+
 double* free_ptr(void* ptr) {
 	free(ptr);
 }
@@ -476,6 +774,17 @@ double* free_ptr(void* ptr) {
 	* Main entry point for running stand-alone---this is basically just a test function designed to see if the solver works on a very small problem.
 	*/
 int main() {
+	int8_t* aux_array = malloc(16);
+	m = 480;
+	n = 35;
+	for(int i=0; i<16; i++) {
+		aux_array[i] = 0;
+	}
+	aux_array[0] = 1;
+	generate_CSC_constraints(2, 2, aux_array, 1);
+	openblas_set_num_threads(1);
+	solve(200, 1e-8);
+
 	/*
 	int m = 3;
 	int n = 2;

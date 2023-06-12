@@ -1,9 +1,11 @@
-from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p
+from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p, c_int8
 import numpy as np
 from numpy.ctypeslib import ndpointer, as_array
 from sys import path
 import os
 from pathlib import Path
+import torch
+from math import comb
 
 # Statically load the interface so that the solver can be called.
 
@@ -23,27 +25,76 @@ c_solver.argtypes = [
     c_double,
     c_int
 ]
-
 c_solver.restype = POINTER(c_double)
+
+c_sparse_solver = lib.sparse_interface
+
+c_sparse_solver.argtypes = [
+        c_int,
+        c_int,
+        ndpointer(c_int8, flags = "C_CONTIGUOUS"),
+        ndpointer(c_int, flags = "C_CONTIGUOUS"),
+        ndpointer(c_int, flags = "C_CONTIGUOUS"),
+        c_int,
+        c_double,
+        c_int
+        ]
+c_sparse_solver.restype = POINTER(c_double)
+
+c_imul_solver = lib.IMul_interface
+c_imul_solver.argtypes = [
+        c_int,
+        c_int,
+        ndpointer(c_int8, flags = "C_CONTIGUOUS"),
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_double,
+        c_int
+        ]
+c_imul_solver.restype = POINTER(c_double)
 
 c_free_ptr = lib.free_ptr
 
 
-def call_my_solver(constraint_matrix):
+def call_my_solver(CSC_constraints):
     """
     Calls my Mehrotra Predictor-Corrector implementation. 
 
     This is more or less a general purpose LP solver, so it really just expects a constraint matrix. The RHS is locked as a vector of 1s for now.
     """
-    num_rows, num_cols = constraint_matrix.shape
+    num_rows, num_cols = CSC_constraints.size()
+    values = CSC_constraints.values().numpy().astype(np.int8)
+    row_index = CSC_constraints.row_indices().numpy().astype(np.int32)
+    col_ptr = CSC_constraints.ccol_indices().numpy().astype(np.int32)
     num_workers = 1
     tolerance = 1e-8
     max_iter = 200
-    result = c_solver(constraint_matrix, num_rows, num_cols, num_workers, tolerance, max_iter)
+    result = c_sparse_solver(num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter)
     result_array = as_array(result, shape = (num_rows+num_cols,))
     objective = sum(result_array[num_cols:])
     c_free_ptr(result)
 
     return objective
+
+
+def call_imul_solver(n1, n2, aux_array):
+    num_aux = aux_array.shape[0]
+    N = n1 + n2
+    G = 2 * N + num_aux 
+    num_rows = int(2 ** (2*N + num_aux) - 2 ** (N + num_aux))
+    num_cols = int(G-N + comb(G, 2) - comb(N, 2))
+    num_workers = 1
+    tolerance = 1e-8
+    max_iter = 200
+    result = c_imul_solver(n1, n2, aux_array, num_aux, num_rows, num_cols, num_workers, tolerance, max_iter)
+    result_array = as_array(result, shape = (num_rows + num_cols,))
+    objective = sum(result_array[num_cols:])
+    c_free_ptr(result)
+
+    return objective
+    
+
 
 
