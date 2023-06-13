@@ -18,6 +18,7 @@ extern int dgetrs_(char* TRANS, int* N, int* NRHS, double* A, int* LDA, int* IPI
 double* interface(double* constraints, int num_rows, int num_cols, int num_workers, double tolerance, int max_iter);
 
 // Utility functions for dealing with the constraint matrix
+void compute_coeff_matrix_matches();
 void generate_coefficient_matrix(double* target, double* d, double* zinv, double* tmp);
 void multiply_by_A(double* target, double* vector);
 void multiply_by_At(double* target, double* vector);

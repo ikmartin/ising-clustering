@@ -58,7 +58,7 @@ c_imul_solver.restype = POINTER(c_double)
 c_free_ptr = lib.free_ptr
 
 
-def call_my_solver(CSC_constraints):
+def call_my_solver(CSC_constraints, tolerance = 1e-4, max_iter = 200):
     """
     Calls my Mehrotra Predictor-Corrector implementation. 
 
@@ -69,8 +69,6 @@ def call_my_solver(CSC_constraints):
     row_index = CSC_constraints.row_indices().numpy().astype(np.int32)
     col_ptr = CSC_constraints.ccol_indices().numpy().astype(np.int32)
     num_workers = 1
-    tolerance = 1e-8
-    max_iter = 200
     result = c_sparse_solver(num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter)
     result_array = as_array(result, shape = (num_rows+num_cols,))
     objective = sum(result_array[num_cols:])
