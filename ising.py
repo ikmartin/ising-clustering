@@ -88,6 +88,13 @@ class PICircuit:
             self._graph = self._generate_graph()
         return self._graph
 
+    @property
+    def outauxspace(self):
+        if self.A:
+            return self._outauxspace
+        else:
+            return self.outspace
+
     def Gin(self, inspin):
         return self.N + self.M + self.Ain(inspin)
 
