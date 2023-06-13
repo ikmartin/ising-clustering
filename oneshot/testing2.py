@@ -9,7 +9,7 @@ from time import perf_counter as pc
 
 import torch
 
-n1, n2, A = 3,4,3
+n1, n2, A = 3,3,4
 
 my_time = 0
 imul_time = 0
@@ -39,7 +39,6 @@ for i in range(10):
     imulanswer = objective > 1
 
 
-    """
     start = pc()
     circuit = IMul(n1, n2)
     circuit.set_all_aux(aux_array)
@@ -49,18 +48,16 @@ for i in range(10):
     result = glop.solve()
     end = pc()
     glop_time += end-start
-    """
 
     aux_array[aux_array == -1] = 0
     start = pc()
-    lmisranswer = call_solver(3, 3, aux_array)
+    lmisranswer = not call_solver(3, 3, aux_array)
     end = pc()
     lmisr_time += end-start
 
-    #glopanswer = result is None
-    glopanswer = False
-    if myanswer != lmisranswer or imulanswer != lmisranswer:
-        print(f'{objective} {imulanswer} {myanswer} {glopanswer} {not lmisranswer}')
+    glopanswer = result is None
+    if myanswer != glopanswer or imulanswer != glopanswer or glopanswer != lmisranswer:
+        print(f'{objective} {imulanswer} {myanswer} {glopanswer} {lmisranswer}')
 
 print(f'my_time = {my_time} imul = {imul_time} glop_time = {glop_time} lmisr_time = {lmisr_time}')
 

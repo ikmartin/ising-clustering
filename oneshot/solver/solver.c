@@ -197,6 +197,7 @@ double* solve(int max_iter, double tolerance) {
     for(i = 0; i < m; i++) {
       rc[i] -= -VI;
     }
+
 		
 		// rb <- Ax - b
 		// This is stored in swap because we do not need it for anything except the error calculation. This is a whole matrix-vector multiply for the error calculation, which I'd like to avoid; look into this later.
@@ -223,6 +224,7 @@ double* solve(int max_iter, double tolerance) {
 		if(relative_error < tolerance || relative_error != relative_error) {
 			break;
 		}
+		
 		
     // L <- -x*s
     for(i = 0; i < 2*m; i++) {
@@ -301,6 +303,19 @@ double* solve(int max_iter, double tolerance) {
     for(i = 0; i < n+m; i++) {
       l[i] += alpha_dual * dl[i];
     }
+
+		/*
+		// check for stopping condition---rhos are not moving much
+		error = 0.0;
+		for(i=n; i<n+m; i++) {
+			initial_error = dl[i] > 0 ? dl[i] : -dl[i];
+			error = fmax(initial_error, error);
+		}
+
+		if(error < tolerance) {
+			break;
+		}
+*/
 
 		//debug statement which prints current solution
 		//printvec(l, n+m, "lambda");
@@ -874,7 +889,7 @@ int main() {
 	}
 	generate_CSC_constraints(n1, n2, aux_array, A);
 	openblas_set_num_threads(1);
-	solve(200, 1e-8);
+	solve(200, 1e-4);
 	free(aux_array);
 
 	return 0;
