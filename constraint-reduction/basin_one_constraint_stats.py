@@ -310,18 +310,18 @@ def basin_one_across_aux(N1, N2, bitlist, minA, maxA, runs, fname, fullcheck=Fal
 
 if __name__ == "__main__":
     N1 = 3
-    N2 = 3
+    N2 = 4
     M = N1 + N2
-    minA = 0
-    maxA = 2
-    runs = 400
+    minA = 7
+    maxA = 10
+    runs = 1000
     subdiv = 10
     load()
     # run_const_radial_sieve(N1, N2, A, minper, maxper, runs, subdiv)
     # run_bin_search_radial_sieve(N1, N2, A, minper, maxper, runs, reps)
     # run_lvec_random()
     cut = 2
-    bitlist = [0, 0, 0, 0, 1, 0]
+    bitlist = [1, 1, 1, 1, 1, 1, 1]
     fname = f"IMul{N1}x{N2}_basin_one_constraints_bitlist={bitlist}"
     basin_one_across_aux(N1, N2, bitlist, minA, maxA, runs, fname, fullcheck=False)
     save()

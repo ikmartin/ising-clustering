@@ -1,3 +1,4 @@
+from constraint-reduction.basin_one_constraint_stats import num_constraints
 from spinspace import Spin
 from itertools import chain, combinations
 import torch
@@ -232,6 +233,99 @@ def filtered_constraints(circuit, degree, sieve):
     def make(inspin):
         # generate the wrong answers for this input level
         wrong_outaux, num_constraints = sieve(inspin)
+        all_wrong_block = dec2bin(torch.tensor(wrong_outaux).to(DEVICE), num_out_aux)
+
+        # generate a row tensor corresponding to the correct output and convert to virtual spins
+        correct_row = (
+            torch.tensor(circuit.inout(inspin).binary()).unsqueeze(0).to(DEVICE)
+        )
+        virtual_right = batch_vspin(correct_row, degree)
+        exp_virtual_right = virtual_right.expand(num_constraints, -1)
+
+        # mash the input together with the wrong outputs for virtual spin calculation
+        inspin_block = (
+            torch.tensor(inspin.binary()).unsqueeze(0).expand(num_constraints, -1)
+        )
+        wrong_block = torch.cat([inspin_block, all_wrong_block], dim=-1)
+        virtual_wrong = batch_vspin(wrong_block, degree)
+
+        # get the constraints
+        constraints = virtual_wrong - exp_virtual_right
+
+        # mask rows whose output portions are all 0
+        row_mask = constraints[..., circuit.N : (circuit.N + circuit.M)].any(dim=-1)
+        red_constraints = constraints[row_mask][..., col_mask]
+        numconst = red_constraints.shape[0]
+        return red_constraints.to_sparse(), numconst
+
+    return make, terms
+
+
+basin_dict = {}
+
+
+def get_basin(N, num, d):
+    """Returns all binary strings length N which are hamming distance <dist> from the given number num.
+
+    Parameters
+    ----------
+    N : int
+        the length of the binary string
+    num : int
+        the number to be used as the center of the hamming distance circle
+    dist : int
+        the hamming distance radius
+    """
+
+    try:
+        return basin_dict[(N, num, d)]
+    except KeyError:
+        b = dec2bin(num, N)
+        basin_dict[(N, num, d)] = []
+        for ind in combinations(range(N), r=d):
+            flipped_guy = flip_bits(num, ind)
+            basin_dict[(N, num, d)].append(flipped_guy)
+
+        return basin_dict[(N, num, d)]
+
+
+def flip_bits(num, ind):
+    for k in ind:
+        # XOR with (00001) shifted into kth position
+        num = num ^ (1 << k)
+    return num
+
+
+def constraints_basin2(circuit, degree):
+    """A currying function. Returns a method used for filtering out constraints built sequentially (i.e. one input level at a time.)
+
+    Parameters
+    ----------
+    circuit : PICircuit
+        the circuit for whom constraints are to be generated
+    degree : int
+        an upper bound on the degree of interactions
+    sieve : callable
+        a method which returns a list of the wrong outaux spins, written as integers, which will be used to build constraints at the given input level. OUTPUT NEEDS TO BE A LIST OF outaux PAIRS IN INTEGER FORMAT.
+    """
+
+    terms = keys(circuit, degree)
+
+    # Filter out connections between inputs
+    col_mask = torch.tensor([max(key) >= circuit.N for key in terms])
+    terms = [term for term in terms if max(term) >= circuit.N]
+
+    num_out_aux = circuit.M + circuit.A
+    rows_per_input = 2**num_out_aux
+
+    MA = circuit.M + circuit.A
+
+    def make(inspin):
+        # generate the wrong answers for this input level
+        wrong_outaux = get_basin(MA, circuit.f(inspin).asint(), 1) + get_basin(
+            MA, circuit.f(inspin).asint(), 2
+        )
+        num_constraints = len(wrong_outaux)
         all_wrong_block = dec2bin(torch.tensor(wrong_outaux).to(DEVICE), num_out_aux)
 
         # generate a row tensor corresponding to the correct output and convert to virtual spins
