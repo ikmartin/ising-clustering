@@ -41,4 +41,4 @@ def call_solver(N1: int, N2: int, aux_array: np.ndarray):
 
     c_free_ptr(result)
 
-    return objective < 1e-4
+    return objective < 0.5

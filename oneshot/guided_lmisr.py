@@ -13,12 +13,13 @@ from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenbe
 from dataclasses import dataclass, field
 from typing import Any
 
-from fast_constraints import fast_constraints, sequential_constraints
+from fast_constraints import fast_constraints, sequential_constraints, constraints_basin
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
 from fittertry import IMulBit
 
 from lmisr_interface import call_solver
+from mysolver_interface import call_my_solver
 
 import cProfile
 
@@ -215,8 +216,11 @@ def search(circuit_args, num_solvers, num_delegators, limit):
 
         time.sleep(1.0)
 
+        """
         if best_score < 1e5:
             exit()
+
+        """
 
 def rank_spin(spin):
     n1, n2 = spin.splitint()
@@ -252,7 +256,7 @@ class Delegator(Process):
         self.admin = admin
         self.factory = factory
         self.limit = limit
-        self.STABLE_QSIZE = 10000
+        self.STABLE_QSIZE = 10000000
         super().__init__()
 
     def run(self):
@@ -354,7 +358,8 @@ class Solver(Process):
                 log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
                 return
         
-        log('solver', self.name, f'Accepting task with priority {priority}')
+        length = 0 if array is None else array.shape[0]
+        log('solver', self.name, f'Accepting task with priority {priority} and length {length}')
 
         
         if poly is None:
@@ -404,6 +409,7 @@ class Solver(Process):
 
             poly = get_poly(keys, solution)
             log('solver', self.name, f'Found solution with degree {degree}.')
+            print(poly)
 
             return poly
 
@@ -415,6 +421,31 @@ class Solver(Process):
         Attempts to fit a quadratic. This method operates under the assumption that most arguments passed to it will be infeasible, so it attempts to disqualify them cheaply using sequential constraint building. This will be much more expensive for a feasible aux array, but much cheaper for an infeasible. This means that insofar as most aux arrays are infeasible, total cost should be reduced. 
         """
 
+
+        for radius in range(1,3):
+            constraints, keys = constraints_basin(self.N1, self.N2, torch.tensor(array), 2, radius)
+            objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
+            if objective > 0.1:
+                if radius > 1:
+                    log('solver', self.name, f'Failed at basin {radius}.')
+                return None
+            log('solver', self.name, f'Passed basin {radius}.')
+
+
+        """
+        glop = LPWrapper(keys)
+        glop.add_constraints(constraints.to_sparse())
+        result = glop.solve()
+
+        if result is None:
+            log('solver', self.name, 'ERROR! PASSED MY SOLVER BUT FAILED GLOP')
+            return None
+        """
+        
+        log('solver', self.name, 'Looking promising!')
+        print(array)
+        print(constraints.size())
+        
         feasible = call_solver(self.N1, self.N2, array)
         return None if not feasible else feasible
         
@@ -452,4 +483,5 @@ def main(n1, n2, bit, solvers, delegators, limit):
 if __name__ == "__main__":
     freeze_support()
     multiprocessing.set_start_method('spawn')
-    cProfile.run('main()')
+    #cProfile.run('main()')
+    main()

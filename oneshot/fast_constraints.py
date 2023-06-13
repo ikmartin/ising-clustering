@@ -124,7 +124,7 @@ def CSC_constraints(n1, n2, aux, degree):
     return constraints.cpu().to_sparse_csc(), terms
 
 
-def constraints_basin1(n1, n2, aux, degree):
+def constraints_basin(n1, n2, aux, degree, radius):
     aux = torch.t(aux)
     num_aux = aux.shape[1]
     G = 2 * (n1 + n2) + num_aux
@@ -140,16 +140,21 @@ def constraints_basin1(n1, n2, aux, degree):
     correct_rows = torch.cat([correct_rows, aux], dim=-1)
 
     all_states = []
+    num_per_row = 0
     for row in correct_rows:
-        for i in range(n1 + n2, 2 * (n1 + n2) + num_aux):
-            new_row = row.clone().detach()
-            new_row[i] = 1 - new_row[i]
-            all_states.append(new_row.unsqueeze(0))
+        num_per_row = 0
+        for i in range(1, radius+1):
+            for diff in combinations(range(n1 + n2, 2*(n1+n2) + num_aux), i):
+                new_row = row.clone().detach()
+                for k in diff:
+                    new_row[k] = 1 - new_row[k]
+                all_states.append(new_row.unsqueeze(0))
+                num_per_row += 1
 
     all_states = torch.cat(all_states)
 
     virtual_right = batch_vspin(correct_rows, degree)
-    rows_per_input = n1 + n2 + num_aux
+    rows_per_input = num_per_row
     exp_virtual_right = (
         virtual_right.unsqueeze(1)
         .expand(-1, rows_per_input, -1)
