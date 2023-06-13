@@ -2,6 +2,7 @@
 #include <cblas.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 typedef struct {
   char n1;
