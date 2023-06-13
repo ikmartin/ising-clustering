@@ -90,6 +90,24 @@ void free_vars() {
 	free(coeff_matrix_num_matches);
 }
 
+void safe_make_coeff_matrix() {
+	INFO = 1;
+	double perturbation = 1e-7;
+	while(INFO > 0) {
+		generate_coefficient_matrix(lu_decomp, d, zinv, swap);
+		for(int i=0; i<n; i++) {
+			for(int j=0; j<n; j++) {
+				lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * perturbation;
+			}
+		}
+		dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+		
+		if(INFO != 0) {
+			printf("WARNING: LU-Decomposition is singular at %d\n", INFO);
+		}
+	}
+}
+
  /*
 	* Main solver function: Assumes that the constraint matrix and so on has already been set up
 	*
@@ -118,21 +136,7 @@ double* solve(int max_iter, double tolerance) {
 		zinv[i] = 0.5;
 	}
 
-	generate_coefficient_matrix(lu_decomp, d, zinv, swap);
-	dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
-	while(INFO > 0) {
-		printf("WARNING: LU-Decomposition is singular at %d\n", INFO);
-		printf("Occured during initial guess.\n");
-		
-		generate_coefficient_matrix(lu_decomp, d, zinv, swap);
-		for(i=0; i<n; i++) {
-			for(int j=0; j<n; j++) {
-				lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * 1e-6;
-			}
-		}
-		dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
-	}
-
+	safe_make_coeff_matrix();
 	
 	// Calculate the initial tilde guesses, using the deltas as temp variables
 	
@@ -253,20 +257,7 @@ double* solve(int max_iter, double tolerance) {
 		}
 
     // Generate the LU decomposition for the system solve. Will be used for both the predictor and corrector step.
-    generate_coefficient_matrix(lu_decomp, d, zinv, swap);
-    dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
-		while(INFO > 0) {
-			printf("WARNING: LU-Decomposition is singular at %d\n", INFO);
-			printf("Occured during main run.\n");
-			
-			generate_coefficient_matrix(lu_decomp, d, zinv, swap);
-			for(i=0; i<n; i++) {
-				for(int j=0; j<n; j++) {
-					lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * 1e-6;
-				}
-			}
-			dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
-		}
+		safe_make_coeff_matrix();
 
     // Solves the predictor system to calculate affine deltas.
     solve_main_system();

@@ -142,7 +142,6 @@ def constraints_basin1(n1, n2, aux, degree):
             new_row = row.clone().detach()
             new_row[i] = 1 - new_row[i]
             all_states.append(new_row.unsqueeze(0))
-            print(new_row)
 
     all_states = torch.cat(all_states)
 
