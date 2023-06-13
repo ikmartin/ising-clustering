@@ -15,7 +15,11 @@ int m;							// Number of rows in M
 int n;							// Number of columns in M
 double* M;					// The constraint matrix
 
+// sparse accelerator stuff
 CSC M_csc;
+int* coeff_matrix_num_matches;
+int** coeff_matrix_matches;
+int8_t** coeff_matrix_match_values;
 
 // predictor-corrector state variables
 double* x;
@@ -55,6 +59,10 @@ void allocate_vars() {
 	lu_decomp = (double*) malloc(sizeof(double) * (n * n));
 	swap			= (double*) malloc(sizeof(double) * imax(n+m, 2*m));
 	pivot			= (int*) malloc(sizeof(int) * n);
+
+	coeff_matrix_num_matches = malloc(sizeof(int) * n * n);
+	coeff_matrix_matches = malloc(sizeof(int*) * n * n);
+	coeff_matrix_match_values = malloc(sizeof(uint8_t*) * n * n);
 }
 
 void free_vars() {
@@ -70,6 +78,16 @@ void free_vars() {
 	free(lu_decomp);
 	free(swap);
 	free(pivot);
+
+	for(int i=0; i<n; i++) {
+		for(int j=0; j<=i; j++) {
+			free(coeff_matrix_matches[i*n + j]);
+			free(coeff_matrix_match_values[i*n + j]);
+		}
+	}
+	free(coeff_matrix_matches);
+	free(coeff_matrix_match_values);
+	free(coeff_matrix_num_matches);
 }
 
  /*
@@ -80,6 +98,7 @@ void free_vars() {
 	*/
 double* solve(int max_iter, double tolerance) {
 	allocate_vars();
+	compute_coeff_matrix_matches();
 
   // iteration variables
   int i, iteration;
@@ -437,9 +456,70 @@ double M_col_dot_prod(int A, int B, double* coeffs) {
 	}
 }
 
+void compute_col_matches(int row, int col) {
+	coeff_matrix_num_matches[row*n + col] = 0;
+	int memory_allocated = 16;
+	coeff_matrix_matches[row*n + col] = malloc(sizeof(int) * memory_allocated);
+	coeff_matrix_match_values[row*n + col] = malloc(memory_allocated);
+	int matches_found = 0;
+
+	int i = M_csc.col_ptr[row];
+	int i_end = M_csc.col_ptr[row+1];
+	int j = M_csc.col_ptr[col];
+	int j_end = M_csc.col_ptr[col+1];
+	int row_i = M_csc.row_index[i];
+	int row_j = M_csc.row_index[j];
+	row_i = M_csc.row_index[i];
+	row_j = M_csc.row_index[j];
+	while(1) {
+		if(row_i == row_j) {
+			coeff_matrix_matches[row*n + col][matches_found] = row_i;
+			coeff_matrix_match_values[row*n + col][matches_found] = M_csc.values[i] * M_csc.values[j];
+			matches_found++;
+			if(matches_found >= memory_allocated) {
+				memory_allocated *= 2;
+				coeff_matrix_matches[row*n + col] = realloc(coeff_matrix_matches[row*n + col], sizeof(int) * memory_allocated);
+				coeff_matrix_match_values[row*n + col] = realloc(coeff_matrix_match_values[row*n + col], memory_allocated);
+			}
+	
+			i++;
+			j++;
+			if(i >= i_end || j >= j_end) {
+				break;
+			}
+			row_i = M_csc.row_index[i];
+			row_j = M_csc.row_index[j];
+			continue;
+		}
+		if(row_i < row_j) {
+			i++;
+			if(i >= i_end) {
+				break;
+			}
+			row_i = M_csc.row_index[i];
+			continue;
+		}
+		if(row_i > row_j) {
+			j++;
+			if(j >= j_end) {
+				break;
+			}
+			row_j = M_csc.row_index[j];
+		}
+	}
+	coeff_matrix_num_matches[row*n + col] = matches_found;
+}
+
+void compute_coeff_matrix_matches() {
+	for(int i=0; i < n; i++) {
+		for(int j=0; j <= i; j++) {
+			compute_col_matches(i, j);
+		}
+	}
+}
 
 void generate_coefficient_matrix(double* target, double* d, double* zinv, double* tmp) {
-	int i, j;
+	int i, j, k, match;
 
 	for(i=0; i<m; i++) {
 		tmp[i] = d[i] - d[i] * d[i] * zinv[i];
@@ -447,10 +527,18 @@ void generate_coefficient_matrix(double* target, double* d, double* zinv, double
 
 	for(i = 0; i < n; i++) {
 		for(j = 0; j <= i; j++) {
-			target[i*n + j] = M_col_dot_prod(i, j, tmp);
+			target[i*n + j] = 0.0;
+			for(k=0; k<coeff_matrix_num_matches[i*n + j]; k++) {
+				match = coeff_matrix_matches[i*n + j][k];
+				target[i*n + j] += tmp[match] * coeff_matrix_match_values[i*n + j][k];
+			}
+			//target[i*n + j] = M_col_dot_prod(i, j, tmp);
 			target[j*n + i] = target[i*n + j];
+			//printf("%.0lf ", target[i*n + j]);
 		}
+		//printf("\n");
 	}
+	//exit(0);
 }
 
 
@@ -531,6 +619,8 @@ void printbin(unsigned long val) {
 void generate_CSC_constraints(int n1, int n2, int8_t* aux_array, int num_aux) {
 	int N = n1 + n2;
 	int G = 2*N + num_aux;
+	m = (1 << G) - (1 << (N + num_aux));
+	n = N + num_aux + (G * (G-1))/2 - (N * (N-1))/2;
 	int num_input_levels = 1 << N;
 	int* correct_answers = (int*) malloc(sizeof(int) * num_input_levels);
 	int* correct_outaux = (int*) malloc(sizeof(int) * num_input_levels);
@@ -617,7 +707,7 @@ void generate_CSC_constraints(int n1, int n2, int8_t* aux_array, int num_aux) {
 			for(inp = 0; inp < (1 << N); inp++) {
 				inp_part = inp << (N + num_aux);
 				right_bit = (int8_t) (((inp_part + correct_outaux[inp]) >> (G-i-1)) & 1);
-				other_right_bit = (int8_t) ((correct_outaux[inp] >> (G-j-1)) & 1);
+				other_right_bit = (int8_t) (((inp_part + correct_outaux[inp]) >> (G-j-1)) & 1);
 				right_bit *= other_right_bit;
 				for(out = 0; out < (1 << N); out++) {
 					if(out == correct_answers[inp]) {
@@ -657,6 +747,7 @@ void generate_CSC_constraints(int n1, int n2, int8_t* aux_array, int num_aux) {
 	free(correct_answers);
 	free(correct_outaux);
 
+	/*
 	printf("ccol ");
 	for(i = 0; i < n+1; i++) {
 		printf("%d ", M_csc.col_ptr[i]);
@@ -680,6 +771,7 @@ void generate_CSC_constraints(int n1, int n2, int8_t* aux_array, int num_aux) {
 		}
 	}
 	printf("\n");
+	*/
 }
 
 void free_M_CSC() {
@@ -756,9 +848,7 @@ double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_in
 	return solve(max_iter, tolerance);
 }
 
-double* IMul_interface(int n1, int n2, int8_t* aux_array, int num_aux, int num_rows, int num_cols, int num_workers, double tolerance, int max_iter) {
-	m = num_rows;
-	n = num_cols;
+double* IMul_interface(int n1, int n2, int8_t* aux_array, int num_aux, int num_workers, double tolerance, int max_iter) {
 	generate_CSC_constraints(n1, n2, aux_array, num_aux);
 	openblas_set_num_threads(num_workers);
 	double* result = solve(max_iter, tolerance);
@@ -774,39 +864,19 @@ double* free_ptr(void* ptr) {
 	* Main entry point for running stand-alone---this is basically just a test function designed to see if the solver works on a very small problem.
 	*/
 int main() {
-	int8_t* aux_array = malloc(16);
-	m = 480;
-	n = 35;
-	for(int i=0; i<16; i++) {
-		aux_array[i] = 0;
+	int n1 = 3;
+	int n2 = 4;
+	int A = 3;
+	int aux_array_size = (1 << (n1+n2)) * A;
+	int8_t* aux_array = malloc(aux_array_size);
+	for(int i=0; i<aux_array_size; i++) {
+		aux_array[i] = i & 1;
 	}
-	aux_array[0] = 1;
-	generate_CSC_constraints(2, 2, aux_array, 1);
+	generate_CSC_constraints(n1, n2, aux_array, A);
 	openblas_set_num_threads(1);
 	solve(200, 1e-8);
+	free(aux_array);
 
-	/*
-	int m = 3;
-	int n = 2;
-	double** mat = (double**) malloc(sizeof(double*) * m);
-	for(int i=0; i<m; i++) {
-		mat[i] = (double*) malloc(sizeof(double) * n);
-	}
-	mat[0][0] = 1;
-	mat[0][1] = 1;
-	mat[1][0] = -1;
-	mat[1][1] = 0;
-	mat[2][0] = 1;
-	mat[2][1] = -1;
-
-	double result = interface(mat, m, n, 1);
-	printf("%lf\n", result);
-
-	for(int i=0; i<m; i++) {
-		free(mat[i]);
-	}
-	free(mat);
-*/
 	return 0;
 }
 

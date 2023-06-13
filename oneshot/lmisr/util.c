@@ -666,82 +666,75 @@ void solveSysMain(double *x, int N1, int N2, int na, bool **a, double *d2,
     }
 
 
-    for(j = 0; j < Jmax; j++){
+  for(j = 0; j < Jmax; j++){
 
-	int2bit(j,N2,jbit);	
+		int2bit(j,N2,jbit);	
 
-	for(i = 0; i < Imax; i++){
+		for(i = 0; i < Imax; i++){
+			int2bit(i,N1,ibit);	
+			my_input[0] = true;
 
-	    int2bit(i,N1,ibit);	
-	    my_input[0] = true;
-
-	    for(k = 0; k < N1; k++){
-		my_input[   k+1] = ibit[k];
-	    }
-	    for(k = 0; k < N2; k++){
-		my_input[N1+k+1] = jbit[k];
-	    }
-
-	    ind = Imax*j+i;
-
-	    for(k = 0; k < L; k++){
-		d2_mini[k] = d2[ind*L+k];
-	    }
-
-	    getSumDiffMatrix(N1, N2, na, a, d2_mini, ind, CC, Mat, compute_me);
-
-	    for(k = 0; k < (N+1); k++){
-		for(l = 0; l < (N+1); l++){
-
-		    if(my_input[k] == my_input[l]){
-
-			for(p = 0; p < M; p++){
-			    for(q = 0; q < M; q++){
-				Grm[k*M+p][l*M+q] += Mat[p][q];
-			    }
-			}	
-
-		    }else{
-
-			for(p = 0; p < M; p++){
-			    for(q = 0; q < M; q++){
-				Grm[k*M+p][l*M+q] -= Mat[p][q];
-			    }
-			}	
-
-		    }
-		}
-	    }
-
-	    for(k = 0; k < (N+1); k++){
-		for(l = 0; l < M; l++){
-		    if(my_input[k]){
-			for(p = 0; p < (sz-num); p++){
-			    Grm[k*M+l][num+p] += Mat[l][M+p];
+			for(k = 0; k < N1; k++){
+				my_input[   k+1] = ibit[k];
 			}
-		    }else{
-			for(p = 0; p < (sz-num); p++){
-			    Grm[k*M+l][num+p] -= Mat[l][M+p];
+			for(k = 0; k < N2; k++){
+				my_input[N1+k+1] = jbit[k];
 			}
-		    }
+
+			ind = Imax*j+i;
+
+			for(k = 0; k < L; k++){
+				d2_mini[k] = d2[ind*L+k];
+			}
+
+			getSumDiffMatrix(N1, N2, na, a, d2_mini, ind, CC, Mat, compute_me);
+
+			for(k = 0; k < (N+1); k++){
+				for(l = 0; l < (N+1); l++){
+					if(my_input[k] == my_input[l]){
+						for(p = 0; p < M; p++){
+							for(q = 0; q < M; q++){
+								Grm[k*M+p][l*M+q] += Mat[p][q];
+							}
+						}	
+					}else{
+						for(p = 0; p < M; p++){
+							for(q = 0; q < M; q++){
+								Grm[k*M+p][l*M+q] -= Mat[p][q];
+							}
+						}	
+					}
+				}
+			}
+
+			for(k = 0; k < (N+1); k++){
+				for(l = 0; l < M; l++){
+					if(my_input[k]){
+						for(p = 0; p < (sz-num); p++){
+							Grm[k*M+l][num+p] += Mat[l][M+p];
+						}
+					}else{
+						for(p = 0; p < (sz-num); p++){
+							Grm[k*M+l][num+p] -= Mat[l][M+p];
+						}
+					}
+				}
+			}
+
+			for(k = 0; k < (sz-num); k++){
+				for(l = 0; l < (sz-num); l++){
+					Grm[num+k][num+l] += Mat[M+k][M+l];
+				}
+			}	
 		}
-	    }
 
-	    for(k = 0; k < (sz-num); k++){
-		for(l = 0; l < (sz-num); l++){
- 		    Grm[num+k][num+l] += Mat[M+k][M+l];
+  }
+
+  for(i = 0; i < sz; i++){
+		for(j = i+1; j < sz; j++){
+				Grm[j][i] = Grm[i][j];
 		}
-	    }	
-
-	}
-
-    }
-
-    for(i = 0; i < sz; i++){
-	for(j = i+1; j < sz; j++){
-	    Grm[j][i] = Grm[i][j];
-	}
-    }
+  }
 
 
 
