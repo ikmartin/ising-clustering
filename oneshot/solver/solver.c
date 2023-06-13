@@ -97,6 +97,7 @@ void free_vars() {
 	* implementation-specific details.
 	*/
 double* solve(int max_iter, double tolerance) {
+	srand((unsigned int) time(NULL));
 	allocate_vars();
 	compute_coeff_matrix_matches();
 
@@ -116,8 +117,21 @@ double* solve(int max_iter, double tolerance) {
 		d[i] = 1.0;
 		zinv[i] = 0.5;
 	}
+
 	generate_coefficient_matrix(lu_decomp, d, zinv, swap);
-  dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+	dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+	while(INFO > 0) {
+		printf("WARNING: LU-Decomposition is singular at %d\n", INFO);
+		printf("Occured during initial guess.\n");
+		
+		generate_coefficient_matrix(lu_decomp, d, zinv, swap);
+		for(i=0; i<n; i++) {
+			for(int j=0; j<n; j++) {
+				lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * 1e-6;
+			}
+		}
+		dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+	}
 
 	
 	// Calculate the initial tilde guesses, using the deltas as temp variables
@@ -241,6 +255,18 @@ double* solve(int max_iter, double tolerance) {
     // Generate the LU decomposition for the system solve. Will be used for both the predictor and corrector step.
     generate_coefficient_matrix(lu_decomp, d, zinv, swap);
     dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+		while(INFO > 0) {
+			printf("WARNING: LU-Decomposition is singular at %d\n", INFO);
+			printf("Occured during main run.\n");
+			
+			generate_coefficient_matrix(lu_decomp, d, zinv, swap);
+			for(i=0; i<n; i++) {
+				for(int j=0; j<n; j++) {
+					lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * 1e-6;
+				}
+			}
+			dgetrf_(&n, &n, lu_decomp, &n, pivot, &INFO);
+		}
 
     // Solves the predictor system to calculate affine deltas.
     solve_main_system();
@@ -482,6 +508,10 @@ void compute_col_matches(int row, int col) {
 	int i_end = M_csc.col_ptr[row+1];
 	int j = M_csc.col_ptr[col];
 	int j_end = M_csc.col_ptr[col+1];
+	// check for all-zero columns
+	if(i >= i_end || j >= j_end) {
+		return;
+	}
 	int row_i = M_csc.row_index[i];
 	int row_j = M_csc.row_index[j];
 	row_i = M_csc.row_index[i];
@@ -540,12 +570,13 @@ void generate_coefficient_matrix(double* target, double* d, double* zinv, double
 		tmp[i] = d[i] - d[i] * d[i] * zinv[i];
 	}
 
+
 	for(i = 0; i < n; i++) {
 		for(j = 0; j <= i; j++) {
 			target[i*n + j] = 0.0;
 			for(k=0; k<coeff_matrix_num_matches[i*n + j]; k++) {
 				match = coeff_matrix_matches[i*n + j][k];
-				target[i*n + j] += tmp[match] * coeff_matrix_match_values[i*n + j][k];
+				target[i*n + j] += tmp[match] * ((int)coeff_matrix_match_values[i*n + j][k]);
 			}
 			//target[i*n + j] = M_col_dot_prod(i, j, tmp);
 			target[j*n + i] = target[i*n + j];
@@ -858,6 +889,11 @@ double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_in
 	M_csc.values = values;
 	M_csc.row_index = row_index;
 	M_csc.col_ptr = col_ptr;
+	for(int k=0; k<n; k++) {
+		for(int l=M_csc.col_ptr[k]; l < M_csc.col_ptr[k+1]; l++) {
+			//printf("col %d index %d row %d value %d\n", k, l, M_csc.row_index[l], (int) M_csc.values[l]);
+		}	
+	}
 
 	openblas_set_num_threads(num_workers); 
 	return solve(max_iter, tolerance);
