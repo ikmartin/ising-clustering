@@ -104,6 +104,12 @@ def get_term_table(poly: MLPoly, criterion = lambda factor, key, value: True, si
             ]
             for factor in combinations(range(n), size)
         }
+    
+    table = {}
+    for i in range(2, poly.degree()):
+        table.update(get_term_table(poly, criterion, i))
+
+    return table
 
 
 def max_common_key(poly: MLPoly, size: int, criterion=lambda factor, key, value: True):
@@ -128,6 +134,14 @@ def get_common_key(poly: MLPoly, criterion: Callable, heuristic = standard_heuri
     options = [max_common_key(poly, i, criterion) for i in range(ceil(d / 2) + 1)]
 
     return max(options, key=heuristic)
+
+weak_positive_FGBZ_criterion = lambda factor, key, value: (
+    set(factor).issubset(key)
+    and len(factor) < len(key)
+    and len(key) > 2
+    and len(factor) >= 1
+    and value > 0
+)
 
 positive_FGBZ_criterion = lambda factor, key, value: (
     set(factor).issubset(key)
@@ -260,6 +274,21 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
 
         # Since we added a new auxilliary, the polynomial now has one more variable.
         n += 1
+
+    return poly
+
+def single_FD(poly, C):
+    value = poly.coeffs[C]
+    order = len(C)
+
+    poly = MLPoly(deepcopy(poly.coeffs))
+    n = poly.num_variables()
+
+    poly.add_coeff((n,), -value * (order - 1))
+    for i in C:
+        poly.add_coeff((i, n), value)
+
+    poly.set_coeff(C, 0)
 
     return poly
 

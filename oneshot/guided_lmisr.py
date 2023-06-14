@@ -8,7 +8,7 @@ import numpy as np
 from math import comb
 
 from solver import LPWrapper
-from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg
+from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -80,7 +80,7 @@ def estimate_score(poly) -> int:
     This provides a heuristic to estimate how good a particular intermediate set of coefficients is. The idea is to just try full Rosenberg reduction with the standard heuristic, and use the total number of variables as a quality score. The hope is that this provides a good notion of the complexity of a particular situation.
     """
 
-    return reduce_poly(poly, ['+fgbz', '-fgbz', 'fd']).num_variables()
+    return reduce_poly(poly, ['+fgbz', '-fgbz', 'fd']).num_variables() + reduce_poly(poly, ['rosenberg']).num_variables()
 
 
 ## Helper functions for uniquely identifying aux arrays
@@ -272,10 +272,11 @@ class Delegator(Process):
         # Get a recently completed task and unpack it
         task = self.admin["done_queue"].get()
         array, poly = task.item
+        priority = task.priority
 
         # Check to see if the current aux array is even with the best final solutions. Since we know that we are about to add a new row to the aux array, if this is the case, then whatever tasks we would add would be guarunteed not to improve on the currently known best answer. Therefore, simply skip.
         with self.admin['success_lock']:
-            if array is not None and (array.shape[0] >= self.admin['success']['best'] - 1 or array.shape[0] >= self.limit):
+            if array is not None and (array.shape[0] >= self.admin['success']['best'] - 1 or array.shape[0] >= self.limit) and priority > 1:
                 log('delegator', self.name, 'Worthless docket item.')
                 return
 
@@ -283,23 +284,88 @@ class Delegator(Process):
         log('delegator', self.name, f'Accepting docket item with priority {task.priority}.')
 
         # Generate new tasks and add them to the queue
-        self.make_new_tasks(poly, array)
+        self.make_new_tasks(poly, array, priority)
 
-    def make_new_tasks(self, poly, array):
+    def make_new_tasks(self, poly, array, priority):
+        if priority < 1 and array is not None:
+            # This is code for "we almost got it!"
+            new_score = estimate_score(poly)
+            log('delegator', self.name, 'Exploring variations...')
+            for i in range(array.shape[0]):
+                for j in range(array.shape[1]):
+                    new_array = array.copy()
+                    new_array[i, j] = 1 - new_array[i, j]
+                    new_task = PrioritizedItem(priority = new_score, item = (new_array, poly))
+
+                    self.admin['task_queue'].put(new_task)
+
+
+
         circuit = self.factory.get(array)
 
-        term_table = get_term_table(poly, rosenberg_criterion, 2)
+        # table of further options --- should be tuples of (new_poly, aux_map)
+        options = []
+
+        rosenberg_term_table = get_term_table(poly, rosenberg_criterion, 2)
+        
+        pos_fgbz_term_table = get_term_table(poly, weak_positive_FGBZ_criterion)
+        neg_fgbz_term_table = get_term_table(poly, negative_FGBZ_criterion)
+        """
+        fd_options = [
+            (key, value)
+             for key, value in poly.coeffs.items()
+            if value < 0 and len(key) > 2
+        ]
+        """
+
+        for C, H in rosenberg_term_table.items():
+            if not len(H):
+                continue
+
+            options.append((Rosenberg(poly, C, H), MLPoly({C: 1})))
+
+        
+        for C, H in pos_fgbz_term_table.items():
+            if not len(H):
+                continue
+
+            options.append((
+                PositiveFGBZ(poly, C, H),
+                MLPoly({
+                    () : 1,
+                    C : -1
+                })
+            ))
+
+        for C, H in neg_fgbz_term_table.items():
+            if not len(H):
+                continue
+
+            options.append((
+                NegativeFGBZ(poly, C, H),
+                MLPoly({
+                    C : 1
+                })
+            ))
+        
+        
+        """
+
+        for key, val in fd_options:
+            options.append((
+                single_FD(poly, key),
+                MLPoly({
+                    key: 1
+                })
+            ))
+        
+        """
 
         # Printout information objects
         log_priorities = []
         new_length = array.shape[0] + 1 if array is not None else 1
 
-        for C, H in term_table.items():
-            if not len(H):
-                continue
-            
-            new_poly = Rosenberg(poly, C, H)
-            aux_map = MLPoly({C: 1})
+        for new_poly, aux_map in options:
             new_aux_vector = np.array([[aux_map(tuple(circuit.inout(inspin).binary())) for inspin in circuit.inspace]])
             
             new_aux_array = new_aux_vector if array is None else np.concatenate([array, new_aux_vector])
@@ -312,7 +378,7 @@ class Delegator(Process):
             self.admin['dibs'][new_array_id] = True
             new_priority = estimate_score(new_poly)
 
-            new_task = PrioritizedItem(priority = new_priority, item = (new_aux_array, new_poly))
+            new_task = PrioritizedItem(priority = new_priority + new_length, item = (new_aux_array, new_poly))
 
             self.admin['task_queue'].put(new_task)
             log_priorities.append(new_priority)
@@ -365,9 +431,9 @@ class Solver(Process):
         if poly is None:
             circuit = self.factory.get(array)
             poly = self.degree_search(circuit, quad_only = False)
-            result = None
+            result, new_priority = None, 10000
         else:
-            result = self.validate(array)
+            result, new_priority = self.validate(array)
 
         # Update the results log
         with self.admin['success_lock']:
@@ -383,9 +449,10 @@ class Solver(Process):
                 
                 return
 
+        log('solver', self.name, f'Adding item with priority {priority}')
         
         # Otherwise, put the appropriate information in the completed task queue.
-        self.admin['done_queue'].put(PrioritizedItem(priority = priority, item = (array, poly)))
+        self.admin['done_queue'].put(PrioritizedItem(priority = new_priority, item = (array, poly)))
 
     def request_task(self):
         if not self.admin["task_queue"].empty():
@@ -397,6 +464,8 @@ class Solver(Process):
 
     def degree_search(self, circuit, quad_only = False):
         for degree in range(2, circuit.G):
+            #if degree > 2:
+            #    degree = 5
             M, keys = fast_constraints(circuit, degree)
             solver = LPWrapper(keys)
             solver.add_constraints(M)
@@ -428,7 +497,8 @@ class Solver(Process):
             if objective > 0.1:
                 if radius > 1:
                     log('solver', self.name, f'Failed at basin {radius}.')
-                return None
+
+                return None, 100/radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}.')
 
 
@@ -446,8 +516,11 @@ class Solver(Process):
         print(array)
         print(constraints.size())
         
-        feasible = call_solver(self.N1, self.N2, array)
-        return None if not feasible else feasible
+        objective = call_solver(self.N1, self.N2, array)
+        feasible = objective < 0.5
+        new_priority = objective/(1 << (2 * (self.N1 + self.N2) + array.shape[0]) - 1 << (self.N1 + self.N2 + array.shape[0])) 
+        log('solver', self.name, f'full check {feasible}, priority = {new_priority}')
+        return (None, new_priority) if not feasible else (feasible, new_priority)
         
 #340 1
 #341 4

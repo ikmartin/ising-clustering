@@ -1,4 +1,4 @@
-from constraint-reduction.basin_one_constraint_stats import num_constraints
+#from constraint-reduction.basin_one_constraint_stats import num_constraints
 from spinspace import Spin
 from itertools import chain, combinations
 import torch

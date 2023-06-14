@@ -1,10 +1,15 @@
 from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p
 import numpy as np
 from sys import path
+from pathlib import Path
+import os
 
 path.insert(1, "/opt/OpenBLAS")
 
-lib = CDLL("./lmisr/isingLPA.so")
+lib = CDLL(os.path.join(
+        str(Path(__file__).parent.absolute()),
+        'lmisr/isingLPA.so'
+    ))
 
 c_free_ptr = lib.free_ptr
 c_lmisr = lib.lmisr
@@ -41,4 +46,4 @@ def call_solver(N1: int, N2: int, aux_array: np.ndarray):
 
     c_free_ptr(result)
 
-    return objective < 0.5
+    return objective
