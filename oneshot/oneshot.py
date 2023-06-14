@@ -106,7 +106,7 @@ def get_term_table(poly: MLPoly, criterion = lambda factor, key, value: True, si
         }
     
     table = {}
-    for i in range(2, poly.degree()):
+    for i in range(1, poly.degree()):
         table.update(get_term_table(poly, criterion, i))
 
     return table

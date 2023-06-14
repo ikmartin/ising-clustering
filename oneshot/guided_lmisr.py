@@ -117,6 +117,7 @@ def get_manager():
 class PrioritizedItem:
     priority: int
     item: Any=field(compare = False)
+    history: Any=field(compare = False)
 
 
 ## Class which is capable of producing many copies of the same circuit, optionally pre-initialized with specified auxilliary arrays.
@@ -171,6 +172,7 @@ def search(circuit_args, num_solvers, num_delegators, limit):
     admin["success"]["best"] = 1e10
     admin["success"]["list"] = []
     admin["success"]["total"] = 0
+    admin["success"]["found"] = False
 
     # Generate circuit factory, used for making new circuits on the specified pattern.
     factory = CircuitFactory(circuit_args['class'], circuit_args['args'])
@@ -201,9 +203,10 @@ def search(circuit_args, num_solvers, num_delegators, limit):
         delegator.start()
 
     log('master', 'Master', "Setting initial task.")
-    admin["task_queue"].put(PrioritizedItem(priority = 0, item = (None, None)))
+    admin["task_queue"].put(PrioritizedItem(priority = 0, item = (None, None), history = []))
 
     log('master', 'Master', "Letting solvers work.")
+    done_flag = False
     while True:
         queue_length = admin["task_queue"].qsize()
         done_length = admin["done_queue"].qsize()
@@ -216,11 +219,22 @@ def search(circuit_args, num_solvers, num_delegators, limit):
 
         time.sleep(1.0)
 
-        """
-        if best_score < 1e5:
-            exit()
+        with admin['success_lock']:
+            if admin['success']['found']:
+                done_flag = True
 
-        """
+        if done_flag:
+            log('master', 'Master', 'Quitting...')
+            for worker in workers:
+                worker.join()
+
+            for delegator in delegators:
+                delegator.join()
+            
+            break
+
+
+        
 
 def rank_spin(spin):
     n1, n2 = spin.splitint()
@@ -262,6 +276,10 @@ class Delegator(Process):
     def run(self):
         log('delegator', self.name, 'Running.')
         while True:
+            with self.admin['success_lock']:
+                if self.admin['success']['found']:
+                    log('delegator', self.name, 'Quitting...')
+                    return
             self.loop()
 
     def loop(self):
@@ -273,6 +291,7 @@ class Delegator(Process):
         task = self.admin["done_queue"].get()
         array, poly = task.item
         priority = task.priority
+        history = task.history
 
         # Check to see if the current aux array is even with the best final solutions. Since we know that we are about to add a new row to the aux array, if this is the case, then whatever tasks we would add would be guarunteed not to improve on the currently known best answer. Therefore, simply skip.
         with self.admin['success_lock']:
@@ -284,9 +303,11 @@ class Delegator(Process):
         log('delegator', self.name, f'Accepting docket item with priority {task.priority}.')
 
         # Generate new tasks and add them to the queue
-        self.make_new_tasks(poly, array, priority)
+        self.make_new_tasks(poly, array, priority, history)
 
-    def make_new_tasks(self, poly, array, priority):
+    def make_new_tasks(self, poly, array, priority, history):
+
+        """
         if priority < 1 and array is not None:
             # This is code for "we almost got it!"
             new_score = estimate_score(poly)
@@ -298,7 +319,7 @@ class Delegator(Process):
                     new_task = PrioritizedItem(priority = new_score, item = (new_array, poly))
 
                     self.admin['task_queue'].put(new_task)
-
+        """
 
 
         circuit = self.factory.get(array)
@@ -307,23 +328,26 @@ class Delegator(Process):
         options = []
 
         rosenberg_term_table = get_term_table(poly, rosenberg_criterion, 2)
-        
+       
+        """
         pos_fgbz_term_table = get_term_table(poly, weak_positive_FGBZ_criterion)
         neg_fgbz_term_table = get_term_table(poly, negative_FGBZ_criterion)
-        """
         fd_options = [
             (key, value)
              for key, value in poly.coeffs.items()
             if value < 0 and len(key) > 2
         ]
         """
+        
 
         for C, H in rosenberg_term_table.items():
             if not len(H):
                 continue
 
-            options.append((Rosenberg(poly, C, H), MLPoly({C: 1})))
+            options.append((Rosenberg(poly, C, H), MLPoly({C: 1}), C, 'ros'))
 
+        
+        """
         
         for C, H in pos_fgbz_term_table.items():
             if not len(H):
@@ -334,7 +358,9 @@ class Delegator(Process):
                 MLPoly({
                     () : 1,
                     C : -1
-                })
+                }),
+                C,
+                '+fgbx'
             ))
 
         for C, H in neg_fgbz_term_table.items():
@@ -345,11 +371,10 @@ class Delegator(Process):
                 NegativeFGBZ(poly, C, H),
                 MLPoly({
                     C : 1
-                })
+                }),
+                C,
+                '-fgbz'
             ))
-        
-        
-        """
 
         for key, val in fd_options:
             options.append((
@@ -365,7 +390,7 @@ class Delegator(Process):
         log_priorities = []
         new_length = array.shape[0] + 1 if array is not None else 1
 
-        for new_poly, aux_map in options:
+        for new_poly, aux_map, C, method in options:
             new_aux_vector = np.array([[aux_map(tuple(circuit.inout(inspin).binary())) for inspin in circuit.inspace]])
             
             new_aux_array = new_aux_vector if array is None else np.concatenate([array, new_aux_vector])
@@ -376,9 +401,9 @@ class Delegator(Process):
                 continue
 
             self.admin['dibs'][new_array_id] = True
-            new_priority = estimate_score(new_poly)
+            new_priority = estimate_score(new_poly) + 2 * new_length
 
-            new_task = PrioritizedItem(priority = new_priority + new_length, item = (new_aux_array, new_poly))
+            new_task = PrioritizedItem(priority = new_priority, item = (new_aux_array, new_poly), history = history + [(C, method)])
 
             self.admin['task_queue'].put(new_task)
             log_priorities.append(new_priority)
@@ -407,6 +432,10 @@ class Solver(Process):
     def run(self):
         log('solver', self.name, 'Running.')
         while True:
+            with self.admin['success_lock']:
+                if self.admin['success']['found']:
+                    log('solver', self.name, 'Quitting...')
+                    return
             self.loop()
 
     def loop(self):
@@ -417,6 +446,7 @@ class Solver(Process):
 
         array, poly = task.item
         priority = task.priority
+        history = task.history
         
         # Check to see if this task is worth doing at all
         with self.admin['success_lock']:
@@ -445,14 +475,17 @@ class Solver(Process):
                 if array.shape[0] < self.admin['success']['best']:
                     self.admin['success']['best'] = array.shape[0]
                     log('solver', self.name, f'Found new best aux array with length {array.shape[0]}')
+                    log('solver', self.name, f'History: {history}')
                     log('solver', self.name, f'{array}')
+                    
+                    #self.admin['success']['found'] = True
                 
                 return
 
         log('solver', self.name, f'Adding item with priority {priority}')
         
         # Otherwise, put the appropriate information in the completed task queue.
-        self.admin['done_queue'].put(PrioritizedItem(priority = new_priority, item = (array, poly)))
+        self.admin['done_queue'].put(PrioritizedItem(priority = new_priority, item = (array, poly), history = history))
 
     def request_task(self):
         if not self.admin["task_queue"].empty():
@@ -465,7 +498,7 @@ class Solver(Process):
     def degree_search(self, circuit, quad_only = False):
         for degree in range(2, circuit.G):
             #if degree > 2:
-            #    degree = 5
+            #    degree = 6
             M, keys = fast_constraints(circuit, degree)
             solver = LPWrapper(keys)
             solver.add_constraints(M)
@@ -490,9 +523,18 @@ class Solver(Process):
         Attempts to fit a quadratic. This method operates under the assumption that most arguments passed to it will be infeasible, so it attempts to disqualify them cheaply using sequential constraint building. This will be much more expensive for a feasible aux array, but much cheaper for an infeasible. This means that insofar as most aux arrays are infeasible, total cost should be reduced. 
         """
 
+        circuit = self.factory.get(array)
+        constraints, keys = fast_constraints(circuit, 2)
+        constraints = constraints.to_sparse_csc()
+        objective = call_my_solver(constraints, tolerance = 1e-8)
+        if objective > 0.1:
+            return None, 100 + 100 * objective / constraints.shape[0]
+
+        return objective, 100 * objective / constraints.shape[0]
+
 
         for radius in range(1,3):
-            constraints, keys = constraints_basin(self.N1, self.N2, torch.tensor(array), 2, radius)
+            constraints, keys = constraints_basin(self.N1, self.N2, torch.tensor(array), 2, radius, 50)
             objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
             if objective > 0.1:
                 if radius > 1:
@@ -522,9 +564,9 @@ class Solver(Process):
         log('solver', self.name, f'full check {feasible}, priority = {new_priority}')
         return (None, new_priority) if not feasible else (feasible, new_priority)
         
-#340 1
-#341 4
-#342 8?
+#340 1      ros(1,2)
+#341 4      (0,7) (3,7) (1,7) (4,7)
+#342 8?     (4,7) (3,7) (3,8) (2,7) (0,7) (1,8) (1,9) (2,9) (5,6)
 #343 9?
 #344 4
 #345 2

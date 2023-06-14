@@ -125,9 +125,11 @@ def CSC_constraints(n1, n2, aux, degree):
     return constraints.cpu().to_sparse_csc(), terms
 
 
-def constraints_basin(n1, n2, aux, degree, radius):
+def constraints_basin(n1, n2, aux, degree, radius, random = 0, mask = None):
     aux = torch.t(aux)
     num_aux = aux.shape[1]
+    M = n1 + n2 if mask is None else len(mask)
+
     G = 2 * (n1 + n2) + num_aux
 
     inp2_mask = 2 ** (n2) - 1
@@ -151,6 +153,19 @@ def constraints_basin(n1, n2, aux, degree, radius):
                     new_row[k] = 1 - new_row[k]
                 all_states.append(new_row.unsqueeze(0))
                 num_per_row += 1
+        for i in range(1, radius+1):
+            for diff in combinations(range(n1 + n2, 2*(n1+n2) + num_aux), n1+n2+num_aux - i):
+                new_row = row.clone().detach()
+                for k in diff:
+                    new_row[k] = 1 - new_row[k]
+                all_states.append(new_row.unsqueeze(0))
+                num_per_row += 1
+
+        for i in range(random):
+            new_row = torch.cat([row[:(n1+n2)], torch.bernoulli(0.5*torch.ones(n1+n2+num_aux))]).unsqueeze(0)
+            all_states.append(new_row)
+            num_per_row += 1
+
 
     all_states = torch.cat(all_states)
 

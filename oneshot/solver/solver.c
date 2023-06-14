@@ -880,11 +880,12 @@ double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_in
 	M_csc.values = values;
 	M_csc.row_index = row_index;
 	M_csc.col_ptr = col_ptr;
+	/*
 	for(int k=0; k<n; k++) {
 		for(int l=M_csc.col_ptr[k]; l < M_csc.col_ptr[k+1]; l++) {
 			//printf("col %d index %d row %d value %d\n", k, l, M_csc.row_index[l], (int) M_csc.values[l]);
 		}	
-	}
+	}*/
 
 	openblas_set_num_threads(num_workers); 
 	return solve(max_iter, tolerance);
