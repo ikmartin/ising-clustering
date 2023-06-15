@@ -1,16 +1,19 @@
 from mysolver_interface import call_my_solver, call_imul_solver
 from lmisr_interface import call_solver
 from itertools import chain, combinations
+from ising import IMul, PICircuit
+import numpy as np
 import random
 import torch
 
-
-def dec2bin(x, bits):
-    mask = 2 ** torch.arange(bits - 1, -1, -1).to(x.device)
-    return x.unsqueeze(-1).bitwise_and(mask).ne(0).byte()
+from filtered_constraints import filtered_constraints as fc
 
 
-def filtered_solver(constraint_set):
+def dec2bin(num, fill):
+    return list(bool(int(a)) for a in bin(num)[2:].zfill(fill))
+
+
+def filtered_solver(constraint_sets):
     """Currying function. Returns a method for running through a sequence of constraint sets.
 
     Parameters
@@ -24,7 +27,7 @@ def filtered_solver(constraint_set):
     def solve(detailed=False):
         """Runs the LPSolver on the given constraint filtering. Returns true if it passes all,"""
         status = []
-        for const in constraint_set:
+        for const in constraint_sets:
             status.append(cutoff > call_my_solver(const, tolerance=tolerance))
             if status[-1] == False:
                 if detailed == False:
@@ -37,11 +40,6 @@ def filtered_solver(constraint_set):
         return status
 
     return solve
-
-
-def basin_2_plus_exponential_random(N1, N2, A, count=5):
-    """A generator for constraint sets. Starts with basin 2 constraints (that is basin one and two) and then"""
-    all_outaux = set(range(N1 + N2 + A))
 
 
 def flip_bits(num, ind):
@@ -86,3 +84,33 @@ def sample_basin(N, num, d, count):
         count = 1 << N
 
     return random.sample(get_basin(N, num, d), count)
+
+
+def basin_d_constraints(circuit, d):
+    """A generator for constraint sets. Starts with basin 2 constraints (that is basin one and two) and then"""
+    MA = circuit.M + circuit.A
+    filtered_levels = [
+        sum([get_basin(MA, circuit.f(i).asint(), r) for r in range(1, d + 1)], [])
+        for i in range(1 << circuit.N)
+    ]
+    return fc(circuit, filtered_levels, degree=2)
+
+
+def run_test(circuit, basin_num=2):
+    constset = [basin_d_constraints(circuit, d) for d in range(1, basin_num + 1)]
+    solve = filtered_solver(constset)
+    print(solve(detailed=True))
+
+
+def test_lmisr():
+    N1 = 2
+    N2 = 2
+    aux_array = np.array(IMul.gen_random_auxarray(N1 + N2, 1, binary=True))
+    print(aux_array)
+    return call_solver(N1, N2, aux_array)
+
+
+if __name__ == "__main__":
+    circuit = IMul.gen_random_circuit(2, 2, 1)
+    # run_test(circuit)
+    print(test_lmisr())

@@ -1,4 +1,5 @@
 from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p
+from numpy.ctypeslib import ndpointer, as_array
 import numpy as np
 from sys import path
 from pathlib import Path
@@ -6,17 +7,19 @@ import os
 
 path.insert(1, "/opt/OpenBLAS")
 
-lib = CDLL(os.path.join(
-        str(Path(__file__).parent.absolute()),
-        'lmisr/isingLPA.so'
-    ))
+# Statically load the interface so that the solver can be called.
+try:
+    # path.insert(1, '/opt/OpenBLAS')
+    lib = CDLL(os.path.join(str(Path(__file__).parent.absolute()), "lmisr/isingLPA.so"))
+except OSError:
+    lib = CDLL("/home/ikmarti/Desktop/ising-clustering/oneshot/lmisr/isingLPA.so")
 
 c_free_ptr = lib.free_ptr
 c_lmisr = lib.lmisr
 c_lmisr.restype = POINTER(c_double)
 
 
-def call_solver(N1: int, N2: int, aux_array: np.ndarray):
+def call_solver(N1: int, N2: int, aux_array: np.ndarray, fullreturn=False):
     """
     Calls Teresa's Mehrotra Predictor-Corrector implementation.
 
@@ -42,8 +45,14 @@ def call_solver(N1: int, N2: int, aux_array: np.ndarray):
         c_formatted_aux_array,
     )
 
+    result_array = as_array(result, shape=((1 << N) + 2,))
+
     objective = result[0]
 
     c_free_ptr(result)
+
+    if fullreturn:
+        # sum of rho, my_frac, rho
+        return result_array[0], result_array[1], result_array[2:]
 
     return objective

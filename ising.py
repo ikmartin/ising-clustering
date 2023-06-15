@@ -166,7 +166,18 @@ class PICircuit:
 
     def get_aux_array(self):
         """Returns the aux array of this circuit"""
-        return [self._aux_dict[inspin].spin().tolist() for inspin in self.inspace]
+        aux_array = [self._aux_dict[inspin].spin().tolist() for inspin in self.inspace]
+        return list(zip(*aux_array))
+
+    @staticmethod
+    def gen_random_auxarray(N, A, binary=False):
+        auxspace = Spinspace((A,))
+        if binary:
+            auxarray = [list(auxspace.rand().binary()) for _ in range(2**N)]
+        else:
+            auxarray = [list(auxspace.rand().spin()) for _ in range(2**N)]
+
+        return list(zip(*auxarray))
 
     def check_aux_all_set(self, inspins=[]):
         if inspins == []:
@@ -472,6 +483,12 @@ class IMul(PICircuit):
         # multiply spins as integers and convert into spin format
         result = Spin(spin=num1 * num2, shape=(self.M,))
         return result
+
+    @staticmethod
+    def gen_random_circuit(N1, N2, A):
+        circuit = IMul(N1, N2)
+        circuit.set_all_aux(PICircuit.gen_random_auxarray(N1 + N2, A))
+        return circuit
 
 
 class AND(PICircuit):

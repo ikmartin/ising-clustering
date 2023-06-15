@@ -240,11 +240,10 @@ def get_random_auxarray(N, A):
     return [auxspace.rand().spin() for _ in range(2**N)]
 
 
-def get_random_circuits(N1, N2, A, num):
-    circuits = [IMul(N1=N1, N2=N2)]
-    for circ in circuits:
-        circ.set_all_aux(get_random_auxarray(N1 + N2, A))
-    return circuits
+def get_random_circuit(N1, N2, A, num):
+    circuit = IMul(N1=N1, N2=N2)
+    circuit.set_all_aux(get_random_auxarray(N1 + N2, A))
+    return circuit
 
 
 def gen_percent_circuits_list(N1, N2, A, minper, maxper, num):
