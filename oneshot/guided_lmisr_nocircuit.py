@@ -13,7 +13,7 @@ from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenbe
 from dataclasses import dataclass, field
 from typing import Any
 
-from fast_constraints import fast_constraints, sequential_constraints, constraints_basin
+from fast_constraints import fast_constraints, sequential_constraints, constraints_basin, constraints_building
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
 from fittertry import IMulBit
@@ -122,20 +122,16 @@ class PrioritizedItem:
 
 ## Class which is capable of producing many copies of the same circuit, optionally pre-initialized with specified auxilliary arrays.
 
-class CircuitFactory:
-    def __init__(self, CircuitClass, args = None):
-        self.args = args
-        self.CircuitClass = CircuitClass
+class ConstraintFactory:
+    def __init__(self, n1, n2, mask, include):
+        self.n1 = n1
+        self.n2 = n2
+        self.mask = mask
+        self.include = include
 
-    def get(self, aux_array = None):
-        circuit = self.CircuitClass(*self.args)
-        if aux_array is None:
-            return circuit
+    def get(self, aux_array, degree, radius):
+        return constraints_building(self.n1, self.n2, aux_array, degree, radius = radius, mask = self.mask, include = self.include)
 
-        aux_array = aux_array * 2 - 1
-
-        circuit.set_all_aux(aux_array.tolist())
-        return circuit
 
 ## A function which makes colored console output. Looks a little nicer.
 
@@ -157,7 +153,7 @@ def log(owner, name, message):
     print(format, flush = True)
         
 
-def search(circuit_args, num_solvers, num_delegators, limit):
+def search(factory, num_solvers, num_delegators, limit):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -174,16 +170,9 @@ def search(circuit_args, num_solvers, num_delegators, limit):
     admin["success"]["total"] = 0
     admin["success"]["found"] = False
 
-    # Generate circuit factory, used for making new circuits on the specified pattern.
-    factory = CircuitFactory(circuit_args['class'], circuit_args['args'])
-
-    constraint_priority = gen_constraint_priority(factory.get().inspace)
-
-    print([[spin.splitint() for spin in stage] for stage in constraint_priority])
-
     log('master', 'Master', "Creating solvers...")
     workers = [
-        Solver(admin, factory, constraint_priority, limit)
+        Solver(admin, factory, limit)
         for i in range(num_solvers)
     ]
 
@@ -232,37 +221,6 @@ def search(circuit_args, num_solvers, num_delegators, limit):
                 delegator.join()
             
             break
-
-
-        
-
-def rank_spin(spin):
-    n1, n2 = spin.splitint()
-    rank = abs(int(n1 + n2 - (2 ** (spin.dim()/2) - 1)))
-    return rank
-
-
-def gen_constraint_priority(inspace):
-    inspin_list = [
-        (spin, rank_spin(spin))
-         for spin in inspace
-    ]
-
-    inspin_list = sorted(inspin_list, key = lambda pair: pair[1])
-    stage0 = [inspace.getspin(2 ** inspace.shape[0] - 1)]
-    stage1 = [
-        spin 
-        for spin, rank in inspin_list
-        if rank < 1
-        and spin not in stage0
-    ]
-    stage2 = [
-        spin
-        for spin, rank in inspin_list
-        if spin not in stage1
-        and spin not in stage0
-    ]
-    return [stage0, stage1, stage2]
 
 
 class Delegator(Process):
@@ -338,7 +296,7 @@ class Delegator(Process):
         """
 
 
-        circuit = self.factory.get(array)
+        _, _, correct_rows = self.factory.get(torch.tensor(array) if array is not None else None, 1, radius = 1)
 
         # table of further options --- should be tuples of (new_poly, aux_map)
         options = []
@@ -409,7 +367,7 @@ class Delegator(Process):
 
         for new_poly, aux_map, C, method in options:
             reduction_choices.append(C)
-            new_aux_vector = np.array([[aux_map(tuple(circuit.inout(inspin).binary())) for inspin in circuit.inspace]])
+            new_aux_vector = np.array([[aux_map(tuple(correct_rows[i])) for i in range(correct_rows.shape[0])]])
             
             new_aux_array = new_aux_vector if array is None else np.concatenate([array, new_aux_vector])
 
@@ -432,22 +390,13 @@ class Delegator(Process):
         log('delegator', self.name, f'Added new tasks (length = {new_length}): priorities {log_priorities}')
 
 class Solver(Process):
-    def __init__(self, admin, factory, constraint_priority, limit):
+    def __init__(self, admin, factory, limit):
         self.admin = admin
         self.factory = factory
-        example_circuit = factory.get()
-        self.N1, self.N2 = example_circuit.N1, example_circuit.N2
         self.limit = limit
-        self._gen_constraint_priority(constraint_priority)
         
         super().__init__()
 
-    def _gen_constraint_priority(self, stages):
-        if stages is None:
-            example_circuit = self.factory.get()
-            self.stages = [example_circuit.inspace]
-
-        self.stages = stages
 
     def run(self):
         log('solver', self.name, 'Running.')
@@ -479,8 +428,7 @@ class Solver(Process):
 
         
         if poly is None:
-            circuit = self.factory.get(array)
-            poly = self.degree_search(circuit, quad_only = False)
+            poly = self.degree_search()
             result, new_priority = None, 10000
         else:
             result, new_priority = self.validate(array)
@@ -515,18 +463,16 @@ class Solver(Process):
 
         return None
 
-    def degree_search(self, circuit, quad_only = False):
-        for degree in range(2, circuit.G):
+    def degree_search(self):
+        for degree in range(2, 6):
             #if degree > 2:
             #    degree = 6
-            M, keys = fast_constraints(circuit, degree)
+            M, keys, correct = self.factory.get(aux_array = None, degree = degree, radius = None)
             solver = LPWrapper(keys)
+            M = M.to_sparse()
             solver.add_constraints(M)
             solution = solver.solve()
             if solution is None:
-                if quad_only:
-                    return None
-
                 continue
 
             poly = get_poly(keys, solution)
@@ -546,23 +492,14 @@ class Solver(Process):
         
         
         for radius in [2, 4]:
-            constraints, keys = constraints_basin(
-                    self.N1, 
-                    self.N2, 
-                    torch.tensor(array), 
-                    2, 
-                    radius, 
-                    mask = [3]
-            )
-
+            constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = radius)
             objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
             if objective > 0.1:
                 return None, 100 / radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}') 
 
 
-        circuit = self.factory.get(array)
-        constraints, keys = fast_constraints(circuit, 2)
+        constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
         constraints = constraints.to_sparse_csc()
         objective = call_my_solver(constraints, tolerance = 1e-8)
         if objective > 0.1:
@@ -651,6 +588,56 @@ comb    06 16 26 36 46 56 236 056 256
 
 
 
+
+
+
+334     17 47
+
+
+
+330     0
+331     1       (0, 4, 5)
+332     1       (0, 1, 3, 4, 5)
+333     3       (0, 1, 4, 5)
+334     2       (0, 5)
+335     0
+
+
+330     0
+331     1       (0, 4, 5)
+332     1       (0, 1, 4, 5)
+333     2       (0, 1, 2, 4, 5)
+334     2       (0, 5)
+335     0
+
+340     n/a
+341     n/a
+342     n/a
+343     2
+344     5   (incl 2)
+345     3   (incl 0, 1)
+346     0
+
+340     n/a
+341     n/a
+342     n/a
+343     n/a
+344     5   (incl 3)        (use 0,1,2,5,6)
+345     3   (incl 0, 1, 2) (use 0)
+346     0
+
+440     n/a
+441     1   (0,5,6,7)
+442     2   (0,1,5,6,7)
+443     3   (0,1,2,5,6,7)
+444     3   (0,1,2,3,5,6,7)
+445     4   (0,6,7)
+446     3   (incl 0)
+447     0
+
+[1,5] incl [0,6,7] got 6
+[5] incl [0,6,7] got 4
+
 """
 
 
@@ -663,18 +650,9 @@ comb    06 16 26 36 46 56 236 056 256
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 def main(n1, n2, bit, solvers, delegators, limit):
 
-    if bit is None:
-        circuit_args = {
-            'class': IMul,
-            'args': (n1, n2)
-        }
-    else:
-        circuit_args = {
-            'class': IMulBit,
-            'args': (n1, n2, int(bit))
-        }
+    factory = ConstraintFactory(n1, n2, mask = [4], include = [0, 1, 2, 3, 5, 6, 7])
 
-    search(circuit_args, solvers, delegators, limit)
+    search(factory, solvers, delegators, limit)
 
 
 if __name__ == "__main__":

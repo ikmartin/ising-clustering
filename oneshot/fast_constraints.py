@@ -64,6 +64,8 @@ def fast_constraints(circuit, degree):
         ]
     )
 
+    #print(correct_rows)
+
     virtual_right = batch_vspin(correct_rows, degree)
     rows_per_input = (2**circuit.A) * (2**circuit.M)
     exp_virtual_right = (
@@ -71,11 +73,16 @@ def fast_constraints(circuit, degree):
         .expand(-1, rows_per_input, -1)
         .reshape(2**circuit.N * rows_per_input, -1)
     )
+    print(exp_virtual_right)
+    print(all_states)
     virtual_all = batch_vspin(all_states, degree)
     constraints = virtual_all - exp_virtual_right
+    print(constraints)
 
     # Filter out the rows with correct answers
     row_mask = constraints[..., circuit.N : (circuit.N + circuit.M)].any(dim=-1)
+    print(constraints[...,:7])
+    print(row_mask.reshape(64,2))
     terms = keys(circuit, degree)
 
     # Filter out connections between inputs
@@ -83,6 +90,7 @@ def fast_constraints(circuit, degree):
     terms = [term for term in terms if max(term) >= circuit.N]
     constraints = constraints[row_mask][..., col_mask]
 
+    print(constraints.shape)
     return constraints.cpu().to_sparse(), terms
 
 
@@ -124,37 +132,70 @@ def CSC_constraints(n1, n2, aux, degree):
 
     return constraints.cpu().to_sparse_csc(), terms
 
+def constraints_building(n1, n2, aux, degree, radius=None, random = 0, mask = None, include = None):
+    
+    if aux is not None:
+        aux = torch.t(aux)
+        num_aux = aux.shape[1]
+    else: 
+        num_aux = 0
 
-def constraints_basin(n1, n2, aux, degree, radius, random = 0, mask = None):
-    aux = torch.t(aux)
-    num_aux = aux.shape[1]
-    M = n1 + n2 if mask is None else len(mask)
+    if include is not None:
+        N = n1 + n2 + len(include)
+    else:
+        N = n1 + n2
 
-    G = 2 * (n1 + n2) + num_aux
+    if mask is None:
+        M = n1 + n2
+    else:
+        M = len(mask)
+
+    G = N + M + num_aux
+    if radius is None:
+        radius = M + num_aux
+
+    bit_filter = torch.tensor([False] * (2*(n1+n2)))
+    #print(f'DEBUG {bit_filter} {bit_filter.shape}')
+    if mask is not None:
+        bit_filter[torch.tensor(mask) + n1 + n2] = True
+    else:
+        bit_filter[(n1+n2):(2*(n1+n2))] = True
+
+    include_filter = torch.tensor([False] * (2*(n1+n2)))
+    if include is not None:
+        include_filter[torch.tensor(include) + n1 + n2] = True
 
     inp2_mask = 2 ** (n2) - 1
     correct_rows = torch.cat(
         [
             torch.tensor([[inp, (inp & inp2_mask) * (inp >> n2)]]).to(DEVICE)
-            for inp in range(2 ** (n1 + n2))
+            for inp in range(2 ** (n1+n2))
         ]
     )
     correct_rows = torch.flatten(dec2bin(correct_rows, n1 + n2), start_dim=-2)
-    correct_rows = torch.cat([correct_rows, aux], dim=-1)
+    output_bits = correct_rows[..., bit_filter]
+    input_bits = correct_rows[..., :(n1+n2)]
+    extra_inputs = correct_rows[..., include_filter]
+    """
+    torch.set_printoptions(threshold=50000, linewidth=200)
+
+    print(output_bits)
+    print(input_bits)
+    print(extra_inputs)
+    print(correct_rows)
+    """
+    args = [input_bits, extra_inputs, output_bits, aux]
+    args = [arg for arg in args if arg is not None]
+    correct_rows = torch.cat(args, dim=-1)
+    #print(correct_rows)
+
 
     all_states = []
     num_per_row = 0
     for row in correct_rows:
         num_per_row = 0
         for i in range(1, radius+1):
-            for diff in combinations(range(n1 + n2, 2*(n1+n2) + num_aux), i):
-                new_row = row.clone().detach()
-                for k in diff:
-                    new_row[k] = 1 - new_row[k]
-                all_states.append(new_row.unsqueeze(0))
-                num_per_row += 1
-        for i in range(1, radius+1):
-            for diff in combinations(range(n1 + n2, 2*(n1+n2) + num_aux), n1+n2+num_aux - i):
+            for diff in combinations(range(N, G), i):
                 new_row = row.clone().detach()
                 for k in diff:
                     new_row[k] = 1 - new_row[k]
@@ -162,7 +203,7 @@ def constraints_basin(n1, n2, aux, degree, radius, random = 0, mask = None):
                 num_per_row += 1
 
         for i in range(random):
-            new_row = torch.cat([row[:(n1+n2)], torch.bernoulli(0.5*torch.ones(n1+n2+num_aux))]).unsqueeze(0)
+            new_row = torch.cat([row[:N], torch.bernoulli(0.5*torch.ones(M+num_aux))]).unsqueeze(0)
             all_states.append(new_row)
             num_per_row += 1
 
@@ -174,20 +215,88 @@ def constraints_basin(n1, n2, aux, degree, radius, random = 0, mask = None):
     exp_virtual_right = (
         virtual_right.unsqueeze(1)
         .expand(-1, rows_per_input, -1)
-        .reshape(2 ** (n1 + n2) * rows_per_input, -1)
+        .reshape((1 << (n1+n2)) * rows_per_input, -1)
     )
     virtual_all = batch_vspin(all_states, degree)
     constraints = virtual_all - exp_virtual_right
 
     # Filter out the rows with correct answers
-    row_mask = constraints[..., (n1 + n2) : (2 * (n1 + n2))].any(dim=-1)
+    row_mask = constraints[..., N : (N+M)].any(dim=-1)
     col_mask = constraints.any(dim=0)
     constraints = constraints[row_mask][..., col_mask]
 
     terms = keys_basic(G, degree)
     terms = [term for term, flag in zip(terms, col_mask) if flag]
 
-    torch.set_printoptions(threshold=50000, linewidth=200)
+    #torch.set_printoptions(threshold=50000, linewidth=200)
+    return constraints.cpu(), terms, correct_rows
+
+def constraints_basin(n1, n2, aux, degree, radius, random = 0, mask = None):
+    aux = torch.t(aux)
+    num_aux = aux.shape[1]
+    N = n1 + n2
+    M = n1 + n2 if mask is None else len(mask)
+    G = N + M + num_aux
+
+    if mask is not None:
+        bit_filter = torch.tensor([False] * (2*N + num_aux))
+        bit_filter[:N] = True
+        bit_filter[(2*N):] = True
+        bit_filter[torch.tensor(mask) + N] = True
+
+    inp2_mask = 2 ** (n2) - 1
+    correct_rows = torch.cat(
+        [
+            torch.tensor([[inp, (inp & inp2_mask) * (inp >> n2)]]).to(DEVICE)
+            for inp in range(2 ** N)
+        ]
+    )
+    correct_rows = torch.flatten(dec2bin(correct_rows, n1 + n2), start_dim=-2)
+    correct_rows = torch.cat([correct_rows, aux], dim=-1)
+
+    if mask is not None:
+        correct_rows = correct_rows[..., bit_filter]
+
+
+    all_states = []
+    num_per_row = 0
+    for row in correct_rows:
+        num_per_row = 0
+        for i in range(1, radius+1):
+            for diff in combinations(range(N, G), i):
+                new_row = row.clone().detach()
+                for k in diff:
+                    new_row[k] = 1 - new_row[k]
+                all_states.append(new_row.unsqueeze(0))
+                num_per_row += 1
+
+        for i in range(random):
+            new_row = torch.cat([row[:N], torch.bernoulli(0.5*torch.ones(M+num_aux))]).unsqueeze(0)
+            all_states.append(new_row)
+            num_per_row += 1
+
+
+    all_states = torch.cat(all_states)
+
+    virtual_right = batch_vspin(correct_rows, degree)
+    rows_per_input = num_per_row
+    exp_virtual_right = (
+        virtual_right.unsqueeze(1)
+        .expand(-1, rows_per_input, -1)
+        .reshape((1 << N) * rows_per_input, -1)
+    )
+    virtual_all = batch_vspin(all_states, degree)
+    constraints = virtual_all - exp_virtual_right
+
+    # Filter out the rows with correct answers
+    row_mask = constraints[..., N : (N+M)].any(dim=-1)
+    col_mask = constraints.any(dim=0)
+    constraints = constraints[row_mask][..., col_mask]
+
+    terms = keys_basic(G, degree)
+    terms = [term for term, flag in zip(terms, col_mask) if flag]
+
+    #torch.set_printoptions(threshold=50000, linewidth=200)
     return constraints.cpu(), terms
 
 
