@@ -8,7 +8,7 @@ import numpy as np
 from math import comb
 
 from solver import LPWrapper
-from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD
+from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD, fast_pairs
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -71,7 +71,7 @@ Admin Object:
 
 def get_poly(keys, coeffs) -> MLPoly:
     coeff_dict = {key: val for key, val in zip(keys, coeffs)}
-    poly = MLPoly(coeff_dict)
+    poly = MLPoly(coeff_dict, clean = True)
     poly.clean(0.1)
     return poly
 
@@ -172,13 +172,13 @@ def search(factory, num_solvers, num_delegators, limit):
 
     log('master', 'Master', "Creating solvers...")
     workers = [
-        Solver(admin, factory, limit)
+        Solver(admin, factory, limit, profile = False)
         for i in range(num_solvers)
     ]
 
     log('master', 'Master', "Creating delegators...")
     delegators = [
-        Delegator(admin, factory, limit)
+        Delegator(admin, factory, limit, profile = False)
         for i in range(num_delegators)
     ]
 
@@ -224,21 +224,30 @@ def search(factory, num_solvers, num_delegators, limit):
 
 
 class Delegator(Process):
-    def __init__(self, admin, factory, limit):
+    def __init__(self, admin, factory, limit, profile = False):
         self.admin = admin
         self.factory = factory
         self.limit = limit
         self.STABLE_QSIZE = 10000000
+        _, _, self.correct_rows = self.factory.get(None, 1, radius = 1)
+        self.correct_rows = self.correct_rows.numpy()
+        self.profile = profile
         super().__init__()
 
     def run(self):
+        if self.profile:
+            pr = cProfile.Profile()
+            pr.enable()
         log('delegator', self.name, 'Running.')
         while True:
-            with self.admin['success_lock']:
-                if self.admin['success']['found']:
-                    log('delegator', self.name, 'Quitting...')
-                    return
+            if self.admin['success']['found']:
+                log('delegator', self.name, 'Quitting...')
+                break
             self.loop()
+
+        if self.profile:
+            pr.disable()
+            pr.print_stats(sort = 'tottime')
 
     def loop(self):
         # If action is not needed or not possible, just wait.
@@ -252,10 +261,9 @@ class Delegator(Process):
         history = task.history
 
         # Check to see if the current aux array is even with the best final solutions. Since we know that we are about to add a new row to the aux array, if this is the case, then whatever tasks we would add would be guarunteed not to improve on the currently known best answer. Therefore, simply skip.
-        with self.admin['success_lock']:
-            if array is not None and (array.shape[0] >= self.admin['success']['best'] - 1 or array.shape[0] >= self.limit) and priority > 1:
-                log('delegator', self.name, 'Worthless docket item.')
-                return
+        if array is not None and (array.shape[0] >= self.admin['success']['best'] - 1 or array.shape[0] >= self.limit) and priority > 1:
+            log('delegator', self.name, 'Worthless docket item.')
+            return
 
             
         log('delegator', self.name, f'Accepting docket item with priority {task.priority}.')
@@ -295,13 +303,15 @@ class Delegator(Process):
                     self.admin['task_queue'].put(new_task)
         """
 
-
-        _, _, correct_rows = self.factory.get(torch.tensor(array) if array is not None else None, 1, radius = 1)
+        if array is not None:
+            correct_rows = np.concatenate([self.correct_rows, array.T], axis = -1)
+        else:
+            correct_rows = self.correct_rows
 
         # table of further options --- should be tuples of (new_poly, aux_map)
         options = []
 
-        rosenberg_term_table = get_term_table(poly, rosenberg_criterion, 2)
+        rosenberg_term_table = fast_pairs(poly) #get_term_table(poly, rosenberg_criterion, 2)
        
         """
         pos_fgbz_term_table = get_term_table(poly, weak_positive_FGBZ_criterion)
@@ -367,9 +377,13 @@ class Delegator(Process):
 
         for new_poly, aux_map, C, method in options:
             reduction_choices.append(C)
-            new_aux_vector = np.array([[aux_map(tuple(correct_rows[i])) for i in range(correct_rows.shape[0])]])
+            #new_aux_vector = np.array([[aux_map(tuple(correct_rows[i])) for i in range(correct_rows.shape[0])]])
+            new_aux_vector = np.expand_dims(np.prod(correct_rows[..., C], axis = -1), 0)
+            #print(new_aux_vector)
             
             new_aux_array = new_aux_vector if array is None else np.concatenate([array, new_aux_vector])
+
+            new_aux_array = new_aux_array.astype(np.int8)
 
             new_array_id = hash_aux_array(new_aux_array)
 
@@ -390,22 +404,29 @@ class Delegator(Process):
         log('delegator', self.name, f'Added new tasks (length = {new_length}): priorities {log_priorities}')
 
 class Solver(Process):
-    def __init__(self, admin, factory, limit):
+    def __init__(self, admin, factory, limit, profile = False):
         self.admin = admin
         self.factory = factory
         self.limit = limit
+        self.profile = profile
         
         super().__init__()
 
 
     def run(self):
+        if self.profile:
+            pr = cProfile.Profile()
+            pr.enable()
         log('solver', self.name, 'Running.')
         while True:
-            with self.admin['success_lock']:
-                if self.admin['success']['found']:
-                    log('solver', self.name, 'Quitting...')
-                    return
+            if self.admin['success']['found']:
+                log('solver', self.name, 'Quitting...')
+                break
             self.loop()
+
+        if self.profile:
+            pr.disable()
+            pr.print_stats(sort = 'tottime')
 
     def loop(self):
         # Obtain a task from the queue, unpack the aux array, and generate the correct circuit
@@ -418,13 +439,12 @@ class Solver(Process):
         history = task.history
         
         # Check to see if this task is worth doing at all
-        with self.admin['success_lock']:
-            if array is not None and (array.shape[0] >= self.admin['success']['best'] or array.shape[0] > self.limit):
-                log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
-                return
+        if array is not None and (array.shape[0] >= self.admin['success']['best'] or array.shape[0] > self.limit):
+            log('solver', self.name, f'Worthless task (priority {priority}), skipping.')
+            return
         
         length = 0 if array is None else array.shape[0]
-        log('solver', self.name, f'Accepting task with priority {priority} and length {length}')
+        log('solver', self.name, f'Accepting task with priority {priority} and length {length}: {history}')
 
         
         if poly is None:
@@ -446,7 +466,8 @@ class Solver(Process):
                     log('solver', self.name, f'History: {history}')
                     log('solver', self.name, f'{array}')
                     
-                    #self.admin['success']['found'] = True
+                    # THIS QUITS THE PROGRAM ON SUCCESS
+                    self.admin['success']['found'] = True
                 
                 return
 
@@ -498,6 +519,7 @@ class Solver(Process):
                 return None, 100 / radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}') 
 
+        """
 
         constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
         constraints = constraints.to_sparse_csc()
@@ -519,7 +541,7 @@ class Solver(Process):
             log('solver', self.name, f'Passed basin {radius}.')
 
 
-        """
+        
         glop = LPWrapper(keys)
         glop.add_constraints(constraints.to_sparse())
         result = glop.solve()
@@ -533,6 +555,9 @@ class Solver(Process):
         print(array)
         print(constraints.size())
         
+        self.N1 = 3
+        self.N2 = 4
+
         objective = call_solver(self.N1, self.N2, array)
         feasible = objective < 0.5
         new_priority = objective/(1 << (2 * (self.N1 + self.N2) + array.shape[0]) - 1 << (self.N1 + self.N2 + array.shape[0])) 
@@ -650,7 +675,7 @@ comb    06 16 26 36 46 56 236 056 256
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 def main(n1, n2, bit, solvers, delegators, limit):
 
-    factory = ConstraintFactory(n1, n2, mask = [4], include = [0, 1, 2, 3, 5, 6, 7])
+    factory = ConstraintFactory(n1, n2, mask = None, include = None)
 
     search(factory, solvers, delegators, limit)
 

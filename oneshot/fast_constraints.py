@@ -73,16 +73,11 @@ def fast_constraints(circuit, degree):
         .expand(-1, rows_per_input, -1)
         .reshape(2**circuit.N * rows_per_input, -1)
     )
-    print(exp_virtual_right)
-    print(all_states)
     virtual_all = batch_vspin(all_states, degree)
     constraints = virtual_all - exp_virtual_right
-    print(constraints)
 
     # Filter out the rows with correct answers
     row_mask = constraints[..., circuit.N : (circuit.N + circuit.M)].any(dim=-1)
-    print(constraints[...,:7])
-    print(row_mask.reshape(64,2))
     terms = keys(circuit, degree)
 
     # Filter out connections between inputs
@@ -90,7 +85,6 @@ def fast_constraints(circuit, degree):
     terms = [term for term in terms if max(term) >= circuit.N]
     constraints = constraints[row_mask][..., col_mask]
 
-    print(constraints.shape)
     return constraints.cpu().to_sparse(), terms
 
 

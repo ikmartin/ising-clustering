@@ -8,13 +8,16 @@ from copy import deepcopy
 
 
 class MLPoly:
-    def __init__(self, coeffs=None):
+    def __init__(self, coeffs=None, clean = False):
         self.coeffs = coeffs if coeffs else {}
-        self.clean()
+        self.threshold = 1e-3
+        if clean:
+            self.clean()
+
 
     def clean(self, threshold=0):
         self.coeffs = {
-            key: value for key, value in self.coeffs.items() if abs(value) > threshold
+            key: value for key, value in self.coeffs.items() if abs(value) > self.threshold
         }
 
     def get_coeff(self, term: tuple) -> float:
@@ -23,13 +26,18 @@ class MLPoly:
 
     def add_coeff(self, term: tuple, value: float) -> None:
         term = tuple(sorted(term))
-        self.coeffs[term] = self.coeffs[term] + value if term in self.coeffs else value
-        self.clean()
+        new = self.coeffs.get(term, 0) + value
+        self.coeffs[term] = new
+        if abs(new) < self.threshold:
+            self.coeffs.pop(term)
 
     def set_coeff(self, term: tuple, value: float) -> None:
+        if abs(value) < self.threshold:
+            self.coeffs.pop(term)
+            return
+
         term = tuple(sorted(term))
         self.coeffs[term] = value
-        self.clean()
 
     def num_variables(self):
         return 1 + max([max(key) for key in self.coeffs])
@@ -135,6 +143,48 @@ def get_common_key(poly: MLPoly, criterion: Callable, heuristic = standard_heuri
 
     return max(options, key=heuristic)
 
+def fast_pairs(poly: MLPoly, n=2, minsize = 3):
+    pairs = {}
+    for key, value in poly.coeffs.items():
+        if len(key) < minsize:
+            continue
+        if len(key) <= n:
+            continue
+        
+        for C in combinations(key, n):
+            pairs[C] = pairs.get(C, []) + [(key, value)]
+
+    return pairs
+
+def pfgbz_candidates(poly: MLPoly):
+    factors = {}
+    for key, value in poly.coeffs.items():
+        if len(key) < 3 or value < 0:
+            continue
+        
+        for n in range(1, len(key)-1):
+            for C in combinations(key, n):
+                factors[C] = factors.get(C, []) + [(key, value)]
+
+    return factors
+
+
+def nfgbz_candidates(poly: MLPoly):
+    factors = {}
+    if poly.degree() < 4:
+        return factors
+
+    for key, value in poly.coeffs.items():
+        if len(key) < 4 or value > 0:
+            continue
+        
+        for n in range(2, len(key)-1):
+            for C in combinations(key, n):
+                factors[C] = factors.get(C, []) + [(key, value)]
+
+    return factors
+
+
 weak_positive_FGBZ_criterion = lambda factor, key, value: (
     set(factor).issubset(key)
     and len(factor) < len(key)
@@ -173,7 +223,8 @@ def PositiveFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     """
 
     # Make a copy of the polynomial to prevent changing the state of the argument
-    poly = MLPoly(deepcopy(poly.coeffs))
+    poly = MLPoly({key:val for key, val in poly.coeffs.items()})
+
 
     n = poly.num_variables()
 
@@ -199,7 +250,7 @@ def NegativeFGBZ(poly: MLPoly, C: tuple, H: tuple) -> tuple[MLPoly, bool]:
     """
 
     # Make a copy of the polynomial to prevent changing the state of the argument
-    poly = MLPoly(deepcopy(poly.coeffs))
+    poly = MLPoly({key:val for key, val in poly.coeffs.items()})
 
     n = poly.num_variables()
 
@@ -227,7 +278,7 @@ def Rosenberg(poly: MLPoly, C: tuple, H: tuple) -> MLPoly:
 
     assert len(C) == 2
 
-    poly = MLPoly(deepcopy(poly.coeffs))
+    poly = MLPoly({key:val for key, val in poly.coeffs.items()})
 
     n = poly.num_variables()
 
@@ -254,8 +305,8 @@ def FreedmanDrineas(poly: MLPoly) -> MLPoly:
     """
 
     # Preserve the argument polynomial by making a copy
-    poly = MLPoly(deepcopy(poly.coeffs))
 
+    poly = MLPoly({key:val for key, val in poly.coeffs.items()})
     n = poly.num_variables()
 
     reducible_terms = [
@@ -281,7 +332,7 @@ def single_FD(poly, C):
     value = poly.coeffs[C]
     order = len(C)
 
-    poly = MLPoly(deepcopy(poly.coeffs))
+    poly = MLPoly({key:val for key, val in poly.coeffs.items()})
     n = poly.num_variables()
 
     poly.add_coeff((n,), -value * (order - 1))
@@ -300,7 +351,13 @@ def full_Rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
     return poly
 
 def single_rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
-    C, H = get_common_key(poly, rosenberg_criterion, heuristic)
+    #C, H = get_common_key(poly, rosenberg_criterion, heuristic)
+    term_table = fast_pairs(poly)
+    if not len(term_table):
+        return poly, None
+
+    factor = max(term_table, key=lambda i: len(term_table[i]))
+    C, H = factor, term_table[factor]
     if not len(H):
         return poly, None
 
@@ -313,7 +370,12 @@ def single_rosenberg(poly: MLPoly, heuristic = standard_heuristic) -> MLPoly:
 
 
 def single_positive_FGBZ(poly: MLPoly) -> MLPoly:
-    C, H = get_common_key(poly, positive_FGBZ_criterion)
+    term_table = pfgbz_candidates(poly)
+    if not len(term_table):
+        return poly, None
+
+    C = max(term_table, key=lambda term: len(term) * len(term_table[term]))
+    H = term_table[C]
     if not len(H):
         return poly, None
 
@@ -327,7 +389,12 @@ def single_positive_FGBZ(poly: MLPoly) -> MLPoly:
 
 
 def single_negative_FGBZ(poly: MLPoly) -> MLPoly:
-    C, H = get_common_key(poly, negative_FGBZ_criterion)
+    term_table = nfgbz_candidates(poly)
+    if not len(term_table):
+        return poly, None
+
+    C = max(term_table, key=lambda term: len(term) * len(term_table[term]))
+    H = term_table[C]
     if not len(H):
         return poly, None
 
