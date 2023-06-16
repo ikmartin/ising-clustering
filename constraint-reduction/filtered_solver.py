@@ -7,6 +7,7 @@ import random
 import torch
 
 from filtered_constraints import filtered_constraints as fc
+from filtered_constraints import basin_d_constraints
 
 
 def dec2bin(num, fill):
@@ -84,16 +85,6 @@ def sample_basin(N, num, d, count):
         count = 1 << N
 
     return random.sample(get_basin(N, num, d), count)
-
-
-def basin_d_constraints(circuit, d):
-    """A generator for constraint sets. Starts with basin 2 constraints (that is basin one and two) and then"""
-    MA = circuit.M + circuit.A
-    filtered_levels = [
-        sum([get_basin(MA, circuit.f(i).asint(), r) for r in range(1, d + 1)], [])
-        for i in range(1 << circuit.N)
-    ]
-    return fc(circuit, filtered_levels, degree=2)
 
 
 def run_test(circuit, basin_num=2):

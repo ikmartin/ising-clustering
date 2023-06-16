@@ -164,10 +164,17 @@ class PICircuit:
 
             self._aux_dict[self.inspace[i]] = Spin(spin=row, shape=(self.A,))
 
-    def get_aux_array(self):
+    def get_aux_array(self, binary=False):
         """Returns the aux array of this circuit"""
-        aux_array = [self._aux_dict[inspin].spin().tolist() for inspin in self.inspace]
-        return list(zip(*aux_array))
+        if binary:
+            aux_array = [
+                self._aux_dict[inspin].binary().tolist() for inspin in self.inspace
+            ]
+        else:
+            aux_array = [
+                self._aux_dict[inspin].spin().tolist() for inspin in self.inspace
+            ]
+        return np.array(list(zip(*aux_array)))
 
     @staticmethod
     def gen_random_auxarray(N, A, binary=False):
