@@ -467,7 +467,7 @@ class Solver(Process):
                     log('solver', self.name, f'{array}')
                     
                     # THIS QUITS THE PROGRAM ON SUCCESS
-                    self.admin['success']['found'] = True
+                    #self.admin['success']['found'] = True
                 
                 return
 
@@ -694,6 +694,8 @@ Full aux array: x1x2 y1o4 x0y2 x0o2 y0o3 x0o3
 -------------------------------------------------------------------
 3x4 BUILDING INSTRUCTIONS
 
+make sure exclude_correct_out = False
+
 original variables
  0  1  2  3  4  5  6    7  8  9 10 11 12 13
 x0 x1 x2 y0 y1 y2 y3 | o0 o1 o2 o3 o4 o5 o6
@@ -707,12 +709,12 @@ Result: (0,10) (5,11) (1,7)     (length 2 is impossible)
 Run with mask=[3,4] include=[0,1,2,5,6] (5.575 seconds)
         0  1  2  3  4  5  6  7  8  9 10 11   12 13
 vars = x0 x1 x2 y0 y1 y2 y3 o0 o1 o2 o5 o6 | o3 o4
-Result: (0,12) (3,13) (1,13) (0,13) (3,12)
--> x0o3 y0o4 x1o4 x0o4 y0o3
+Result: (0,12) (3,13) (4,13) (5,13) (3,12)
+-> x0o3 y0o4 y1o4 y2o4 y0o3
 
 Combined 3x4 aux array is 
-x0o2 y2o5 x1o6 x0o3 y0o4 x1o4 x0o4 y0o3
-(0,9) (5,12) (1,13) (0,10) (3,11) (1,11) (0,11) (3,10)
+x0o2 y2o5 x1o6 x0o3 y0o4 y1o4 y2o4 y0o3
+(0,9) (5,12) (1,13) (0,10) (3,11) (4,11) (5,11) (3,10)
 
 ---------------------------------------------------------------------
 440     n/a
@@ -739,7 +741,7 @@ x0o2 y2o5 x1o6 x0o3 y0o4 x1o4 x0o4 y0o3
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 def main(n1, n2, bit, solvers, delegators, limit):
 
-    factory = ConstraintFactory(n1, n2, mask = [3], include = [0,1,2,4,5])
+    factory = ConstraintFactory(n1, n2, mask = [3,4], include = [0,1,2,5,6])
 
     search(factory, solvers, delegators, limit)
 

@@ -37,8 +37,8 @@ def call_solver(N1: int, N2: int, aux_array: np.ndarray, fullreturn=False):
     num_input_levels = 1 << N
 
     result = c_lmisr(
-        c_int(N1),
         c_int(N2),
+        c_int(N1),
         c_int(num_aux_spins),
         c_int(N),
         c_int(num_input_levels),

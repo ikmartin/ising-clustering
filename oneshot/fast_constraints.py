@@ -126,7 +126,7 @@ def CSC_constraints(n1, n2, aux, degree):
 
     return constraints.cpu().to_sparse_csc(), terms
 
-def constraints_building(n1, n2, aux, degree, radius=None, random = 0, mask = None, include = None):
+def constraints_building(n1, n2, aux, degree, radius=None, random = 0, mask = None, include = None, exclude_correct_out = False):
     
     if aux is not None:
         aux = torch.t(aux)
@@ -215,9 +215,12 @@ def constraints_building(n1, n2, aux, degree, radius=None, random = 0, mask = No
     constraints = virtual_all - exp_virtual_right
 
     # Filter out the rows with correct answers
-    row_mask = constraints[..., N : (N+M)].any(dim=-1)
+    if exclude_correct_out:
+        row_mask = constraints[..., N : (N+M)].any(dim=-1)
+        constraints = constraints[row_mask]
+
     col_mask = constraints.any(dim=0)
-    constraints = constraints[row_mask][..., col_mask]
+    constraints = constraints[..., col_mask]
 
     terms = keys_basic(G, degree)
     terms = [term for term, flag in zip(terms, col_mask) if flag]
