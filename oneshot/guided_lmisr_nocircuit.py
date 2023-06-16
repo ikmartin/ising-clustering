@@ -519,7 +519,7 @@ class Solver(Process):
                 return None, 100 / radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}') 
 
-        """
+        
 
         constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
         constraints = constraints.to_sparse_csc()
@@ -529,6 +529,7 @@ class Solver(Process):
 
         return objective, 100 * objective / constraints.shape[0]
         
+        """
 
         for radius in range(1,3):
             constraints, keys = constraints_basin(self.N1, self.N2, torch.tensor(array), 2, radius, 50)
@@ -551,6 +552,7 @@ class Solver(Process):
             return None
         """
         
+        """
         log('solver', self.name, 'Looking promising!')
         print(array)
         print(constraints.size())
@@ -564,6 +566,7 @@ class Solver(Process):
         log('solver', self.name, f'full check {feasible}, priority = {new_priority}')
         return (None, new_priority) if not feasible else (feasible, new_priority)
         
+        """
 """
 
 330     0   
@@ -575,6 +578,7 @@ class Solver(Process):
 comb    06 16 26 36 46 56 236 056 256
 
 33      09 1,10 39 08
+        08 09 39 1,10
 
 #340 1      
             (1,2)
@@ -648,9 +652,69 @@ comb    06 16 26 36 46 56 236 056 256
 342     n/a
 343     n/a
 344     5   (incl 3)        (use 0,1,2,5,6)
-345     3   (incl 0, 1, 2) (use 0)
+345     3   (incl 0, 1, 2) (use 6)
 346     0
 
+------------------------------------------------------------------
+3x3 BUILDING INSTRUCTIONS
+
+original variables
+ 0  1  2  3  4  5    6  7  8  9 10 11
+x0 x1 x2 y0 y1 y2 | o0 o1 o2 o3 o4 o5
+
+Run with mask=[4] include=[0,5] (3.239 seconds)
+       0  1  2  3  4  5  6  7    8
+vars: x0 x1 x2 y0 y1 y2 o0 o5 | o4
+Result: (1,2) (4,8)
+-> x1x2 y1o4
+
+Run with mask=[1] include =[0,4,5] (2.596 seconds)
+       0  1  2  3  4  5  6  7  8    9
+vars: x0 x1 x2 y0 y1 y2 o0 o4 o5 | o1
+Result: (0,5)
+-> x0y2
+
+Run with mask=[2] include=[0,1,4,5] (2.626 seconds)
+       0  1  2  3  4  5  6  7  8  9   10
+vars: x0 x1 x2 y0 y1 y2 o0 o1 o4 o5 | o2
+Result: (0,1)
+-> x0o2
+
+Run with mask=[3] include=[0,1,2,4,5] (2.653 seconds)
+       0  1  2  3  4  5  6  7  8  9 10   11
+vars: x0 x1 x2 y0 y1 y2 o0 o1 o2 o4 o5 | o3
+Result: (3,11) (0,11)
+-> y0o3 x0o3
+
+Full aux array: x1x2 y1o4 x0y2 x0o2 y0o3 x0o3
+-> (1,2), (4,10), (0,5), (0,8), (3,9), (0,9)
+
+
+
+-------------------------------------------------------------------
+3x4 BUILDING INSTRUCTIONS
+
+original variables
+ 0  1  2  3  4  5  6    7  8  9 10 11 12 13
+x0 x1 x2 y0 y1 y2 y3 | o0 o1 o2 o3 o4 o5 o6
+
+Instructions: Run with mask=[0,1,2,5] include=[6] (24.58 seconds)
+       0  1  2  3  4  5  6  7    8  9 10 11
+vars: x0 x1 x2 y0 y1 y2 y3 o6 | o0 o1 o2 o5
+Result: (0,10) (5,11) (1,7)     (length 2 is impossible)
+-> x0o2 y2o5 x1o6
+
+Run with mask=[3,4] include=[0,1,2,5,6] (5.575 seconds)
+        0  1  2  3  4  5  6  7  8  9 10 11   12 13
+vars = x0 x1 x2 y0 y1 y2 y3 o0 o1 o2 o5 o6 | o3 o4
+Result: (0,12) (3,13) (1,13) (0,13) (3,12)
+-> x0o3 y0o4 x1o4 x0o4 y0o3
+
+Combined 3x4 aux array is 
+x0o2 y2o5 x1o6 x0o3 y0o4 x1o4 x0o4 y0o3
+(0,9) (5,12) (1,13) (0,10) (3,11) (1,11) (0,11) (3,10)
+
+---------------------------------------------------------------------
 440     n/a
 441     1   (0,5,6,7)
 442     2   (0,1,5,6,7)
@@ -675,7 +739,7 @@ comb    06 16 26 36 46 56 236 056 256
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 def main(n1, n2, bit, solvers, delegators, limit):
 
-    factory = ConstraintFactory(n1, n2, mask = None, include = None)
+    factory = ConstraintFactory(n1, n2, mask = [3], include = [0,1,2,4,5])
 
     search(factory, solvers, delegators, limit)
 

@@ -19,6 +19,26 @@ The goal is to figure out what number and distribution of constraints we need on
 
 One way to attack this is to take advantage of the rigidity of the quadratic function class. Suppose that $H$ is a quadratic polynomial in $x_1 \dots x_n$, where we have coefficients $c_{ij} \sim N(0,1)$. 
 
+\section{Building}
+
+Suppose that we have two quadratic Hamiltonians $H_1(x, y, o_1, a_1)$ and $H_2(x, y, o_1, o_2, a_2)$ such that if $M = 2\max |H_2|+1/2$, then
+\begin{align}
+	H_1(x, y, o_1, a_1) <= H_1(x, y, o_1', a_1') - M &&\forall a_1' \forall o_1' \neq o_1\\
+	H_2(x,y,o_1,o_2, a_2) <= H_2(x,y,o_1,o_2',a_2')-1/2 &&\forall a_2' \forall o_2' \neq o_2
+\end{align}
+Then we can make a new Hamiltonian $H(x,y,o_1,o_2,a_1,a_2) = H_1(x,y,o_1,a_1) + H_2(x,y,o_1,o_2,a_2)$. Select wrong outputs $o_1', o_2'$ and arbitrary auxes $a_1', a_2'$. 
+\begin{align}
+	H(x,y,o_1',o_2',a_1',a_2') = H_1(x,y,o_1',a_1') + H_2(x,y,o_1',o_2',a_2') \\
+	\geq H_1(x,y,o_1,a_1) + M + H_2(x,y,o_1,o_2',a_2') + (H_2(x,y,o_1', o_2', a_2') - H_2(x,y,o_1,o_2',a_2'))
+\end{align}
+Note that $H_2(x,y,o_1', o_2', a_2') - H_2(x,y,o_1,o_2',a_2') \geq -2\max|H_2|$, so we can continue:
+\begin{align}
+	\geq H_1(x,y,o_1,a_1) + 1/2 + H_2(x,y,o_1,o_2',a_2') \geq H_1(x,y,o_1,a_1) + H_2(x,y,o_1,o_2,a_2) + 1\\
+	= H(x,y,o_1,o_2,a_1,a_2) + 1
+\end{align}
+This shows that $H$ satisfies the constraint set. 
+
+
 
 
 \end{document}
