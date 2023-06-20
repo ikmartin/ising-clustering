@@ -166,6 +166,8 @@ class PICircuit:
 
     def get_aux_array(self, binary=False):
         """Returns the aux array of this circuit"""
+        if self.A == 0:
+            return None
         if binary:
             aux_array = [
                 self._aux_dict[inspin].binary().tolist() for inspin in self.inspace

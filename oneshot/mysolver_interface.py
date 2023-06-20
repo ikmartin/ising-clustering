@@ -1,3 +1,4 @@
+from copy import deepcopy
 from ctypes import c_int, c_bool, POINTER, c_double, CDLL, c_void_p, c_int8
 import numpy as np
 from numpy.ctypeslib import ndpointer, as_array
@@ -72,6 +73,7 @@ def call_my_solver(CSC_constraints, tolerance=1e-4, max_iter=200, fullreturn=Fal
         num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter
     )
     result_array = as_array(result, shape=(num_rows + num_cols,))
+    result_array = deepcopy(result_array)
     objective = sum(result_array[num_cols:])
     c_free_ptr(result)
 

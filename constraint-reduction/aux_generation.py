@@ -1,6 +1,7 @@
 from functools import cache
 from matplotlib import pyplot as plt
 from itertools import combinations
+from joblib import Parallel, delayed
 
 import json
 import random
@@ -10,9 +11,8 @@ import numpy as np
 
 
 # imports for Isaac's code
-from filtered_constraints import filtered_constraints as fc, IMul_correct_rows as crows
+from filtered_constraints import filtered_constraints as fc, make_correct_rows as crows
 
-from joblib import Parallel, delayed
 
 auxdirpath = "/home/ikmarti/Desktop/ising-clustering/constraint-reduction/aux_arrays/"
 
@@ -37,6 +37,15 @@ def read_auxfile(filename):
     return auxes
 
 
+def sample_auxfile(filename, samples):
+    auxes = []
+    with open(filename) as file:
+        for line in file:
+            auxes.append(json.loads(line))
+
+    return random.sample(auxes, k=samples)
+
+
 def save_auxfile(auxes, filename):
     path = uniquify(auxdirpath + filename)
     with open(path, "w") as file:
@@ -47,7 +56,7 @@ def save_auxfile(auxes, filename):
 def and_aux_generator(N1, N2, A, numsamples=10000):
     filename = f"IMul{N1}x{N2}x{A}_AND_AUX.dat"
     N = N1 + N2
-    _, _, correct = crows(3, 3, None)
+    correct = crows(3, 3, None)
     correct = correct.numpy()
 
     tups = set(
@@ -67,12 +76,12 @@ def and_aux_generator(N1, N2, A, numsamples=10000):
 
 
 if __name__ == "__main__":
-    N1 = 3
-    N2 = 3
+    N1 = 4
+    N2 = 4
     M = N1 + N2
     G = N1 + N2 + M
-    A = 10
-    numsamples = min(math.comb(math.comb(G, 2), A), 100000)
-    for a in range(1, A + 1):
-        and_aux_generator(N1, N2, a, numsamples)
-        print(f"finished {a}")
+    maxA = 20
+    for A in range(1, maxA + 1):
+        numsamples = min(math.comb(math.comb(G, 2), A), 100000)
+        and_aux_generator(N1, N2, A, numsamples)
+        print(f"Finished IMul{N1}x{N2}x{A}")
