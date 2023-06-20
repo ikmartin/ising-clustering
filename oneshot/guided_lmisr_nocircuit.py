@@ -8,7 +8,7 @@ import numpy as np
 from math import comb
 
 from solver import LPWrapper
-from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD, fast_pairs
+from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD, fast_pairs, pfgbz_candidates, nfgbz_candidates
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -376,9 +376,10 @@ class Delegator(Process):
 
         rosenberg_term_table = fast_pairs(poly) #get_term_table(poly, rosenberg_criterion, 2)
        
+        pos_fgbz_term_table = pfgbz_candidates(poly)
+        neg_fgbz_term_table = nfgbz_candidates(poly)
+
         """
-        pos_fgbz_term_table = get_term_table(poly, weak_positive_FGBZ_criterion)
-        neg_fgbz_term_table = get_term_table(poly, negative_FGBZ_criterion)
         fd_options = [
             (key, value)
              for key, value in poly.coeffs.items()
@@ -391,38 +392,21 @@ class Delegator(Process):
             if not len(H):
                 continue
 
-            options.append((Rosenberg(poly, C, H), MLPoly({C: 1}), C, 'ros'))
+            options.append((Rosenberg(poly, C, H), C, 'ros'))
 
-        
-        """
-        
         for C, H in pos_fgbz_term_table.items():
             if not len(H):
                 continue
 
-            options.append((
-                PositiveFGBZ(poly, C, H),
-                MLPoly({
-                    () : 1,
-                    C : -1
-                }),
-                C,
-                '+fgbx'
-            ))
-
+            options.append((PositiveFGBZ(poly, C, H), C, '+fgbz'))
+        
         for C, H in neg_fgbz_term_table.items():
             if not len(H):
                 continue
 
-            options.append((
-                NegativeFGBZ(poly, C, H),
-                MLPoly({
-                    C : 1
-                }),
-                C,
-                '-fgbz'
-            ))
-
+            options.append((NegativeFGBZ(poly, C, H), C, '-fgbz'))
+        
+        """
         for key, val in fd_options:
             options.append((
                 single_FD(poly, key),
@@ -438,12 +422,14 @@ class Delegator(Process):
         reduction_choices = []
         new_length = array.shape[0] + 1 if array is not None else 1
 
-        for new_poly, aux_map, C, method in options:
+        for new_poly, C, method in options:
             reduction_choices.append(C)
             #new_aux_vector = np.array([[aux_map(tuple(correct_rows[i])) for i in range(correct_rows.shape[0])]])
             new_aux_vector = np.expand_dims(np.prod(correct_rows[..., C], axis = -1), 0)
             #print(new_aux_vector)
-            
+            if method == '+fgbz':
+                new_aux_vector = 1 - new_aux_vector
+
             new_aux_array = new_aux_vector if array is None else np.concatenate([array, new_aux_vector])
 
             new_aux_array = new_aux_array.astype(np.int8)
@@ -550,8 +536,8 @@ class Solver(Process):
 
     def degree_search(self):
         for degree in range(2, 6):
-            #if degree > 2:
-            #    degree = 6
+            if degree > 2:
+                degree = 6
             M, keys, correct = self.factory.get(aux_array = None, degree = degree, radius = None)
             solver = LPWrapper(keys)
             M = M.to_sparse()
@@ -808,12 +794,9 @@ def main(n1, n2, solvers, delegators, limit, stop):
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = (2,3,4), 
-        included = (0,1,5,6,7), 
-        and_pairs = (
-            (2, 14), (6, 14), (5, 8),
-            (1, 13), (5, 13), (3, 6), (0, 9)
-        )
+        desired = (0,1,2,3), 
+        included = (7,), 
+        and_pairs = None
     )
 
     search(factory, solvers, delegators, limit, stop)

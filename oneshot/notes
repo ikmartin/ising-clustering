@@ -56,10 +56,19 @@ Next ideas:
 - In general, we need better heuristics to guide solver priority, and we need better and quicker ways to determine if a quadratic problem is infeasible. However, we have had very good results with this so far, and we're definitely still making progress. I have hope!
 
 
+3x4 results from Kruskal (single run)
+[^[[33;20mSolver-3^[[0m] Found new best aux array with length 9^[[0m
+[^[[33;20mSolver-3^[[0m] History: [((0, 9), 'ros'), ((4, 11), 'ros'), ((1, 10), 'ros'), ((3, 11), 'ros'), ((10, 11), 'ros'), ((8, 10), 'ros'), ((5, 11), 'ros'), ((1, 12), 'ros'), ((3, 10), 'ros')]^[[0m
+
+[^[[33;20mSolver-4^[[0m] Found new best aux array with length 8^[[0m
+[^[[33;20mSolver-4^[[0m] History: [((0, 9), 'ros'), ((4, 11), 'ros'), ((1, 10), 'ros'), ((3, 11), 'ros'), ((8, 10), 'ros'), ((5, 11), 'ros'), ((1, 12), 'ros'), ((3, 10), 'ros')
+
+[^[[33;20mSolver-5^[[0m] Found new best aux array with length 7^[[0m
+[^[[33;20mSolver-5^[[0m] History: [((0, 9), 'ros'), ((4, 11), 'ros'), ((1, 10), 'ros'), ((0, 11), 'ros'), ((5, 12), 'ros'), ((0, 10), 'ros'), ((1, 2), 'ros')
 
 
 
-3x4
+3x4x7
 
 original variables
  0  1  2  3  4  5  6    7  8  9 10 11 12 13
@@ -113,10 +122,16 @@ result: (4,20) (4,21) (0,21) (4,22) (20,22) (0,22)
 Complete: x2o6 y2o6 y1y2 x1o5 y1o5 y1y2o1 x3o5 y0o2 y0o3 x0o3 y0o4 o2o4 x0o4
 
 
-4x4
+4x4x13
 
+desired (0,6) included (7,)
+['x₂o₆', 'y₂o₆', 'y₁o₀'] [(2, 14), (6, 14), (5, 8)
 
+desired (1,5) included (0,6,7)
+['x₁o₅', 'y₁o₅', 'x₃y₂', 'x₀o₁'] [(1, 13), (5, 13), (3, 6), (0, 9)]
 
+desired (2,3,4) included (0,1,5,6,7)
+['x₀o₂', 'y₀o₃', 'x₁o₄', 'x₀o₄', 'x₂o₄', 'y₁o₃'] [(0, 10), (4, 11), (1, 12), (0, 12), (2, 12), (5, 11)]
 
 
 
