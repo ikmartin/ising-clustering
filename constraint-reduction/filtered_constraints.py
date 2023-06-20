@@ -1,8 +1,10 @@
 from csv import Error
 from spinspace import Spin
+from functools import cache
 from itertools import chain, combinations
-import torch
 import numba
+import torch
+import torch.nn.functional as F
 
 # DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DEVICE = "cpu"
@@ -38,11 +40,9 @@ def batch_vspin(input, degree):
     )
 
 
-def keys(circuit, degree):
+def keys(G, degree):
     return list(
-        chain.from_iterable(
-            [combinations(range(circuit.G), i) for i in range(1, degree + 1)]
-        )
+        chain.from_iterable([combinations(range(G), i) for i in range(1, degree + 1)])
     )
 
 
@@ -81,34 +81,194 @@ def flip_bits(num, ind):
     return num
 
 
-def all_filtered_states(circuit, filtered_levels):
-    shift = circuit.M + circuit.A
+####################################
+### Full Constraint Methods
+####################################
+def full_constraints(N1, N2, aux):
+    return constraints(N1, N2, aux, 2, None, None, None, None)
+
+
+def make_correct_rows(
+    n1, n2, aux_array=None, included=None, desired=None, and_pairs=None
+):
+    N = n1 + n2
+    num_inputs_1 = 1 << n1
+    num_inputs_2 = 1 << n2
+    num_inputs = num_inputs_1 * num_inputs_2
+    num_fixed_columns = N
+
+    inp1, inp2 = torch.meshgrid(
+        torch.arange(num_inputs_1), torch.arange(num_inputs_2), indexing="ij"
+    )
+    outputs = inp1 * inp2
+    inp1_bits = dec2bin(inp1, n1).to(torch.int8).reshape(num_inputs, n1)
+    inp2_bits = dec2bin(inp2, n2).to(torch.int8).reshape(num_inputs, n2)
+    output_bits = dec2bin(outputs, N).to(torch.int8).reshape(num_inputs, N)
+
+    included = () if included is None else included
+    num_fixed_columns += len(included)
+    desired = tuple(range(N)) if desired is None else desired
+    num_free_columns = len(desired)
+    aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
+    num_free_columns += aux_array.shape[0]
+
+    original_correct = torch.cat([inp1_bits, inp2_bits, output_bits], dim=-1)
+    ands = torch.tensor([], dtype=torch.int8)
+    if and_pairs is not None:
+        ands = torch.cat(
+            [
+                torch.prod(original_correct[..., pair], dim=-1, keepdim=True)
+                for pair in and_pairs
+            ],
+            dim=-1,
+        )
+        num_fixed_columns += len(and_pairs)
+
+    return (
+        torch.cat(
+            [
+                inp1_bits,
+                inp2_bits,
+                output_bits[..., included],
+                ands,
+                output_bits[..., desired],
+                torch.t(aux_array),
+            ],
+            dim=-1,
+        ),
+        num_fixed_columns,
+        num_free_columns,
+    )
+
+
+@cache
+def make_wrong_mask(num_fixed, num_free, radius):
+    radius = num_free if radius is None else radius
+    flip = torch.cat(
+        [
+            torch.cat(
+                [
+                    torch.sum(
+                        F.one_hot(indices, num_classes=num_free), dim=0, keepdim=True
+                    )
+                    for indices in torch.combinations(torch.arange(num_free), r)
+                ]
+            )
+            for r in range(1, radius + 1)
+        ]
+    ).to(torch.int8)
+    return torch.cat(
+        [torch.zeros(flip.shape[0], num_fixed, dtype=torch.int8), flip], dim=-1
+    )
+
+
+def make_wrongs(correct, num_fixed, num_free, radius):
+    wrong_mask = make_wrong_mask(num_fixed, num_free, radius)
+    exp_correct = correct.unsqueeze(1).expand(-1, wrong_mask.shape[0], -1)
+    exp_wrong_mask = wrong_mask.unsqueeze(0).expand(correct.shape[0], -1, -1)
+    return ((exp_correct + exp_wrong_mask) % 2).reshape(
+        wrong_mask.shape[0] * correct.shape[0], -1
+    ), wrong_mask.shape[0]
+
+
+def constraints(n1, n2, aux, degree, radius, included, desired, and_pairs):
+    correct, num_fixed, num_free = make_correct_rows(
+        n1, n2, aux, included, desired, and_pairs
+    )
+    wrong, rows_per_input = make_wrongs(correct, num_fixed, num_free, radius)
+
+    virtual_right = batch_vspin(correct, degree)
+    exp_virtual_right = (
+        virtual_right.unsqueeze(1)
+        .expand(-1, rows_per_input, -1)
+        .reshape(wrong.shape[0], -1)
+    )
+    virtual_wrong = batch_vspin(wrong, degree)
+    constraints = virtual_wrong - exp_virtual_right
+
+    col_mask = constraints.any(dim=0)
+    constraints = constraints[..., col_mask]
+
+    terms = keys(num_fixed + num_free, degree)
+    terms = [term for term, flag in zip(terms, col_mask) if flag]
+
+    return constraints.cpu(), terms, correct
+
+
+def all_filtered_states(N1, N2, A, filtered_levels):
+    N = N1 + N2
+    shift = N + A
     states = [
         (i << shift) | out for i, row in enumerate(filtered_levels) for out in row
     ]
-    return dec2bin(torch.tensor(states), bits=circuit.N + shift)
+    return dec2bin(torch.tensor(states), bits=N + shift)
 
 
-def IMul_correct_rows(circuit):
+def correct_rows(circuit):
     correct_rows = torch.cat(
         [
             torch.tensor(circuit.inout(inspin).binary()).unsqueeze(0).to(DEVICE)
             for inspin in circuit.inspace
         ]
     )
+    return correct_rows
 
 
-def basin_d_constraints(circuit, d, degree=2):
-    """A generator for constraint sets. Starts with basin 2 constraints (that is basin one and two) and then"""
-    MA = circuit.M + circuit.A
-    filtered_levels = [
-        sum([get_basin(MA, circuit.f(i).asint(), r) for r in range(1, d + 1)], [])
-        for i in range(1 << circuit.N)
-    ]
-    return filtered_constraints(circuit, filtered_levels, degree=degree)
+# Andrew's current tensor-fied way to retreive the correct rows of IMulN1xN2xA
+def IMul_correct_rows(
+    n1, n2, aux_array=None, included=None, desired=None, and_pairs=None
+):
+    N = n1 + n2
+    num_inputs_1 = 1 << n1
+    num_inputs_2 = 1 << n2
+    num_inputs = num_inputs_1 * num_inputs_2
+    num_fixed_columns = N
+
+    inp1, inp2 = torch.meshgrid(
+        torch.arange(num_inputs_1), torch.arange(num_inputs_2), indexing="ij"
+    )
+    outputs = inp1 * inp2
+    inp1_bits = dec2bin(inp1, n1).to(torch.int8).reshape(num_inputs, n1)
+    inp2_bits = dec2bin(inp2, n2).to(torch.int8).reshape(num_inputs, n2)
+    output_bits = dec2bin(outputs, N).to(torch.int8).reshape(num_inputs, N)
+
+    included = () if included is None else included
+    num_fixed_columns += len(included)
+    desired = tuple(range(N)) if desired is None else desired
+    num_free_columns = len(desired)
+    aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
+    num_free_columns += aux_array.shape[0]
+
+    original_correct = torch.cat([inp1_bits, inp2_bits, output_bits], dim=-1)
+    ands = torch.tensor([], dtype=torch.int8)
+    if and_pairs is not None:
+        ands = torch.cat(
+            [
+                torch.prod(original_correct[..., pair], dim=-1, keepdim=True)
+                for pair in and_pairs
+            ],
+            dim=-1,
+        )
+        num_fixed_columns += len(and_pairs)
+
+    return (
+        torch.cat(
+            [
+                inp1_bits,
+                inp2_bits,
+                output_bits[..., included],
+                ands,
+                output_bits[..., desired],
+                torch.t(aux_array),
+            ],
+            dim=-1,
+        ),
+        num_fixed_columns,
+        num_free_columns,
+    )
 
 
-def filtered_constraints(circuit, filtered_levels, degree=2):
+def filtered_constraints(N1, N2, aux, filtered_levels, degree=2):
     """A method for building all levels of a filtered constraint set simultaneously.
 
     Parameters
@@ -118,11 +278,14 @@ def filtered_constraints(circuit, filtered_levels, degree=2):
     filtered_levels : list[list[int]]
         a list of list where row i is the list of wrong outauxes, represented by integers, to be used as constraints for input level i.
     """
-    if len(filtered_levels) != 1 << circuit.N:
+    N = N1 + N2
+    M = N
+    A = len(aux)
+    if len(filtered_levels) != 1 << N:
         raise KeyError("The list <filtered_levels> is missing input levels!")
 
     # make the correct block
-    correct_rows = IMul_correct_rows(circuit)
+    correct_rows = IMul_correct_rows(N1, N2, aux)
     virtual_right = batch_vspin(correct_rows, degree)
     rows_per_input = [len(row) for row in filtered_levels]
     exp_virtual_right = torch.repeat_interleave(
@@ -130,17 +293,17 @@ def filtered_constraints(circuit, filtered_levels, degree=2):
     )
 
     # make the wrong block
-    all_states = all_filtered_states(circuit, filtered_levels)
+    all_states = all_filtered_states(N1, N2, A, filtered_levels)
     virtual_all = batch_vspin(all_states, degree)
     constraints = virtual_all - exp_virtual_right
 
     # filter out the rows with correct answers
-    row_mask = constraints[..., circuit.N : (circuit.N + circuit.M)].any(dim=-1)
-    terms = keys(circuit, degree)
+    row_mask = constraints[..., N : (N + M)].any(dim=-1)
+    terms = keys(N + M + A, degree)
 
     # filter out connections between inputs
-    col_mask = torch.tensor([max(key) >= circuit.N for key in terms])
-    terms = [term for term in terms if max(term) >= circuit.N]
+    col_mask = torch.tensor([max(key) >= N for key in terms])
+    terms = [term for term in terms if max(term) >= N]
     constraints = constraints[row_mask][..., col_mask]
 
     return constraints.cpu().to_sparse_csc()

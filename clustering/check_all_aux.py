@@ -33,7 +33,7 @@ circuit = IMul(n1, n2)
 # this is because pqdm uses pickle and pickle cannot
 # pickle local objects
 def test_aux_array(aux_array):
-    circuit.set_aux(aux_array)
+    circuit.set_all_aux(aux_array)
     solver = circuit.build_solver()
     status = solver.Solve()
     print(aux_array)
