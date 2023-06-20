@@ -5,16 +5,22 @@ from solver import LPWrapper
 import torch
 
 np.set_printoptions(threshold = 50000000)
-n1 = 3
+n1 = 4
 n2 = 4
-aux_keys = [(0,9), (5,12), (1,13), (0,10), (3,11), (4,11), (5,11), (3,10)]
-aux_keys = [(0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)]
+# working 3x4
+#aux_keys = [(0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)]
+
+
+aux_keys = [(2, 14), (6, 14), (5, 8), (1, 13), (5, 13), (3, 6), (0, 9), (0, 10), (4, 11), (1, 12), (0, 12), (2, 12), (5, 11)]
+
 #aux_keys = [(1,2), (4,10), (0,5), (0,8), (3,9), (0,9)]
 _, _, correct = constraints_building(n1,n2, None, 1, radius=None, mask=None, include=None)
 correct = correct.numpy()
 
 aux_vecs = np.concatenate([np.expand_dims(np.prod(correct[...,key], axis=-1), axis=0) for key in aux_keys]).astype(np.int8)
 print(aux_vecs)
+with open("saved-aux", "w") as FILE:
+    FILE.write(str(aux_vecs.tolist()))
 
 """
 print("making constraints")

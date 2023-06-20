@@ -20,7 +20,7 @@ from fittertry import IMulBit
 
 from lmisr_interface import call_solver
 from mysolver_interface import call_my_solver
-
+from itertools import chain
 import cProfile
 
 
@@ -133,6 +133,61 @@ class ConstraintFactory:
         self.included = included
         self.desired = desired
         self.and_pairs = and_pairs
+
+        self._generate_variable_names()
+
+    def _generate_variable_names(self):
+        SUB = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+        self.variable_names = []
+        self.original_variables = []
+        self.variable_indices = []
+        for i in range(self.n1):
+            self.original_variables.append(f'x{str(i).translate(SUB)}')
+
+        for i in range(self.n2):
+            self.original_variables.append(f'y{str(i).translate(SUB)}')
+        
+        for i in range(self.n1 + self.n2):
+            self.original_variables.append(f'o{str(i).translate(SUB)}')
+
+        for i in range(self.n1 + self.n2):
+            self.variable_names.append(self.original_variables[i])
+            self.variable_indices.append((i,))
+
+        if self.included is not None:
+            for i in self.included:
+                self.variable_names.append(f'o{str(i).translate(SUB)}')
+                self.variable_indices.append((self.n1+self.n2+i,))
+
+        if self.and_pairs is not None:
+            for x in self.and_pairs:
+                self.variable_names.append("".join([self.original_variables[i] for i in x]))
+                self.variable_indices.append(x)
+
+        if self.desired is None:
+            for i in range(self.n1 + self.n2):
+                self.variable_names.append(f'o{str(i).translate(SUB)}')
+                self.variable_indices.append((i+self.n1+self.n2,))
+        else:
+            for i in self.desired:
+                self.variable_names.append(f'o{str(i).translate(SUB)}')
+                self.variable_indices.append((i+self.n1+self.n2,))
+
+
+    def format_history(self, history):
+        variable_names = self.variable_names.copy()
+        variable_indices = self.variable_indices.copy()
+        fixed_length = len(variable_names)
+        for C, method in history:
+            variable_names.append("".join([variable_names[i] for i in C]))
+            variable_indices.append(tuple(chain.from_iterable([
+                variable_indices[i]
+                for i in C
+            ])))
+
+        return str(variable_names[fixed_length:]) + " " + str(variable_indices[fixed_length:])
+            
+
 
     def get(self, aux_array = None, degree = 2, radius = None):
         return constraints(self.n1, self.n2, aux_array, degree, radius, self.included, self.desired, self.and_pairs)
@@ -471,7 +526,7 @@ class Solver(Process):
                 if array.shape[0] < self.admin['success']['best']:
                     self.admin['success']['best'] = array.shape[0]
                     log('solver', self.name, f'Found new best aux array with length {array.shape[0]}')
-                    log('solver', self.name, f'History: {history}')
+                    log('solver', self.name, f'History: {self.factory.format_history(history)}')
                     log('solver', self.name, f'{array}')
                     
                     # THIS QUITS THE PROGRAM ON SUCCESS
@@ -744,14 +799,22 @@ x0o2 y2o5 x1o6 x0o3 y0o4 y1o4 y2o4 y0o3
 @click.command()
 @click.option("--n1", default=2, help="First input")
 @click.option("--n2", default=2, help="Second input")
-@click.option("--bit", default=None, help="Select an output bit.")
 @click.option("--solvers", default=os.cpu_count()-1, help="Number of solver processes.")
 @click.option("--delegators", default=1, help="Number of delegator processes.")
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 @click.option("--stop/--no-stop", default = False, help = "Quit when an aux array is found.")
-def main(n1, n2, bit, solvers, delegators, limit, stop):
+def main(n1, n2, solvers, delegators, limit, stop):
 
-    factory = ConstraintFactory(n1, n2, desired = (2,3,4), included = (0,1,5,6,7), and_pairs = ((2,14), (6,14), (5,6), (1,13), (5,13), (5,6,9), (3,13)))
+    factory = ConstraintFactory(
+        n1, 
+        n2, 
+        desired = (2,3,4), 
+        included = (0,1,5,6,7), 
+        and_pairs = (
+            (2, 14), (6, 14), (5, 8),
+            (1, 13), (5, 13), (3, 6), (0, 9)
+        )
+    )
 
     search(factory, solvers, delegators, limit, stop)
 
