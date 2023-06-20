@@ -54,3 +54,63 @@ Next ideas:
 - Insofar as what we are currently doing is just trying out a bunch of different reduction paths and continually attempting quadratic fit at each node in the tree---perhaps it would be worth attempting (and it is far cheaper) to actually find that optimal Rosenberg reduction and so on before going through all this. What I have in mind is a two part algorithm: first, work through the NP-hard problem of finding the optimal reduction, presumably by enumerating out the big reduction tree with all the methods and so on. We can prune this by ignoring obviously bad branches for an optimization, but for now in theory just imagine that we have the entire tree. Then we could iterate through the tree with quadratic feasibility checking. The big advantage is that if we have the tree enumerated out down to the leaves, then the final auxilliary numbers of the leaves provides us a much better heuristic than we are currently using, though based on the same method, for we don't have to rely on any heuristics to know the optimal rosenberg cost of a given reduction option---it just becomes a minimax problem. With the heuristic values precomputed, we may be able to to much better in terms of picking the right tasks during the actualy solvability-search stage (as we know, since good solutions sometimes appear after a while of searching, the current heuristics are pretty bad, although they do point us in the right overall direction). This seems like a natural thing to try, given that we have already abandoned as too expensive (and seemingly not worth it) the idea of refitting the higher degree hamiltonian at each step in order to obtain new reduction candidates. As Jess mentioned, we could of course still just do this sometimes, but the fact that the results of the two methods are so far equivalent indicates to me that the extra effort is simply not worth it. Finding the best possible Rosenberg reduction is curiously something that we have not actually attempted at all so far, even for the smallest problems where it is clearly computationally feasible---I suppose the NP-hard label just scared us off. 
 
 - In general, we need better heuristics to guide solver priority, and we need better and quicker ways to determine if a quadratic problem is infeasible. However, we have had very good results with this so far, and we're definitely still making progress. I have hope!
+
+
+
+
+
+3x4
+
+original variables
+ 0  1  2  3  4  5  6    7  8  9 10 11 12 13
+x0 x1 x2 y0 y1 y2 y3 | o0 o1 o2 o3 o4 o5 o6
+
+Instructions: Run with mask=[0,1,2,5] include=[6] (24.58 seconds)
+       0  1  2  3  4  5  6  7    8  9 10 11
+vars: x0 x1 x2 y0 y1 y2 y3 o6 | o0 o1 o2 o5
+Result: (0,10) (5,11) (1,7)     (length 2 is impossible)
+-> x0o2 y2o5 x1o6
+
+now, include these aux in the next stage.
+
+run with mask=(3,4) include = (0,1,2,5,6) and_pairs = ((0,9), (5,12), (1,13))
+
+	     0  1  2  3  4  5  6  7  8  9 10 11   12   13   14   15 16
+vars: x0 x1 x2 y0 y1 y2 y3 o0 o1 o2 o5 o6 x0o2 y2o5 x1o6 | o3 o4
+Result: (1,16) (0, 16) (4,15) (3,15)
+-> x1o4 x0o4 y1o3 y0o3
+
+aux keys (0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)
+
+Confirmed by Teresa's solver with verify.py
+
+
+4x4
+
+original vars
+
+ 0  1  2  3  4  5  6  7    8  9 10 11 12 13 14 15
+x0 x1 x2 x3 y0 y1 y2 y3 | o0 o1 o2 o3 o4 o5 o6 o7
+
+desired (0,6) included (7,)
+ 0  1  2  3  4  5  6  7  8    9 10
+x0 x1 x2 x3 y0 y1 y2 y3 o7 | o0 o6
+result: (2,10) (6,10) (5,6)
+-> x2o6 y2o6 y1y2
+
+desired (1,5) included (0,6,7) and_pairs (2,14) (6,14) (5,6)
+ 0  1  2  3  4  5  6  7  8  9 10   11   12   13   14 15
+x0 x1 x2 x3 y0 y1 y2 y3 o0 o6 o7 x2o6 y2o6 y1y2 | o1 o5
+result: (1,15) (5,15) (13,14) (3,15)
+-> x1o5 y1o5 y1y2o1 x3o5
+
+desired (2,3,4) included (0,1,5,6,7) and_pairs (2,14) (6,14) (5,6) (1,13) (5,13) (5,6,9) (3,13)
+ 0  1  2  3  4  5  6  7  8  9 10 11 12   13   14   15   16   17     18   19   20 21 22
+x0 x1 x2 x3 y0 y1 y2 y3 o0 o1 o5 o6 o7 x2o6 y2o6 y1y2 x1o5 y1o5 y1y2o1 x3o5 | o2 o3 o4
+result: (4,20) (4,21) (0,21) (4,22) (20,22) (0,22)
+-> y0o2 y0o3 x0o3 y0o4 o2o4 x0o4
+
+Complete: x2o6 y2o6 y1y2 x1o5 y1o5 y1y2o1 x3o5 y0o2 y0o3 x0o3 y0o4 o2o4 x0o4
+
+
+

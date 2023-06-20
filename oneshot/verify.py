@@ -8,6 +8,7 @@ np.set_printoptions(threshold = 50000000)
 n1 = 3
 n2 = 4
 aux_keys = [(0,9), (5,12), (1,13), (0,10), (3,11), (4,11), (5,11), (3,10)]
+aux_keys = [(0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)]
 #aux_keys = [(1,2), (4,10), (0,5), (0,8), (3,9), (0,9)]
 _, _, correct = constraints_building(n1,n2, None, 1, radius=None, mask=None, include=None)
 correct = correct.numpy()

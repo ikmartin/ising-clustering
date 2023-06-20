@@ -13,7 +13,7 @@ from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenbe
 from dataclasses import dataclass, field
 from typing import Any
 
-from fast_constraints import fast_constraints, sequential_constraints, constraints_basin, constraints_building
+from new_constraints import constraints
 from oneshot import reduce_poly, MLPoly
 from ising import IMul
 from fittertry import IMulBit
@@ -66,6 +66,10 @@ Admin Object:
     -- Success list lock
 
 """
+
+params = {
+    "stop_on_find": False
+        }
 
 ## Helper functions for dealing with polynomials
 
@@ -123,14 +127,15 @@ class PrioritizedItem:
 ## Class which is capable of producing many copies of the same circuit, optionally pre-initialized with specified auxilliary arrays.
 
 class ConstraintFactory:
-    def __init__(self, n1, n2, mask, include):
+    def __init__(self, n1, n2, included = None, desired = None, and_pairs = None):
         self.n1 = n1
         self.n2 = n2
-        self.mask = mask
-        self.include = include
+        self.included = included
+        self.desired = desired
+        self.and_pairs = and_pairs
 
-    def get(self, aux_array, degree, radius):
-        return constraints_building(self.n1, self.n2, aux_array, degree, radius = radius, mask = self.mask, include = self.include)
+    def get(self, aux_array = None, degree = 2, radius = None):
+        return constraints(self.n1, self.n2, aux_array, degree, radius, self.included, self.desired, self.and_pairs)
 
 
 ## A function which makes colored console output. Looks a little nicer.
@@ -153,7 +158,7 @@ def log(owner, name, message):
     print(format, flush = True)
         
 
-def search(factory, num_solvers, num_delegators, limit):
+def search(factory, num_solvers, num_delegators, limit, stop):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -161,7 +166,8 @@ def search(factory, num_solvers, num_delegators, limit):
         "task_queue": manager.PriorityQueue(),
         "done_queue": manager.PriorityQueue(),
         "success": manager.dict(),
-        "dibs": manager.dict()
+        "dibs": manager.dict(),
+        "params": manager.dict()
     }
 
     # Initial value: way higher than any actual solution
@@ -169,6 +175,8 @@ def search(factory, num_solvers, num_delegators, limit):
     admin["success"]["list"] = []
     admin["success"]["total"] = 0
     admin["success"]["found"] = False
+
+    admin["params"]["stop"] = stop
 
     log('master', 'Master', "Creating solvers...")
     workers = [
@@ -467,7 +475,8 @@ class Solver(Process):
                     log('solver', self.name, f'{array}')
                     
                     # THIS QUITS THE PROGRAM ON SUCCESS
-                    #self.admin['success']['found'] = True
+                    if self.admin['params']['stop']:
+                        self.admin['success']['found'] = True
                 
                 return
 
@@ -739,11 +748,12 @@ x0o2 y2o5 x1o6 x0o3 y0o4 y1o4 y2o4 y0o3
 @click.option("--solvers", default=os.cpu_count()-1, help="Number of solver processes.")
 @click.option("--delegators", default=1, help="Number of delegator processes.")
 @click.option("--limit", default = 16, help="Maximum aux array size.")
-def main(n1, n2, bit, solvers, delegators, limit):
+@click.option("--stop/--no-stop", default = False, help = "Quit when an aux array is found.")
+def main(n1, n2, bit, solvers, delegators, limit, stop):
 
-    factory = ConstraintFactory(n1, n2, mask = [3,4], include = [0,1,2,5,6])
+    factory = ConstraintFactory(n1, n2, desired = (2,3,4), included = (0,1,5,6,7), and_pairs = ((2,14), (6,14), (5,6), (1,13), (5,13), (5,6,9), (3,13)))
 
-    search(factory, solvers, delegators, limit)
+    search(factory, solvers, delegators, limit, stop)
 
 
 if __name__ == "__main__":

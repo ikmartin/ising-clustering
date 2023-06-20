@@ -1,5 +1,8 @@
 import torch
-from fast_constraints import dec2bin
+import torch.nn.functional as F
+from fast_constraints import dec2bin, batch_vspin, keys_basic
+from functools import cache
+from itertools import combinations
 
 def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None, and_pairs = None):
     N = n1 + n2
@@ -17,7 +20,9 @@ def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None,
     included = () if included is None else included
     num_fixed_columns += len(included)
     desired = tuple(range(N)) if desired is None else desired
+    num_free_columns = len(desired)
     aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
+    num_free_columns += aux_array.shape[0]
 
     original_correct = torch.cat([inp1_bits, inp2_bits, output_bits], dim = -1)
     ands = torch.tensor([], dtype=torch.int8)
@@ -25,7 +30,48 @@ def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None,
         ands = torch.cat([torch.prod(original_correct[..., pair], dim = -1, keepdim = True) for pair in and_pairs], dim = -1)
         num_fixed_columns += len(and_pairs)
 
-    return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, output_bits[..., desired], torch.t(aux_array)], dim = -1), num_fixed_columns
+    return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, output_bits[..., desired], torch.t(aux_array)], dim = -1), num_fixed_columns, num_free_columns
+
+@cache
+def make_wrong_mask(num_fixed, num_free, radius):
+    radius = num_free if radius is None else radius
+    flip = torch.cat([
+        torch.cat([
+            torch.sum(F.one_hot(indices, num_classes = num_free), dim = 0, keepdim = True)
+            for indices in torch.combinations(torch.arange(num_free), r)
+        ])
+        for r in range(1, radius+1)
+    ]).to(torch.int8)
+    return torch.cat([torch.zeros(flip.shape[0], num_fixed, dtype = torch.int8), flip], dim = -1)
+        
+def make_wrongs(correct, num_fixed, num_free, radius):
+    wrong_mask = make_wrong_mask(num_fixed, num_free, radius)
+    exp_correct = correct.unsqueeze(1).expand(-1, wrong_mask.shape[0], -1)
+    exp_wrong_mask = wrong_mask.unsqueeze(0).expand(correct.shape[0], -1, -1)
+    return ((exp_correct + exp_wrong_mask) % 2).reshape(wrong_mask.shape[0] * correct.shape[0], -1), wrong_mask.shape[0]
+
+def constraints(n1, n2, aux, degree, radius, included, desired, and_pairs):
+    correct, num_fixed, num_free = make_correct_rows(n1, n2, aux, included, desired, and_pairs)
+    wrong, rows_per_input = make_wrongs(correct, num_fixed, num_free, radius)
+    
+    virtual_right = batch_vspin(correct, degree)
+    exp_virtual_right = (
+        virtual_right.unsqueeze(1)
+        .expand(-1, rows_per_input, -1)
+        .reshape(wrong.shape[0], -1)
+    )
+    virtual_wrong = batch_vspin(wrong, degree)
+    constraints = virtual_wrong - exp_virtual_right
+    
+    col_mask = constraints.any(dim=0)
+    constraints = constraints[..., col_mask]
+
+    terms = keys_basic(num_fixed+num_free, degree)
+    terms = [term for term, flag in zip(terms, col_mask) if flag]
+
+    return constraints.cpu(), terms, correct
 
 
-print(make_correct_rows(2, 3, and_pairs = [(0,1), (1,2)]))
+
+
+torch.set_printoptions(threshold = 50000)
