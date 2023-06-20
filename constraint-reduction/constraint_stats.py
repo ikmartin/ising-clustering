@@ -1,5 +1,3 @@
-from ising import IMul
-from spinspace import Spinspace, Spin
 from functools import cache
 from matplotlib import pyplot as plt
 from itertools import combinations
@@ -9,9 +7,17 @@ import json
 import csv
 import pickle
 import time
+import torch
+import numpy as np
 
-from fast_constraints import filtered_constraints
+# imports for Andrew's code
+from fast_constraints import filtered_constraints, constraints_building as constbuild
 from solver import LPWrapper
+
+# imports for Isaac's code
+from ising import IMul
+from spinspace import Spinspace, Spin
+from filtered_constraints import filtered_constraints as fc, correct_rows as crows
 
 from joblib import Parallel, delayed
 
@@ -240,9 +246,16 @@ def get_random_auxarray(N, A):
     return [auxspace.rand().spin() for _ in range(2**N)]
 
 
-def get_random_circuit(N1, N2, A, num):
+def get_random_circuit(N1, N2, A):
     circuit = IMul(N1=N1, N2=N2)
     circuit.set_all_aux(get_random_auxarray(N1 + N2, A))
+    return circuit
+
+
+def sample_circuit(N1, N2, A, auxsampler):
+    """Returns a circuit with an auxiliary array sampled from provided auxsampler"""
+    circuit = IMul(N1=N1, N2=N2)
+    circuit.set_all_aux(auxsampler(N1 + N2, A))
     return circuit
 
 

@@ -1,0 +1,78 @@
+from functools import cache
+from matplotlib import pyplot as plt
+from itertools import combinations
+
+import json
+import random
+import os
+import math
+import numpy as np
+
+
+# imports for Isaac's code
+from filtered_constraints import filtered_constraints as fc, IMul_correct_rows as crows
+
+from joblib import Parallel, delayed
+
+auxdirpath = "/home/ikmarti/Desktop/ising-clustering/constraint-reduction/aux_arrays/"
+
+
+def uniquify(path):
+    filename, extension = os.path.splitext(path)
+    counter = 1
+
+    while os.path.exists(path):
+        path = filename + " (" + str(counter) + ")" + extension
+        counter += 1
+
+    return path
+
+
+def read_auxfile(filename):
+    auxes = []
+    with open(filename) as file:
+        for line in file:
+            auxes.append(json.loads(line)[0])
+
+    return auxes
+
+
+def save_auxfile(auxes, filename):
+    path = uniquify(auxdirpath + filename)
+    with open(path, "w") as file:
+        for aux in auxes:
+            file.write(str(aux.tolist()) + "\n")
+
+
+def and_aux_generator(N1, N2, A, numsamples=10000):
+    filename = f"IMul{N1}x{N2}x{A}_AND_AUX.dat"
+    N = N1 + N2
+    _, _, correct = crows(3, 3, None)
+    correct = correct.numpy()
+
+    tups = set(
+        {
+            tuple(random.sample(list(combinations(list(range(N)), r=2)), k=A))
+            for _ in range(numsamples)
+        }
+    )
+    auxes = []
+    for tup in tups:
+        aux_vecs = np.concatenate(
+            [np.expand_dims(np.prod(correct[..., key], axis=-1), axis=0) for key in tup]
+        ).astype(np.int8)
+        auxes.append(aux_vecs)
+
+    save_auxfile(auxes, filename)
+
+
+if __name__ == "__main__":
+    N1 = 3
+    N2 = 3
+    M = N1 + N2
+    G = N1 + N2 + M
+    A = 10
+    numsamples = min(math.comb(math.comb(G, 2), A), 100000)
+    for a in range(1, A + 1):
+        and_aux_generator(N1, N2, a, numsamples)
+        print(f"finished {a}")

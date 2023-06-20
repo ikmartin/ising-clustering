@@ -76,7 +76,8 @@ def call_my_solver(CSC_constraints, tolerance=1e-4, max_iter=200, fullreturn=Fal
     c_free_ptr(result)
 
     if fullreturn:
-        return objective, result_array
+        # objective, answer (i.e. solution to LP), artifical variables
+        return objective, result_array[:num_cols], result_array[num_cols:]
 
     return objective
 

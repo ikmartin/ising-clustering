@@ -1,6 +1,10 @@
-from filtered_constraints import filtered_constraints as fc
+from filtered_constraints import (
+    filtered_constraints as fc,
+    full_constraints as fullconst,
+)
 from filtered_solver import filtered_solver as fsolve
 from lmisr_interface import call_solver as lmsir_solver
+from mysolver_interface import call_my_solver as solver
 from ising import IMul
 
 import matplotlib.pyplot as plt
@@ -16,6 +20,12 @@ def top_n_rhos(circuit, n, jobnum=-1):
         print(f"  Solved job number {jobnum}.")
     rhos = np.array(rhos)
     return rhos, np.argsort(rhos)[-n:]
+
+
+def states_ordered_by_rho(N1, N2):
+    full, _, _ = fullconst(N1, N2, aux=None)
+    result, rhos = solver(full.to_sparse_csc(), fullreturn=True)
+    print(len(rhos), rhos.shape)
 
 
 def run_rhos_analysis(N1, N2, A, runs=100, n=1):
@@ -46,10 +56,14 @@ def make_rho_histograms(N1, N2, A, runs, n):
     make_histogram(data, bins=1 << (N1 + N2), title=title, fname=fname)
 
 
-if __name__ == "__main__":
+def main_histogram():
     N1 = 3
-    N2 = 3
+    N2 = 4
     A = 6
     runs = 50
     n = 3
     make_rho_histograms(N1, N2, A, runs, n)
+
+
+if __name__ == "__main__":
+    print(states_ordered_by_rho(3, 3))

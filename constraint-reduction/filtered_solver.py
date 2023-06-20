@@ -28,8 +28,8 @@ def filtered_solver(constraint_sets):
     def solve(detailed=False):
         """Runs the LPSolver on the given constraint filtering. Returns true if it passes all,"""
         status = []
-        for const in constraint_sets:
-            status.append(cutoff > call_my_solver(const, tolerance=tolerance))
+        for constraint in constraint_sets:
+            status.append(cutoff > call_my_solver(constraint, tolerance=tolerance))
             if status[-1] == False:
                 if detailed == False:
                     return False
