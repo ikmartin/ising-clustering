@@ -10,6 +10,7 @@ from lmisr_interface import call_solver as lmsir_solver
 from mysolver_interface import call_my_solver as solver
 from aux_generation import sample_auxfile, read_auxfile, uniquify
 from ising import IMul
+from spinspace import Spin
 
 import heapq
 import matplotlib.pyplot as plt
@@ -33,10 +34,29 @@ def zip_rhos(circuit, rhos):
     in_outaux = [
         (n.asint(), m.asint())
         for n in circuit.inspace.copy()
-        for m in circuit.outauxspace.copy()
-        if circuit.f(n) != m
+        for m in circuit.allwrong(n)
     ]
-    return zip(in_outaux, rhos)
+    assert len(in_outaux) == len(rhos)
+    return dict(zip(in_outaux, rhos))
+
+
+def zip_rhos_by_out(circuit, rhos):
+    """Similar to zip_rhos, but adds up all rho values for a fixed in/out pair, summing up across all possible auxiliaries"""
+    d = zip_rhos(circuit, rhos)
+    if circuit.A == 0:
+        return d
+
+    newd = {}
+    for n in circuit.inspace.copy():
+        for m in circuit.outspace.copy():
+            if m == circuit.fout(n):
+                continue
+
+            newd[(n.asint(), m.asint())] = sum(
+                [d[(n.asint(), Spin.catspin((m, a)).asint())] for a in circuit.auxspace]
+            )
+
+    return newd
 
 
 def states_ordered_by_rho(circuit, threshold=1e-8):
@@ -45,9 +65,23 @@ def states_ordered_by_rho(circuit, threshold=1e-8):
     aux = circuit.get_aux_array()
     full, _ = fullconst(N1, N2, aux, degree=2)
     _, _, rhos = solver(full.to_sparse_csc(), fullreturn=True)
-    zipped = list(zip_rhos(circuit, rhos))
-    zipped = sorted(zipped, key=lambda x: x[1])
+    zipped = zip_rhos(circuit, rhos)
+    keys = sorted(zipped.keys(), key=lambda x: zipped[x], reverse=True)
+    zipped = [(x, zipped[x]) for x in keys]
+    print(zipped[:10])
+    return [x for x in zipped if x[1] >= threshold]
 
+
+def states_ordered_by_rho_out(circuit, threshold=1e-8):
+    N1 = circuit.N1
+    N2 = circuit.N2
+    aux = circuit.get_aux_array()
+    full, _ = fullconst(N1, N2, aux, degree=2)
+    _, _, rhos = solver(full.to_sparse_csc(), fullreturn=True)
+    zipped = zip_rhos_by_out(circuit, rhos)
+    keys = sorted(zipped.keys(), key=lambda x: zipped[x], reverse=True)
+    zipped = [(x, zipped[x]) for x in keys]
+    print(zipped[:10])
     return [x for x in zipped if x[1] >= threshold]
 
 
@@ -146,14 +180,15 @@ def and_aux_rho_avg(N1, N2, A, runs=100):
         add_rhos(circ)
         print(f"finished run {i}")
 
-    print(heapq.nlargest(20, rhodict.items(), key=lambda i: i[1]))
+    with open(
+        f"/home/ikmarti/Desktop/ising-clustering/constraint-reduction/rhostats/IMul{N1}x{N2}x{A}_30_largest.dat",
+        "a",
+    ) as file:
+        file.write(f"{heapq.nlargest(30, rhodict.items(), key=lambda i: i[1])}\n")
 
     with open(uniquify(filename), "w") as file:
-        file.write(
-            json.dumps(
-                remap_keys(rhodict), sort_keys=True, indent=4, separators=(",", ": ")
-            )
-        )
+        for key, value in rhodict.items():
+            file.write(str([key, value]) + "\n")
 
 
 if __name__ == "__main__":

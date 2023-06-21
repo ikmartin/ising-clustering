@@ -77,7 +77,7 @@ def and_aux_generator(N1, N2, A, numsamples=10000):
 
 if __name__ == "__main__":
     N1 = 4
-    N2 = 4
+    N2 = 3
     M = N1 + N2
     G = N1 + N2 + M
     maxA = 20
