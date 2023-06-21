@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 typedef struct {
   char n1;
@@ -30,6 +31,17 @@ void multiply_by_Mt(double* target, double* vector);
 double* solve(int max_iter, double tolerance);
 void solve_main_system();
 void solve_AKAt(double* target, double* rhs, double* tmp);
+
+// threadpool functions
+
+void start_threadpool();
+void destroy_threadpool();
+void* threadloop();
+void thread_task(int index);
+void threadpool_run_jobs(double* target, double* tmp);
+
+void threaded_coefficient_matrix(double* target, double* d, double* zinv, double* tmp);
+
 
 // basic functions
 double fmin(double a, double b);

@@ -1,6 +1,6 @@
 from multiprocessing.managers import SyncManager
 from multiprocessing import Process, Lock, freeze_support, Manager
-from queue import PriorityQueue
+from queue import PriorityQueue, Empty
 import multiprocessing
 from collections import deque
 import time, os, torch, click
@@ -213,7 +213,7 @@ def log(owner, name, message):
     print(format, flush = True)
         
 
-def search(factory, num_solvers, num_delegators, limit, stop):
+def search(factory, num_solvers, num_delegators, limit, stop, fullcheckmethod):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -232,6 +232,7 @@ def search(factory, num_solvers, num_delegators, limit, stop):
     admin["success"]["found"] = False
 
     admin["params"]["stop"] = stop
+    admin["params"]["fullcheckmethod"] = fullcheckmethod
 
     log('master', 'Master', "Creating solvers...")
     workers = [
@@ -318,7 +319,11 @@ class Delegator(Process):
             return
 
         # Get a recently completed task and unpack it
-        task = self.admin["done_queue"].get()
+        try:
+            task = self.admin["done_queue"].get(timeout=0.1)
+        except Empty:
+            return
+
         array, poly = task.item
         priority = task.priority
         history = task.history
@@ -376,9 +381,12 @@ class Delegator(Process):
 
         rosenberg_term_table = fast_pairs(poly) #get_term_table(poly, rosenberg_criterion, 2)
        
+
+        """
         pos_fgbz_term_table = pfgbz_candidates(poly)
         neg_fgbz_term_table = nfgbz_candidates(poly)
-
+        """
+            
         """
         fd_options = [
             (key, value)
@@ -394,6 +402,7 @@ class Delegator(Process):
 
             options.append((Rosenberg(poly, C, H), C, 'ros'))
 
+        """
         for C, H in pos_fgbz_term_table.items():
             if not len(H):
                 continue
@@ -405,7 +414,7 @@ class Delegator(Process):
                 continue
 
             options.append((NegativeFGBZ(poly, C, H), C, '-fgbz'))
-        
+        """
         """
         for key, val in fd_options:
             options.append((
@@ -479,9 +488,11 @@ class Solver(Process):
 
     def loop(self):
         # Obtain a task from the queue, unpack the aux array, and generate the correct circuit
-        task = self.request_task()
-        if task is None:
-            return
+        
+        try:
+            task = self.admin["task_queue"].get(timeout=0.1)
+        except Empty:
+            return;
 
         array, poly = task.item
         priority = task.priority
@@ -526,18 +537,11 @@ class Solver(Process):
         # Otherwise, put the appropriate information in the completed task queue.
         self.admin['done_queue'].put(PrioritizedItem(priority = new_priority, item = (array, poly), history = history))
 
-    def request_task(self):
-        if not self.admin["task_queue"].empty():
-            task = self.admin["task_queue"].get()
-            return task
-
-
-        return None
 
     def degree_search(self):
         for degree in range(2, 6):
-            if degree > 2:
-                degree = 6
+            #if degree > 2:
+            #    degree = 6
             M, keys, correct = self.factory.get(aux_array = None, degree = degree, radius = None)
             solver = LPWrapper(keys)
             M = M.to_sparse()
@@ -570,15 +574,28 @@ class Solver(Process):
             log('solver', self.name, f'Passed basin {radius}') 
 
         
+        if self.admin['params']['fullcheckmethod'] == 'my':
+            constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
+            constraints = constraints.to_sparse_csc()
+            objective = call_my_solver(constraints, tolerance = 1e-8)
+            if objective > 0.1:
+                return None, 100 * objective / constraints.shape[0]
 
-        constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
-        constraints = constraints.to_sparse_csc()
-        objective = call_my_solver(constraints, tolerance = 1e-8)
-        if objective > 0.1:
-            return None, 100 * objective / constraints.shape[0]
-
-        return objective, 100 * objective / constraints.shape[0]
+            return objective, 100 * objective / constraints.shape[0]
         
+        if self.admin['params']['fullcheckmethod'] == 'lmisr':
+            log('solver', self.name, 'Looking promising!')
+            print(array)
+            print(constraints.size())
+            
+            self.N1 = 3
+            self.N2 = 3
+
+            objective = call_solver(self.N1, self.N2, array)
+            feasible = objective < 0.5
+            new_priority = objective/(1 << (2 * (self.N1 + self.N2) + array.shape[0]) - 1 << (self.N1 + self.N2 + array.shape[0])) 
+            log('solver', self.name, f'full check {feasible}, priority = {new_priority}')
+            return (None, new_priority) if not feasible else (feasible, new_priority)
         """
 
         for radius in range(1,3):
@@ -603,18 +620,6 @@ class Solver(Process):
         """
         
         """
-        log('solver', self.name, 'Looking promising!')
-        print(array)
-        print(constraints.size())
-        
-        self.N1 = 3
-        self.N2 = 4
-
-        objective = call_solver(self.N1, self.N2, array)
-        feasible = objective < 0.5
-        new_priority = objective/(1 << (2 * (self.N1 + self.N2) + array.shape[0]) - 1 << (self.N1 + self.N2 + array.shape[0])) 
-        log('solver', self.name, f'full check {feasible}, priority = {new_priority}')
-        return (None, new_priority) if not feasible else (feasible, new_priority)
         
         """
 """
@@ -789,17 +794,18 @@ x0o2 y2o5 x1o6 x0o3 y0o4 y1o4 y2o4 y0o3
 @click.option("--delegators", default=1, help="Number of delegator processes.")
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 @click.option("--stop/--no-stop", default = False, help = "Quit when an aux array is found.")
-def main(n1, n2, solvers, delegators, limit, stop):
+@click.option("--fullcheckmethod", default = "my", help = "Which solver to use for full check.")
+def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod):
 
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = (0,1,2,3), 
-        included = (7,), 
+        desired = None,
+        included = None, 
         and_pairs = None
     )
 
-    search(factory, solvers, delegators, limit, stop)
+    search(factory, solvers, delegators, limit, stop, fullcheckmethod)
 
 
 if __name__ == "__main__":

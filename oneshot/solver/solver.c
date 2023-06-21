@@ -1,7 +1,8 @@
 #include "include.h"
 
 // Turns off customizable RHS of the original problem, setting it to be equal to the traditional problem.
-#define			VI		1.0
+#define			VI						1.0
+#define			NUM_THREADS		8
 
 typedef struct {
 	int8_t* values;	
@@ -44,6 +45,142 @@ double* swap;
 int INFO;
 char TRANS = 'N';
 int LD = 1;
+
+
+// thread pool variables
+int* job_indexes;						// indexes (i*n + j) of col-col multiplication jobs
+int* job_transpose;
+int num_started;
+int num_jobs;
+int num_done;
+int threadpool_status;
+int threads_ready;
+#define			STATUS_RUNNING		0
+#define			STATUS_DESTROY		1
+pthread_mutex_t job_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t report_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t wakeup_cond_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t complete_cond_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t threadpool_wakeup = PTHREAD_COND_INITIALIZER;
+pthread_cond_t job_complete = PTHREAD_COND_INITIALIZER;
+pthread_t threads[NUM_THREADS];
+
+double* temp_pointer;				// pointer to the diagonal entries for the threads to work with
+double* target_pointer;
+
+void start_threadpool() {
+	num_jobs = (n * n + n)/2;
+	num_started = 0;
+	num_done = 0;
+	job_indexes = malloc(sizeof(int) * num_jobs);
+	job_transpose = malloc(sizeof(int) * num_jobs);
+	int q = 0;
+	for(int i=0; i<n; i++) {
+		for(int j=0; j<=i; j++) {
+			job_indexes[q] = i*n + j;
+			job_transpose[q] = j*n + i;
+			q++;
+		}
+	}
+	threads_ready = 0;
+	threadpool_status = STATUS_RUNNING;
+	for(int i=0; i<NUM_THREADS; i++) {
+		pthread_create(&threads[i], NULL, &threadloop, NULL);
+	}
+}
+
+void destroy_threadpool() {
+	int ready = 0;
+	while(ready < NUM_THREADS) {
+		pthread_mutex_lock(&wakeup_cond_mutex);
+		ready = threads_ready;
+		pthread_mutex_unlock(&wakeup_cond_mutex);
+	}
+	threadpool_status = STATUS_DESTROY;
+	pthread_mutex_lock(&wakeup_cond_mutex);
+	pthread_cond_broadcast(&threadpool_wakeup);
+	pthread_mutex_unlock(&wakeup_cond_mutex);
+	free(job_indexes);
+	free(job_transpose);
+}
+
+void* threadloop() {
+	int task;
+	while(1) {
+		// wait for thread pool wakeup call
+		pthread_mutex_lock(&wakeup_cond_mutex);
+		threads_ready++;
+		pthread_cond_wait(&threadpool_wakeup, &wakeup_cond_mutex);
+		threads_ready--;
+		pthread_mutex_unlock(&wakeup_cond_mutex);
+		if(threadpool_status == STATUS_DESTROY) {
+			break;
+		}
+
+		// execution loop
+		while(1) {
+			// check the queue to see if there are tasks to do
+			pthread_mutex_lock(&job_queue_mutex);
+			if(num_started >= num_jobs) {
+				// no more jobs to do
+				pthread_mutex_unlock(&job_queue_mutex);
+				break;
+			}
+
+			task = num_started;
+			num_started++;
+			pthread_mutex_unlock(&job_queue_mutex);
+
+			// execute task
+			thread_task(task);
+
+			// report task completion
+			pthread_mutex_lock(&report_mutex);
+			num_done++;
+
+			// notify the caller thread if all jobs are done
+			if(num_done >= num_jobs) {
+				pthread_mutex_lock(&complete_cond_mutex);
+				pthread_cond_signal(&job_complete);
+				pthread_mutex_unlock(&complete_cond_mutex);
+				pthread_mutex_unlock(&report_mutex);
+				break;
+			}
+			pthread_mutex_unlock(&report_mutex);
+		}
+	}
+}
+
+void thread_task(int index) {
+	int task = job_indexes[index];
+	int transpose = job_transpose[index];
+	int match, k;
+	target_pointer[task] = 0.0;
+	for(k=0; k<coeff_matrix_num_matches[task]; k++) {
+		match = coeff_matrix_matches[task][k];
+		target_pointer[task] += temp_pointer[match] * ((int)coeff_matrix_match_values[task][k]);
+	}
+	target_pointer[transpose] = target_pointer[task];
+}
+
+void threadpool_run_jobs(double* target, double* tmp) {
+	int ready = 0;
+	while(ready < NUM_THREADS) {
+		pthread_mutex_lock(&wakeup_cond_mutex);
+		ready = threads_ready;
+		pthread_mutex_unlock(&wakeup_cond_mutex);
+	}
+	target_pointer = target;
+	temp_pointer = tmp;
+	num_done = 0;
+	num_started = 0;
+	pthread_mutex_lock(&complete_cond_mutex);
+	pthread_mutex_lock(&wakeup_cond_mutex);
+	pthread_cond_broadcast(&threadpool_wakeup);
+	pthread_mutex_unlock(&wakeup_cond_mutex);
+	pthread_cond_wait(&job_complete, &complete_cond_mutex);
+	pthread_mutex_unlock(&complete_cond_mutex);
+}
 
 void allocate_vars() {
 	x					= (double*) malloc(sizeof(double) * 2 * m);
@@ -94,7 +231,7 @@ void safe_make_coeff_matrix() {
 	INFO = 1;
 	double perturbation = 1e-7;
 	while(INFO > 0) {
-		generate_coefficient_matrix(lu_decomp, d, zinv, swap);
+		threaded_coefficient_matrix(lu_decomp, d, zinv, swap);
 		for(int i=0; i<n; i++) {
 			for(int j=0; j<n; j++) {
 				lu_decomp[i*n+j] += ((float)rand()/(float)(RAND_MAX)) * perturbation;
@@ -117,6 +254,7 @@ void safe_make_coeff_matrix() {
 double* solve(int max_iter, double tolerance) {
 	srand((unsigned int) time(NULL));
 	allocate_vars();
+	start_threadpool();
 	compute_coeff_matrix_matches();
 
   // iteration variables
@@ -342,6 +480,7 @@ double* solve(int max_iter, double tolerance) {
   }
 
 	free_vars();
+	destroy_threadpool();
 	return l;		
 }
 
@@ -552,6 +691,14 @@ void compute_coeff_matrix_matches() {
 			compute_col_matches(i, j);
 		}
 	}
+}
+
+void threaded_coefficient_matrix(double* target, double* d, double* zinv, double* tmp) {
+	for(int i=0; i<m; i++) {
+		tmp[i] = d[i] - d[i] * d[i] * zinv[i];
+	}
+
+	threadpool_run_jobs(target, tmp);
 }
 
 void generate_coefficient_matrix(double* target, double* d, double* zinv, double* tmp) {
@@ -917,7 +1064,7 @@ int main() {
 	}
 	generate_CSC_constraints(n1, n2, aux_array, A);
 	openblas_set_num_threads(1);
-	solve(200, 1e-4);
+	solve(200, 1e-8);
 	free(aux_array);
 
 	return 0;

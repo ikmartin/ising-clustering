@@ -2,7 +2,7 @@ CC = gcc
 
 CFLAGS = -Ofast -std=c99 -fPIC # -g -pg
 
-LFLAGS =  -lm -lopenblas 
+LFLAGS =  -lm -lopenblas -lpthread
 
 SRCS = solver.c
 SOBJ = solver.so
@@ -10,12 +10,7 @@ SOBJ = solver.so
 OBJS = $(SRCS:.c=.o)
 
 INC  = -I/opt/OpenBLAS/include
-LIBS = -L/opt/OpenBLAS/lib
-
-ifeq ($(HOSTNAME),nemo.lps.umd.edu)
-INC  += -I/opt/OpenBLAS/include
-LIBS += -L/opt/OpenBLAS/lib
-endif
+LIBS = -L/opt/OpenBLAS/lib 
 
 MAIN = solver
 
