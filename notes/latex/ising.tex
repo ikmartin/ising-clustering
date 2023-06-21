@@ -35,6 +35,16 @@
   Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a function $f:\Sigma^N \to \Sigma^M$ where $N$ and $M$ are finite subsets of $\bN$. For convenience we always assume $N = \{1,...,n\}$ and $M = \{n+1, ..., n+m\}$.
 \end{defn}
 
+\section{Hierarchical Clustering}
+
+A choice of ``auxililary array'' can be thought of as a function $a:\Sigma^N \to \Sigma^A$ which assigns an auxiliary state to each input state. The collection of germs of this function partitions $\Sigma^N$ into subsets of inputs which share the same auxiliary state. To be clear, we're talking about the partition
+\begin{align*}
+  \{a^{-1}(\alpha)\}_{\alpha \in \Sigma^A}
+\end{align*}
+of input spin space. If the choice of auxiliary array $a$ makes the Ising circuit feasible, then we say $a$ solves the Ising circuit.
+
+This simple observation motivates a simple question: \emph{can a partition of $\Sigma^N$ be found such that it matches the partition produced by some feasible auxiliary array using only the logic of the Ising circuit?} Producing such a partition is a clustering problem on input spinspace.
+
 \section{Pseudo-boolean optimization and polynomial fitting}
 A pseudo boolean function (PBF) is any function $f:\{0,1\}\to \bR$. It is a well known fact that any such PBF can be uniquely represented by a multilinear polynomial in $n$ variables [pseudo-boolean optimization Boros, Hammer]; that is, a polynomial
 \begin{align*}
