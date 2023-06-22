@@ -7,11 +7,14 @@
 \usepackage{macrosabound, theorem-env}
 
 % make font smaller
-\usepackage[fontsize=10pt]{fontsize}
-% set margins
-% only use if strictly necessary, tufte-book calls geometry already
-% double geometry call results in "overspecified margins" warning if done as below
-% \geometry{left=1in, right=3in, top = 1in, bottom=1in}
+\usepackage[fontsize=10pt]{fontsize}%%% Coloring the comment as blue
+
+% algorithms
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\newcommand\mycommfont[1]{\footnotesize\ttfamily\textcolor{blue}{#1}}
+\SetCommentSty{mycommfont}
+\SetKwInput{KwInput}{Input}                % Set the Input
+\SetKwInput{KwOutput}{Output}              % set the Output
 
 %%%%%%%%%%%%%%%%%%
 %%%% FOR DEBUGGING
@@ -30,11 +33,90 @@
 \author{Isaac Martin}
 \date{Summer 2023}
 \maketitle
-\section{Introduction and Terminology}
+\section{Foundations}
 \begin{defn}
-  Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a function $f:\Sigma^N \to \Sigma^M$ where $N$ and $M$ are finite subsets of $\bN$. For convenience we always assume $N = \{1,...,n\}$ and $M = \{n+1, ..., n+m\}$.
+  Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a pair $(G,f)$ where $G$ is a finite set with a partition $G = N\cup M$ and $f$ is a function $f:\Sigma^N \to \Sigma^M$. For convenience we always assume $N = \{1,...,n\}$ and $M = \{n+1, ..., n+m\}$.
 \end{defn}
 
+\subsection{Partial Ising Circuits}
+
+\begin{defn}\label{defn:ising-subcircuit}
+  As always, let $\Sigma = \{-1,+1\}$ and let $(G,f)$ be an Ising circuit with $G = N \cup M$. An \textbf{Ising subcircuit} of $(G,f)$ is some pair $(G', f')$ such that $G' = N\cup M'$ with $M' \subset M$ and $f'$ agrees with $f$ on the $M'$ coordinates; i.e. there is some function $g:\Sigma^N \to \Sigma^{M \setminus M'}$ such that $f = f'\times g$.
+\end{defn}
+
+\begin{defn}\label{defn:partial-ising}
+  Let $\Sigma = \{-1, +1\}$ and let $(G,f)$ be an Ising circuit with further decompositions of the output space into $M = M_1 \cup M_2$ and the logic into $f = f_1\times f_2$. We say that $(G,f)$ is \emph{partially} solvable with respect to $M_2$ if there exists some Hamiltonian such that
+  \begin{align*}
+    (s,f_1(s),f_2(s)) < (s,f_1(s),t)
+  \end{align*}
+  for all $s \in \Sigma^N$ and $f_2(s) \neq t \in \Sigma^{M_2}$.
+\end{defn}
+
+\begin{prop}\label{prop:partial_solvability}
+  Let $(G,f)$ be an Ising circuit with subcircuit $(N\cup M_1, f_1)$, and set $M_2 = M \setminus M_1$ . If the subcircuit $(G_1 = N\cup M_1, f_1)$ is solvable and $(G,f)$ is partially solvable with respect to $M_2$ then $(G,f)$ is solvable.
+\end{prop}
+\begin{proof}
+    Suppose $(G_1,f_1)$ is solvable with Hamiltonian $H_1$ and $(G,f)$ is partially solvable by Hamiltonian $H_2$. By definition this means
+    \begin{align*}
+        H_1(s,f_1(s)) < H_1(s,r) \hspace{1em} \text{for all } s\in \Sigma^N \text{ and } f_1(s) \neq r \in \Sigma^{M_1}
+    \end{align*}
+    and
+    \begin{align*}
+        H_2(s,f_1(s),f_2(s)) < H_2(s,f_1(s), t) \hspace{1em} \text{for all } s\in \Sigma^N \text{ and } f_2(s) \neq t \in \Sigma^{M_2}.
+    \end{align*}
+    Define $H_\lambda(s,r,t) = H_2(s,r,t) + \lambda H_1(s,r)$. By definition, $H_\lambda$ is a Hamiltonian which solves $(G,f)$ if and only if for all $(r,t) \neq (f_1(s), f_2(s))$,
+    \begin{align*}
+        H_\lambda(s,r,t) > H_\lambda(s,f_1(s),f_2(s))
+        &\iff H_\lambda(s,r,t) - H_\lambda(s,f_1(s),f_2(s)) > 0\\
+        &\iff H_2(s,r,t) - H_2(s,f_1(s),f_2(s)) + \lambda(H_1(s,r) - H_1(s,f_1(r))) > 0 \\
+        &\iff H_2(s,r,t) - H_2(s,f_1(s),f_2(s)) > \lambda(H_1(s,f_1(r)) - H_1(s,r)).
+    \end{align*}
+    Set $\alpha = \max_{s,r}(H_1(s,f_1(s)) - H_1(s,r))$ and $\beta = \min_{s,r,t} (H_2(s,r,t) - H_2(s,f_1(s),f_2(s)))$. Then any choice of $\lambda$ such that $\beta > \lambda\alpha$ will ensure the above inequality is satisfied for all $s$, $r\neq f_1(s)$ and $t\neq f_2(x)$.
+\end{proof}
+
+\begin{rmk}
+    The converse of Proposition \ref{prop:partial_solvability} is false; solvability of $(G,f)$ does not necessarily imply the solvability of its subcircuits.
+\end{rmk}
+\begin{rmk}
+    Decomposing an Ising circuit $G$ into $G_1 = N \cup M_1$ and $G_2 = N \cup M_2$ seems dual to the addition of auxiliary spins $A$ to circuit $G_1 = N \cup M_1$, however, the two processes are distinct in a subtle way. Solving an Ising circuit $G$ through the addition of auxiliary spins $A$ and an auxiliary array $g:\Sigma^N \to \Sigma^A$ results in a constraint set
+    \begin{align*}
+        (s,f(s),g(s)) < (s,t,a) ~\text{ for all }~ s\in \Sigma^N ~\text{ and }~ f(s) \neq t\in \Sigma^M,
+    \end{align*}
+    for a total of $2^N(2^{M+A} - 2^A)$ constraints. However, solving $G = N \cup M_1 \cup M_2$ requires satisfying the constraints
+    \begin{align*}
+        (s,f_1(s),f_2(s)) < (s,r,t) ~\text{ for all }~ s\in \Sigma^N ~\text{ and }~ (f_1(s), f_2(s)) \neq (r,t) \in \Sigma^{M_1}\times \Sigma^{M_2},
+    \end{align*}
+    for a total of $2^N(2^{M_1 + M_2} - 1)$ constraints. \textbf{Circuits with auxiliaries care only about correctness in the output component, whereas circuits with decomposed output spaces require correctness in all output components. Auxiliary spins are therefore not the same as output spins.}
+\end{rmk}
+
+These remarks notwithstanding, Proposition \ref{prop:partial_solvability} is a powerful tool for solving Ising circuits. For instance, suppose we have an algorithm PartialSolve which takes as input $(G,M_2)$ where
+\begin{itemize}
+  \item $G = N\cup M_1 \cup M_2$ is an ising circuit
+  \item $(G,M_1)$ is a solvable subcircuit
+\end{itemize}
+and returns an Ising circuit $G'$ which is partially solvable with respect to $M_2$. Such an algorithm can be achieved using an auxiliary solve, for instance. We can then solve \emph{any} Ising circuit by
+\begin{algorithm}[!ht]
+\DontPrintSemicolon
+  
+  \KwInput{Ising Circuit $(G=N\cup M, f)$ with decomposition $M = M_1 \cup ...\cup M_k$.}
+  \KwOutput{Ising circuit $G' = G \cup A$ solving $G$ with auxiliary spins $A$.}
+    $i = 1$
+    $G' = N\cup M_i$.
+
+  \While{$i \neq k$}
+  {
+     $i = i + 1$
+
+    $G' = G' \cup M_i$
+
+    $G' = \text{PartialSolve}(G')$
+  }
+\caption{RecursivePartialSolve}
+\end{algorithm}
+
+Since $G'$ is always solvable, the full circuit $G$ (together with the auxiliary spins accrued by the solves of $G'$) is solvable if and only if $G'$ is solvable with respect to $M_{i+1} \cup ... \cup M_k$, due to Proposition \ref{prop:partial_solvability}. By the time RecursivePartialSolve terminates, $G'$ will be a solution to $G$ with auxiliaries.
+
+The advantage of using this algorithm over an auxiliary solve is that each iteration of $PartialSolve$ only has to operate over $|2^N\times (2^{M_2} - 1)|$ many constraints.
 \section{Hierarchical Clustering}
 
 A choice of ``auxililary array'' can be thought of as a function $a:\Sigma^N \to \Sigma^A$ which assigns an auxiliary state to each input state. The collection of germs of this function partitions $\Sigma^N$ into subsets of inputs which share the same auxiliary state. To be clear, we're talking about the partition
@@ -79,7 +161,6 @@ We need a slightly stronger statement however.
 
   Fix an input $s$ and suppose that the minimizer of $g^k(s, \cdot)$ has output coordinates $f(s)$. To obtain $g^{k+1}$ we replace some pair $x_ix_j$ by $x_{k+1}$ and add the expression $M(x_ix_j - 2x_ix_{k+1} - 2x_jx_{k+1} + 3x_{k+1})$. Observe that this expression is zero if $x_ix_j = x_{k+1}$ and is strictly positive otherwise. It follows that $g^k(\bfx) = g^{k+1}(\bfx, x_{k+1})$ if $x_{k+1} = x_ix_j$ and $g^k(\bfx) < g^{k+1}(\bfx, x_{k+1})$ if $x_{k+1} \neq x_ix_j$. Hence the minimizer of $g^{k+1}$ on input level $s$ also has the correct output coordinates, and inductively, we conclude that $H$ is an Ising Hamiltonian reproducing the circuit $f$.
 \end{proof}
-
 \newpage
 \bibliographystyle{abbrvnat}
 \bibliography{ising}

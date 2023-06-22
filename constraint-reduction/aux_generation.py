@@ -53,10 +53,26 @@ def save_auxfile(auxes, filename):
             file.write(str(aux.tolist()) + "\n")
 
 
+correct_rows_no_aux = {}
+
+
+def pairs_to_and(N1, N2, pairs):
+    try:
+        correct = correct_rows_no_aux[(N1, N2)]
+    except KeyError:
+        correct_rows_no_aux[(N1, N2)] = crows(N1, N2, None)
+        correct = correct_rows_no_aux[(N1, N2)]
+
+    aux_vecs = np.concatenate(
+        [np.expand_dims(np.prod(correct[..., key], axis=-1), axis=0) for key in pairs]
+    ).astype(np.int8)
+    return aux_vecs
+
+
 def and_aux_generator(N1, N2, A, numsamples=10000):
     filename = f"IMul{N1}x{N2}x{A}_AND_AUX.dat"
     N = N1 + N2
-    correct = crows(3, 3, None)
+    correct = crows(N1, N2, None)
     correct = correct.numpy()
 
     tups = set(

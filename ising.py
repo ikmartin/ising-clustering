@@ -205,9 +205,11 @@ class PICircuit:
         pass
 
     def faux(self, inspin: Spin) -> None | Spin:
-        if self.Ain(inspin) == 0:
+        if self.A == 0:
             return None
         else:
+            if isinstance(inspin, int):
+                inspin = self.inspace[inspin]
             return self._aux_dict[inspin]
 
     def f(self, inspin: Spin | int) -> Spin:
@@ -486,6 +488,8 @@ class IMul(PICircuit):
         self.N2 = N2
 
     def fout(self, inspin: Spin):
+        if isinstance(inspin, int):
+            inspin = self.inspace[inspin]
         # get the numbers corresponding to the input spin
         num1, num2 = inspin.splitint()
 
