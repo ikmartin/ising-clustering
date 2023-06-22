@@ -31,11 +31,20 @@ def top_n_rhos(circuit, n, jobnum=-1):
 
 
 def zip_rhos(circuit, rhos):
-    in_outaux = [
-        (n.asint(), m.asint())
-        for n in circuit.inspace.copy()
-        for m in circuit.allwrong(n)
-    ]
+    if circuit.A == 0:
+        in_outaux = [
+            (n.asint(), m.asint())
+            for n in circuit.inspace.copy()
+            for m in circuit.allwrong(n)
+        ]
+
+    else:
+        in_outaux = [
+            (n.asint(), m.split()[0].asint(), m.split()[1].asint())
+            for n in circuit.inspace.copy()
+            for m in circuit.allwrong(n)
+        ]
+
     assert len(in_outaux) == len(rhos)
     return dict(zip(in_outaux, rhos))
 
@@ -62,26 +71,16 @@ def zip_rhos_by_out(circuit, rhos):
 def states_ordered_by_rho(circuit, threshold=1e-8):
     N1 = circuit.N1
     N2 = circuit.N2
-    aux = circuit.get_aux_array()
+    aux = circuit.get_aux_array(binary=True)
     full, _ = fullconst(N1, N2, aux, degree=2)
     _, _, rhos = solver(full.to_sparse_csc(), fullreturn=True)
     zipped = zip_rhos(circuit, rhos)
     keys = sorted(zipped.keys(), key=lambda x: zipped[x], reverse=True)
     zipped = [(x, zipped[x]) for x in keys]
-    print(zipped[:10])
-    return [x for x in zipped if x[1] >= threshold]
-
-
-def states_ordered_by_rho_out(circuit, threshold=1e-8):
-    N1 = circuit.N1
-    N2 = circuit.N2
-    aux = circuit.get_aux_array()
-    full, _ = fullconst(N1, N2, aux, degree=2)
-    _, _, rhos = solver(full.to_sparse_csc(), fullreturn=True)
-    zipped = zip_rhos_by_out(circuit, rhos)
-    keys = sorted(zipped.keys(), key=lambda x: zipped[x], reverse=True)
-    zipped = [(x, zipped[x]) for x in keys]
-    print(zipped[:10])
+    for x in zipped[:10]:
+        print(
+            f"  {x[0]}, {(x[0][0], circuit.fout(x[0][0]).asint(), circuit.faux(x[0][0]).asint())}, {x[1]}"
+        )
     return [x for x in zipped if x[1] >= threshold]
 
 
@@ -165,7 +164,10 @@ def and_aux_rho_avg(N1, N2, A, runs=100):
     path = f"/home/ikmarti/Desktop/ising-clustering/constraint-reduction/aux_arrays/IMul{N1}x{N2}x{A}_AND_AUX.dat"
     filename = f"/home/ikmarti/Desktop/ising-clustering/constraint-reduction/rhostats/IMul{N1}x{N2}x{A}_AND_AUX_stats_runs={runs}.json"
     rhodict = {
-        (n, m): 0 for n in range(2 ** (N1 + N2)) for m in range(2 ** (N1 + N2 + A))
+        (n, m, a): 0
+        for n in range(2 ** (N1 + N2))
+        for m in range(2 ** (N1 + N2))
+        for a in range(2**A)
     }
 
     def add_rhos(circuit):
@@ -194,6 +196,8 @@ def and_aux_rho_avg(N1, N2, A, runs=100):
 if __name__ == "__main__":
     N1 = 3
     N2 = 3
-    A = 2
+    A = 4
     runs = 100
-    and_aux_rho_avg(N1, N2, A, runs)
+    totalruns = 10
+    for _ in range(totalruns):
+        and_aux_rho_avg(N1, N2, A, runs)
