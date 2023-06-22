@@ -7,6 +7,8 @@ import time, os, torch, click
 import numpy as np
 from math import comb
 
+from verify import aux_array_as_hex
+
 from solver import LPWrapper
 from oneshot import full_Rosenberg, rosenberg_criterion, get_term_table, Rosenberg, weak_positive_FGBZ_criterion, negative_FGBZ_criterion, PositiveFGBZ, NegativeFGBZ, single_FD, fast_pairs, pfgbz_candidates, nfgbz_candidates
 
@@ -524,7 +526,12 @@ class Solver(Process):
                     self.admin['success']['best'] = array.shape[0]
                     log('solver', self.name, f'Found new best aux array with length {array.shape[0]}')
                     log('solver', self.name, f'History: {self.factory.format_history(history)}')
-                    log('solver', self.name, f'{array}')
+                    log('solver', self.name, f'Array:\n{aux_array_as_hex(array)}')
+
+                    with open("tmp", "w") as FILE:
+                        FILE.write(str(array.shape[0]) + "\n")
+                        FILE.write(str(self.factory.format_history(history)) + "\n")
+                        FILE.write(aux_array_as_hex(array))
                     
                     # THIS QUITS THE PROGRAM ON SUCCESS
                     if self.admin['params']['stop']:
@@ -566,7 +573,7 @@ class Solver(Process):
 
         
         
-        for radius in [2, 4]:
+        for radius in [1,3]:
             constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = radius)
             objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
             if objective > 0.1:
@@ -585,8 +592,7 @@ class Solver(Process):
         
         if self.admin['params']['fullcheckmethod'] == 'lmisr':
             log('solver', self.name, 'Looking promising!')
-            print(array)
-            print(constraints.size())
+            print(aux_array_as_hex(array))
             
             self.N1 = 3
             self.N2 = 3
@@ -800,9 +806,9 @@ def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod):
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = None,
-        included = None, 
-        and_pairs = None
+        desired = (4,5),
+        included = (0,1,2,3,6,7),
+        and_pairs =  [(0, 9), (1, 11), (0, 10), (2, 11), (6, 14)]
     )
 
     search(factory, solvers, delegators, limit, stop, fullcheckmethod)

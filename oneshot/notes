@@ -134,9 +134,42 @@ desired (2,3,4) included (0,1,5,6,7)
 ['x₀o₂', 'y₀o₃', 'x₁o₄', 'x₀o₄', 'x₂o₄', 'y₁o₃'] [(0, 10), (4, 11), (1, 12), (0, 12), (2, 12), (5, 11)]
 
 
+(New method: fixed auxes...)
+4x4x10
 
 
-5x5x33
+desired (0,1,5,6) incl (7,)
+['x₁o₅', 'x₂o₆', 'x₁o₁', 'y₁o₅'] [(1, 13), (2, 14), (1, 9), (5, 13)]
+
+desired (2,3,4) incl (0,1,5,6,7)
+['x₀x₁', 'y₀o₃', 'x₂o₂', 'x₀o₃', 'y₁o₄', 'y₀o₄'] [(0, 1), (4, 11), (2, 10), (0, 11), (5, 12), (4, 12)]
+
+4x4x9 (fixed aux)
+
+desired (0,1,2,5,6) incl(7,)
+['x₀x₁', 'y₁o₅', 'y₂o₆', 'y₁o₂', 'x₂o₅'] [(0, 1), (5, 13), (6, 14), (5, 10), (2, 13)]
+
+desired (4,5) incl (0,1,2,5,6,7)
+['x₀o₃', 'x₁o₃', 'y₀o₄', 'y₁o₄'] [(0, 11), (1, 11), (4, 12), (5, 12)]
+
+
+4x4x11  (fixed aux)
+
+desired (0,1,2,3,6) incl(7)
+['x₀o₁', 'x₁o₃', 'x₀o₂', 'x₂o₃', 'y₂o₆'] [(0, 9), (1, 11), (0, 10), (2, 11), (6, 14)]
+
+['x₀x₁', 'o₄o₅', 'x₂o₅', 'x₂o₄', 'x₃o₄', 'y₁o₅'] [(0, 1), (12, 13), (2, 13), (2, 12), (3, 12), (5, 13)]
+
+
+4x4x8 (fixed aux)
+
+desired (0,1,2,3,5,6) incl(7)
+['x₀x₁', 'y₀o₃', 'x₀o₂', 'x₂o₅', 'x₂o₆', 'y₁o₅'] [(0, 1), (4, 11), (0, 10), (2, 13), (2, 14), (5, 13)]
+
+desired (4,) incl(0,1,2,3,5,6,7)
+['y₁o₄', 'y₀o₄'] [(5, 12), (4, 12)]
+
+5x5x33 (free auxes)
 
 desired (0,8) included (9,)
 x₃o₈ y₁o₀ y₃o₈ [(3, 18), (6, 10), (8, 18)]
@@ -161,3 +194,11 @@ desired (5,) included (0,1,2,3,4,7,8,9)
 
 desired (6,) included (0,1,2,3,4,5,7,8,9)
 ['x₀o₆', 'x₁o₆', 'x₂o₆', 'x₄o₆', 'x₃o₆'] [(0, 16), (1, 16), (2, 16), (4, 16), (3, 16)]
+
+
+New ideas:
+note that an aux which can be assumed to be fixed is the same as a spin which is solvable with no auxilliaries (we know AND is always feasible for instance). Therefore, the space of auxes which can be assumed to be fixed is identical with the space of linear separations of the subset of hypercube corners given by the current input set. Now we know that a quadratic hamiltonian is the same as a linear SVM is the same as a separating hyperplane (with orientation). Now, note that we can try to solve a single arbitrary desired output bit by soft SVM. This will return a best-guess hyperplane and a misclassification error, which we hypothesize is the same as the rhos (please check!). therefore, we get a new idea for aux array generation: fit a soft SVM and use its separating hyperplane to define a new fixed auxilliary spin. Repeat. 
+
+
+
+
