@@ -201,4 +201,14 @@ note that an aux which can be assumed to be fixed is the same as a spin which is
 
 
 
+Isaac pointed out that input-output AND gates cannot be assumed to be fixed, since precomputing them would require that we know the outputs in advance. This explains why my 4x4x8 did not work, since it was based on the faulty assumption that all AND auxilliaries could always be assumed to be fixed inputs. However, there is something similar which IS true--that we can always assume ANDs to be correctly calculated. What do I mean? Well we can just have AND gates fixed, but their output is not fixed. So if we have row (x1,x2,y) = (1,0,0), then x1 AND y = 0, and row (x1, x2, y') = (1,0,1), then x1 AND y = 1. So we can perfectly legitimately have rows (1,0,0,0) and (1,0,1,1), where x3 = x1 AND y. Since AND gates are functional subcircuits, we don't need to include the possibility that the AND calculation is wrong, it's just that the ouput value of the AND gate depends on the output level as well as the input level in this case. So we can still get away with keeping the number of constraint rows constant---it's just unclear whether this will actually still produce the happy results. 
 
+Note that it might be a little hard to see how such a constant function would be made. But it is possible. Suppose that we have a pair x, y, and we want to add a spin a that will always have value x AND y (and can be subsequently used by the circuit). Then we can add P = M(xy - 2xa - 2ya + 3a) to the Hamiltonian, for M sufficiently large. If a = xy, then P = M(xy - 2xxy - 2yxy + 3xy) = 0, and if a != xy, then a = 1-xy, so P = M(xy - 2x(1-xy) - 2y(1-xy) + 3(1-xy)) = M(xy - 2x + 2xy - 2y + 2xy + 3 - 3xy) = M(2xy - 2x - 2y + 3). If x,y=1 then P = 3M, if x=0 y=1 then P = M, and if x=y=0 then M = 3M. Thus we can simply make M large enough that whatever other hamiltonian we have, it will always be favorable that a = xy. This is precisely the Rosenberg penalty term, and doesn't extend in any obvious way to other linearly computable functions of the variables, but it does mean that we can fix AND gates freely. 
+
+desired 0,1,2,3,6 incl 7
+['y₂o₆', 'x₂o₂', 'y₂o₃', 'x₀o₂', 'x₂o₃', 'x₀o₁', 'x₁o₃', 'y₁o₃', 'o₇o₆'] [(6, 14), (2, 10), (6, 11), (0, 10), (2, 11), (0, 9), (1, 11), (5, 11), (15, 14)]
+or
+['x₁o₃', 'y₀o₂', 'x₀o₃', 'x₂o₂', 'y₂o₂', 'y₀o₁', 'o₇o₆', 'x₂o₆'] [(1, 11), (4, 10), (0, 11), (2, 10), (6, 10), (4, 9), (15, 14), (2, 14)]
+
+desired 4,5 incl 0,1,2,3,6,7
+['y₁o₅', 'y₃o₅', 'x₁o₅', 'y₁o₄', 'y₂o₄', 'y₀o₄'] [(5, 13), (7, 13), (1, 13), (5, 12), (6, 12), (4, 12)]

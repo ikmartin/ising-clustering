@@ -73,14 +73,15 @@ def call_my_solver(CSC_constraints, tolerance=1e-4, max_iter=200, fullreturn=Fal
         num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter
     )
     result_array = as_array(result, shape=(num_rows + num_cols,))
-    result_array = deepcopy(result_array)
     objective = sum(result_array[num_cols:])
-    c_free_ptr(result)
 
     if fullreturn:
         # objective, answer (i.e. solution to LP), artifical variables
+        result_array = deepcopy(result_array)
+        c_free_ptr(result)
         return objective, result_array[:num_cols], result_array[num_cols:]
 
+    c_free_ptr(result)
     return objective
 
 

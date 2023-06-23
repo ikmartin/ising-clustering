@@ -40,7 +40,7 @@ def verify():
     objective = call_solver(n1,n2, aux_vecs)
     print(objective)
 
-verify()
+#verify()
 
 """
 print("making constraints")

@@ -4,7 +4,7 @@
 
 // Turns off customizable RHS of the original problem, setting it to be equal to the traditional problem.
 #define			VI						1.0
-#define			NUM_THREADS		16
+#define			NUM_THREADS		8
 
 typedef struct {
 	int8_t* values;	
