@@ -49,5 +49,48 @@ Thus $H$ satisfies this (stronger) constraint set. We can refine $M$ to the bett
 	1 + \max\left\{0, -\min_{x,o_1', o_2', a_2'} H_2(x,o_1',o_2',a_2') - H_2(x,o_1,o_2',a_2')\right\}
 \end{align}
 
+\section{SVM}
 
+Fitting a degree $d$ Ising Hamiltonian with one output spin and no input-input connections is identical to fitting a $d-1$-degree polynomial kernel SVM. Let $H(x, y)$ be a degree $d$ polynomial satisfying a circuit constraint set $H(x, -f(x)) \geq H(x, f(x)) + 1$. Then since $H(x,y) = yG(x)$ for some degree $d-1$ polynomial $G$, we have $-y_i G(x_i) \geq y_i G(x_i) + 1$, so $y_i G(x_i) \leq -1/2$. Notice that for $G' := -2G$, we have $y_i G'(x_i) \geq 1$, which is the constraint equation for a $d-1$ polynomial kernel SVM. In particular, a feasible quadratic Hamiltonian $yf(x)$ for $f(x) = \langle w, x \rangle + b$ is equivalent to the SVM solution $y_i(\langle -2w, x_i \rangle - 2b) \geq 1$.
+
+We have a number of ways that we could guess a new aux by picking a separating hyperplane. First, let's consider the case of a single output bit. Then there is only one constraint equation, and we're literally dealing with an SVM. Attempting to fit a quadratic will result in some misclassified points. Now we could do one of two things: either take the best-guess hyperplane and set it as the new aux, or fit a best-guess hyperplane which attempts to separate the classified and misclassified points. When thinking about it geometrically, the former allows a sort of hyperbola, while the latter allows a sort of curve-off or cubic looking separating curve (if it is possible). It seems like which one is better depends on the situation, though it's possible that restricting the points to hypercube corners will change the situation somewhat.
+
+One observation we can make is that the $\zeta$ variables in the soft SVM are identifiable with the $\rho$ variables in the aritifial Ising objective. 
+
+\subsection{Multiple Outputs}
+
+Now, consider the case of two outputs. Suppose that $H(x,y,z) = y(\langle u, x\rangle + b) + z(\langle v, x\rangle + c) + dzy$. 
+\begin{align}
+	H(x,y,z) < H(x,-y,z), H(x,y,-z), H(x,-y,-z) &&\forall x
+\end{align}
+Expands as 
+\begin{align}
+	y(\langle u, x\rangle + b) + z(\langle v, x\rangle + c) + dzy &< -y(\langle u, x\rangle + b) + z(\langle v, x\rangle + c) - dzy\\
+	y(\langle u, x\rangle + b) + z(\langle v, x\rangle + c) + dzy &< y(\langle u, x\rangle + b) - z(\langle v, x\rangle + c) - dzy\\
+	y(\langle u, x\rangle + b) + z(\langle v, x\rangle + c) + dzy &< -y(\langle u, x\rangle + b) - z(\langle v, x\rangle + c) + dzy
+\end{align}
+Thus
+\begin{align}
+	yf(x) + dzy < 0\\
+	zg(x) + dzy < 0\\
+	yf(x) + zg(x) < 0
+\end{align}
+
+Now the situation gets much more complicated when we have multiple outputs. Since they are not independent, there is the quadratic remainder, parts of which are added to each constraint equation (as seen above). The lower the basin number, the more of the quadratic remainder is used to perturb the decision boundary, with the highest basin having no perturbation. Let us note that each one of these equations will have an associated $\rho$ value when we attempt to solve. It seems to stand to reason that these are the equations that `need help', so perhaps adding auxilliaries based off the hyperplanes involved would be sensible. The idea is that these equations need more degrees of freedom. Or, maybe we could try to use FME to remove the output-output interactions, and then deal with the resulting (much larger) set of constraint equations on the inputs alone. 
+
+The hypercube constraints version is 
+\begin{align}
+	yf(x) + zg(x) + dzy < -yf(x) + zg(x) - dzy\\
+	yf(x) + zg(x) + dzy < yf(x) - zg(x) - dzy\\
+	-yf(x) + zg(x) - dzy < -yf(x) - zg(x) + dzy\\
+	yf(x) - zg(x) - dzy < -yf(x) - zg(x) + dzy
+\end{align}
+Which simplifies to
+\begin{align}
+	yf(x) + dzy < 0\\
+	zg(x) + dzy < 0\\
+	zg(x) - dzy < 0\\
+	yf(x) - dzy < 0
+\end{align}
+Which is in fact essentially the same thing as the bit-separate case. Actually, if you think about it, bit-separate and hypercube are the same thing, since bit-separate is automatically hypercube, and if we have hypercube, then flipping a bit from wrong to right always decreases the energy, so we could just set all the other bits arbitrarily fixed and obtain a bit-separate solution.
 \end{document}
