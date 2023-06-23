@@ -1,0 +1,5 @@
+\contentsline {section}{\tocsection {}{1}{Foundations}}{1}{section.1}%
+\contentsline {subsection}{\tocsubsection {}{1.1}{Partial Ising Circuits}}{1}{subsection.1.1}%
+\contentsline {section}{\tocsection {}{2}{Boolean Ising Circuits}}{2}{section.2}%
+\contentsline {section}{\tocsection {}{3}{Hierarchical Clustering}}{2}{section.3}%
+\contentsline {section}{\tocsection {}{4}{Pseudo-boolean optimization and polynomial fitting}}{3}{section.4}%

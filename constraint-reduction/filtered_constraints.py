@@ -1,5 +1,6 @@
 from csv import Error
 from spinspace import Spin
+from ising import IMul
 from functools import cache
 from itertools import chain, combinations
 import numba
@@ -162,14 +163,20 @@ def all_filtered_states(N1, N2, A, filtered_levels):
 
 
 def filtered_constraints(N1, N2, aux, filtered_levels, degree=2):
-    """A method for building all levels of a filtered constraint set simultaneously.
+    """A method for simultaneouslybuilding all levels of a filtered constraint set for IMul(N1, N2) with an auxiliary array aux.
 
     Parameters
     ----------
-    circuit : (PICircuit)
-        the circuit for which we build the constraints
+    N1 : int
+        number of bits in first input
+    N2 : int
+        number of bits in the second output
+    aux : list[list[int]]
+        the aux array. Needs to be in aux[input] format, i.e. aux[i] is a list of length 2**(N1 + N2) where the jth entry is the auxiliary state of aux spin i for input j.
     filtered_levels : list[list[int]]
         a list of list where row i is the list of wrong outauxes, represented by integers, to be used as constraints for input level i.
+    degree : int (=2)
+
     """
     N = N1 + N2
     M = N
@@ -206,14 +213,17 @@ def filtered_constraints(N1, N2, aux, filtered_levels, degree=2):
     return constraints.cpu().to_sparse_csc()
 
 
-def basin_d_constraints(circuit, d, degree=2):
+def basin_d_constraints(N1, N2, aux, d, degree=2):
     """A generator for constraint sets. Starts with basin 2 constraints (that is basin one and two) and then"""
-    MA = circuit.M + circuit.A
+    N = N1 + N2
+    M = N1 + N2
+    A = len(aux)
+    MA = M + A
+    circuit = IMul(N1, N2, auxlist=aux)
     filtered_levels = [
         sum([get_basin(MA, circuit.f(i).asint(), r) for r in range(1, d + 1)], [])
-        for i in range(1 << circuit.N)
+        for i in range(1 << N)
     ]
-    aux = circuit.get_aux_array()
-    return filtered_constraints(
-        circuit.N1, circuit.N2, aux, filtered_levels, degree=degree
-    )
+    # this ensures the aux is in binary format
+    aux = circuit.get_aux_array(binary=True)
+    return filtered_constraints(N1, N2, aux, filtered_levels, degree=degree)
