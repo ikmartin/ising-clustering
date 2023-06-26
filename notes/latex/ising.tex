@@ -35,8 +35,17 @@
 \maketitle
 \tableofcontents
 \section{Foundations}
-\begin{defn}
-  Let $\Sigma = \{-1, +1\}$. An \textbf{Ising circuit} is a pair $(G,f)$ where $G$ is a finite set with a partition $G = N\cup M$ and $f$ is a function $f:\Sigma^N \to \Sigma^M$. For convenience we always assume $N = \{1,...,n\}$ and $M = \{n+1, ..., n+m\}$.
+
+Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible spins ($\Sigma$ for \textbf{s}pin) taken by a single vertex in an Ising graph. For any set $G$, we denote by $\Sigma^G$ the set of all functions $\sigma: G\to \Sigma$.
+
+\begin{defn}\label{defn:ising-circuit}
+  An \textbf{Ising circuit} is a tuple $(G, N, M, f_G)$ where
+  \begin{itemize}
+    \item $G$ is a set
+    \item $N, M \subseteq G$
+    \item $f_G: \Sigma^N \to \Sigma^M$ is an arbitrary function called the \emph{logic} function.
+  \end{itemize}
+  Additionally, 
 \end{defn}
 
 \subsection{Partial Ising Circuits}
@@ -118,6 +127,8 @@ and returns an Ising circuit $G'$ which is partially solvable with respect to $M
 Since $G'$ is always solvable, the full circuit $G$ (together with the auxiliary spins accrued by the solves of $G'$) is solvable if and only if $G'$ is solvable with respect to $M_{i+1} \cup ... \cup M_k$, due to Proposition \ref{prop:partial_solvability}. By the time RecursivePartialSolve terminates, $G'$ will be a solution to $G$ with auxiliaries.
 
 The advantage of using this algorithm over an auxiliary solve is that each iteration of $PartialSolve$ only has to operate over $|2^N\times (2^{M_2} - 1)|$ many constraints.
+
+
 
 \section{Boolean Ising Circuits}
 In this section we consider Ising circuits $(G,f)$ with only one output. This special case proves tractable enough to produce useful theoretical results, and yet general enough to yield good solutions to the general case.
