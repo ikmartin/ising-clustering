@@ -21,7 +21,7 @@ from ising import IMul
 from fittertry import IMulBit
 
 from lmisr_interface import call_solver
-from mysolver_interface import call_my_solver
+from mysolver_interface import call_my_solver, call_full_sparse
 from itertools import chain
 import cProfile
 
@@ -582,7 +582,7 @@ class Solver(Process):
         
         for radius in [1,3]:
             constraints, keys, correct = self.factory.get(aux_array = None, degree = 2, radius = radius, function_ands = and_funcs)
-            objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
+            objective = call_my_solver(constraints.to_sparse_csc())
             if objective > 0.1:
                 return None, 100 / radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}') 
@@ -590,8 +590,7 @@ class Solver(Process):
         
         if self.admin['params']['fullcheckmethod'] == 'my':
             constraints, keys, correct = self.factory.get(aux_array = None, degree = 2, radius = None, function_ands = and_funcs)
-            constraints = constraints.to_sparse_csc()
-            objective = call_my_solver(constraints, tolerance = 1e-8)
+            objective = call_my_solver(constraints.to_sparse_csc())
             if objective > 0.1:
                 return None, 100 * objective / constraints.shape[0]
 
@@ -814,9 +813,9 @@ def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod, burnin):
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = (2,3,4),
-        included = (0,1,5,6,7),
-        and_pairs = [(6, 14), (15, 14), (5, 6), (1, 13), (2, 13), (5, 6, 9), (5, 7)]
+        desired = (0,1,2,3,4),
+        included = (5,),
+        and_pairs = None
     )
 
     search(factory, solvers, delegators, limit, stop, fullcheckmethod, burnin)

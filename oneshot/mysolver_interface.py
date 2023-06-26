@@ -16,7 +16,6 @@ except OSError:
     lib = CDLL("/home/ikmarti/Desktop/ising-clustering/oneshot/solver/solver.so")
 
 c_solver = lib.interface
-
 c_solver.argtypes = [
     ndpointer(c_double, flags="C_CONTIGUOUS"),
     c_int,
@@ -28,7 +27,6 @@ c_solver.argtypes = [
 c_solver.restype = POINTER(c_double)
 
 c_sparse_solver = lib.sparse_interface
-
 c_sparse_solver.argtypes = [
     c_int,
     c_int,
@@ -40,6 +38,22 @@ c_sparse_solver.argtypes = [
     c_int,
 ]
 c_sparse_solver.restype = POINTER(c_double)
+
+c_full_sparse_solver = lib.full_sparse_interface
+c_full_sparse_solver.argtypes = [
+    c_int,
+    c_int,
+    ndpointer(c_int8, flags="C_CONTIGUOUS"),
+    ndpointer(c_int, flags="C_CONTIGUOUS"),
+    ndpointer(c_int, flags="C_CONTIGUOUS"),
+    ndpointer(c_int8, flags="C_CONTIGUOUS"),
+    ndpointer(c_int, flags="C_CONTIGUOUS"),
+    ndpointer(c_int, flags="C_CONTIGUOUS"),
+    c_int,
+    c_double,
+    c_int,
+]
+c_full_sparse_solver.restype = POINTER(c_double)
 
 c_imul_solver = lib.IMul_interface
 c_imul_solver.argtypes = [
@@ -58,7 +72,7 @@ c_imul_solver.restype = POINTER(c_double)
 c_free_ptr = lib.free_ptr
 
 
-def call_my_solver(CSC_constraints, tolerance=1e-4, max_iter=200, fullreturn=False):
+def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=200, fullreturn=False):
     """
     Calls my Mehrotra Predictor-Corrector implementation.
 
@@ -84,6 +98,35 @@ def call_my_solver(CSC_constraints, tolerance=1e-4, max_iter=200, fullreturn=Fal
     c_free_ptr(result)
     return objective
 
+def call_full_sparse(CSC_constraints, CSR_constraints, tolerance=1e-8, max_iter=200, fullreturn=False):
+    """
+    Calls my Mehrotra Predictor-Corrector implementation.
+
+    This is more or less a general purpose LP solver, so it really just expects a constraint matrix. The RHS is locked as a vector of 1s for now.
+    """
+    num_rows, num_cols = CSC_constraints.size()
+    csc_values = CSC_constraints.values().numpy().astype(np.int8)
+    csc_row_index = CSC_constraints.row_indices().numpy().astype(np.int32)
+    csc_col_ptr = CSC_constraints.ccol_indices().numpy().astype(np.int32)
+    csr_values = CSR_constraints.values().numpy().astype(np.int8)
+    csr_col_index = CSR_constraints.col_indices().numpy().astype(np.int32)
+    csr_row_ptr = CSR_constraints.crow_indices().numpy().astype(np.int32)
+
+    num_workers = 1
+    result = c_full_sparse_solver(
+        num_rows, num_cols, csc_values, csc_row_index, csc_col_ptr, csr_values, csr_col_index, csr_row_ptr, num_workers, tolerance, max_iter
+    )
+    result_array = as_array(result, shape=(num_rows + num_cols,))
+    objective = sum(result_array[num_cols:])
+
+    if fullreturn:
+        # objective, answer (i.e. solution to LP), artifical variables
+        result_array = deepcopy(result_array)
+        c_free_ptr(result)
+        return objective, result_array[:num_cols], result_array[num_cols:]
+
+    c_free_ptr(result)
+    return objective
 
 def call_imul_solver(n1, n2, aux_array):
     num_aux = aux_array.shape[0]

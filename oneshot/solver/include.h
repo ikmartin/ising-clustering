@@ -36,10 +36,11 @@ void solve_AKAt(double* target, double* rhs, double* tmp);
 void start_threadpool();
 void destroy_threadpool();
 void* threadloop();
-void thread_exec(int total_tasks, void (*func)(int));
+void thread_exec();
 void coeff_task(int index);
-void mt_task(int index);
-void threadpool_run_jobs(int status, double* target, double* tmp);
+void mt_task(int col);
+void m_task(int row);
+void threadpool_run_jobs(double* target, double* tmp, int num_jobs, void (*job)(int));
 
 void threaded_coefficient_matrix(double* target, double* d, double* zinv, double* tmp);
 
