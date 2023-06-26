@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Ofast -std=c99 -fPIC # -g -pg
+CFLAGS = -Ofast -std=gnu99 -fPIC # -g -pg
 
 LFLAGS =  -lm -lopenblas -lpthread
 

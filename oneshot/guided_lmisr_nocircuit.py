@@ -21,7 +21,7 @@ from ising import IMul
 from fittertry import IMulBit
 
 from lmisr_interface import call_solver
-from mysolver_interface import call_my_solver
+from mysolver_interface import call_my_solver, call_full_sparse
 from itertools import chain
 import cProfile
 
@@ -191,8 +191,8 @@ class ConstraintFactory:
             
 
 
-    def get(self, aux_array = None, degree = 2, radius = None):
-        return constraints(self.n1, self.n2, aux_array, degree, radius, self.included, self.desired, self.and_pairs)
+    def get(self, aux_array = None, degree = 2, radius = None, function_ands = None):
+        return constraints(self.n1, self.n2, aux_array, degree, radius, self.included, self.desired, self.and_pairs, function_ands = function_ands)
 
 
 ## A function which makes colored console output. Looks a little nicer.
@@ -215,7 +215,7 @@ def log(owner, name, message):
     print(format, flush = True)
         
 
-def search(factory, num_solvers, num_delegators, limit, stop, fullcheckmethod):
+def search(factory, num_solvers, num_delegators, limit, stop, fullcheckmethod, burnin):
     log('master', 'Master', "Creating global manager.")
     manager = get_manager()
     admin = {
@@ -235,6 +235,7 @@ def search(factory, num_solvers, num_delegators, limit, stop, fullcheckmethod):
 
     admin["params"]["stop"] = stop
     admin["params"]["fullcheckmethod"] = fullcheckmethod
+    admin["params"]["burnin"] = burnin
 
     log('master', 'Master', "Creating solvers...")
     workers = [
@@ -451,7 +452,11 @@ class Delegator(Process):
                 continue
 
             self.admin['dibs'][new_array_id] = True
-            new_priority = estimate_score(new_poly) + 2 * new_length
+            new_priority = estimate_score(new_poly) + 3 * new_length
+
+            new_priority += priority
+            if new_length <= self.admin["params"]["burnin"]:
+                new_priority = new_length
 
             new_task = PrioritizedItem(priority = new_priority, item = (new_aux_array, new_poly), history = history + [(C, method)])
 
@@ -459,8 +464,8 @@ class Delegator(Process):
             log_priorities.append(new_priority)
 
         log_priorities = sorted(log_priorities)
-        log('delegator', self.name, f'Poly : {poly}')
-        log('delegator', self.name, f'Reduction choices: {reduction_choices}')
+        #log('delegator', self.name, f'Poly : {poly}')
+        #log('delegator', self.name, f'Reduction choices: {reduction_choices}')
         log('delegator', self.name, f'Added new tasks (length = {new_length}): priorities {log_priorities}')
 
 class Solver(Process):
@@ -513,7 +518,7 @@ class Solver(Process):
             poly = self.degree_search()
             result, new_priority = None, 10000
         else:
-            result, new_priority = self.validate(array)
+            result, new_priority = self.validate(array,history)
 
         # Update the results log
         with self.admin['success_lock']:
@@ -566,25 +571,26 @@ class Solver(Process):
         log('solver', self.name, 'ERROR: No solution at any degree! This should not be possible.')
         return None
 
-    def validate(self, array):
+    def validate(self, array, history):
         """
         Attempts to fit a quadratic. This method operates under the assumption that most arguments passed to it will be infeasible, so it attempts to disqualify them cheaply using sequential constraint building. This will be much more expensive for a feasible aux array, but much cheaper for an infeasible. This means that insofar as most aux arrays are infeasible, total cost should be reduced. 
         """
-
         
+        and_funcs = [C for C,method in history]
+        #if len(and_funcs) <= self.admin["params"]["burnin"]:
+        #    return None, len(and_funcs)
         
         for radius in [1,3]:
-            constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = radius)
-            objective = call_my_solver(constraints.to_sparse_csc(), tolerance = 1e-8)
+            constraints, keys, correct = self.factory.get(aux_array = None, degree = 2, radius = radius, function_ands = and_funcs)
+            objective = call_my_solver(constraints.to_sparse_csc())
             if objective > 0.1:
                 return None, 100 / radius + 100 * objective / constraints.shape[0]
             log('solver', self.name, f'Passed basin {radius}') 
 
         
         if self.admin['params']['fullcheckmethod'] == 'my':
-            constraints, keys, correct = self.factory.get(aux_array = torch.tensor(array), degree = 2, radius = None)
-            constraints = constraints.to_sparse_csc()
-            objective = call_my_solver(constraints, tolerance = 1e-8)
+            constraints, keys, correct = self.factory.get(aux_array = None, degree = 2, radius = None, function_ands = and_funcs)
+            objective = call_my_solver(constraints.to_sparse_csc())
             if objective > 0.1:
                 return None, 100 * objective / constraints.shape[0]
 
@@ -801,17 +807,18 @@ x0o2 y2o5 x1o6 x0o3 y0o4 y1o4 y2o4 y0o3
 @click.option("--limit", default = 16, help="Maximum aux array size.")
 @click.option("--stop/--no-stop", default = False, help = "Quit when an aux array is found.")
 @click.option("--fullcheckmethod", default = "my", help = "Which solver to use for full check.")
-def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod):
+@click.option("--burnin", default = 0, help = "How deep to explore completely before depth search.")
+def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod, burnin):
 
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = (4,5),
-        included = (0,1,2,3,6,7),
-        and_pairs =  [(0, 9), (1, 11), (0, 10), (2, 11), (6, 14)]
+        desired = (0,1,2,3,4),
+        included = (5,),
+        and_pairs = None
     )
 
-    search(factory, solvers, delegators, limit, stop, fullcheckmethod)
+    search(factory, solvers, delegators, limit, stop, fullcheckmethod, burnin)
 
 
 if __name__ == "__main__":
