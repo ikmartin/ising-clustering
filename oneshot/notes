@@ -212,3 +212,27 @@ or
 
 desired 4,5 incl 0,1,2,3,6,7
 ['y₁o₅', 'y₃o₅', 'x₁o₅', 'y₁o₄', 'y₂o₄', 'y₀o₄'] [(5, 13), (7, 13), (1, 13), (5, 12), (6, 12), (4, 12)]
+
+
+3x3 bitwise AND best results (incl 5)
+1: 3
+2: 4
+3: 4
+4: 2
+
+SVM assume magic misclassification indicators
+1: 2
+2: 2
+3: 3
+4: 2
+
+Magic misclassifier SVM on 4x4:
+1, 2, 3, 3, 3, 3, 2
+
+
+
+
+
+
+0,1,2,5,6 incl 7: 8
+3,4 incl 0,1,2,5,6,7: 

@@ -12,7 +12,17 @@ def aux_array_as_hex(aux_array):
             for i in range(0,len(row),4)
         ])
         for row in aux_array
-    ]).replace("0", '_')
+    ])#.replace("0", '_')
+
+def parseaux(lines):
+    array = None
+    for line in lines:
+        binary_string = ''.join([f'{int(c,16):04b}' for c in line])
+        print(binary_string)
+        numpy_line = np.array([[int(x) for x in binary_string]])
+        array = numpy_line if array is None else np.concatenate([array,numpy_line])
+
+    return array
 
 
 def verify():

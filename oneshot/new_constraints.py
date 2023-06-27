@@ -4,7 +4,7 @@ from fast_constraints import dec2bin, batch_vspin, keys_basic
 from functools import cache
 from itertools import combinations
 
-def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None, and_pairs = None):
+def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None, and_pairs = None, auxfix = False):
     N = n1 + n2
     num_inputs_1 = 1 << n1
     num_inputs_2 = 1 << n2
@@ -29,27 +29,15 @@ def make_correct_rows(n1, n2, aux_array = None, included = None, desired = None,
         num_fixed_columns += len(and_pairs)
 
     # JUST FOR TESTING---HAVE AUX ARRAY BE FIXED INPUTS
-    num_fixed_columns += aux_array.shape[0] if aux_array is not None else 0
-    aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
-    return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, torch.t(aux_array), output_bits[..., desired]], dim = -1), num_fixed_columns, num_free_columns
+    if auxfix:
+        num_fixed_columns += aux_array.shape[0] if aux_array is not None else 0
+        aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
+        return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, torch.t(aux_array), output_bits[..., desired]], dim = -1), num_fixed_columns, num_free_columns
 
     # ORIGINAL---AUX ARRAY IS FREE
-    #num_free_columns += aux_array.shape[0]
-    #return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, output_bits[..., desired], torch.t(aux_array)], dim = -1), num_fixed_columns, num_free_columns
-
-"""
-@cache
-def make_wrong_mask(num_fixed, num_free, radius):
-    radius = num_free if radius is None else radius
-    flip = torch.cat([
-        torch.cat([
-            torch.sum(F.one_hot(indices, num_classes = num_free), dim = 0, keepdim = True)
-            for indices in torch.combinations(torch.arange(num_free), r)
-        ])
-        for r in range(1, radius+1)
-    ]).to(torch.int8)
-    return torch.cat([torch.zeros(flip.shape[0], num_fixed, dtype = torch.int8), flip], dim = -1)
-"""
+    num_free_columns += aux_array.shape[0] if aux_array is not None else 0
+    aux_array = torch.tensor([], dtype=torch.int8) if aux_array is None else aux_array
+    return torch.cat([inp1_bits, inp2_bits, output_bits[..., included], ands, output_bits[..., desired], torch.t(aux_array)], dim = -1), num_fixed_columns, num_free_columns
 
 @cache
 def make_wrong_mask(num_fixed, num_free, radius):
@@ -72,13 +60,26 @@ def add_function_ands(matrix, functions):
         matrix = torch.cat([matrix,col], dim=-1)
     return matrix
 
-def constraints(n1, n2, aux, degree, radius, included, desired, and_pairs, ising=False, function_ands = None):
-    correct, num_fixed, num_free = make_correct_rows(n1, n2, aux, included, desired, and_pairs)
+def add_hyperplane(matrix, hyperplane):
+    w, b = hyperplane
+    new_vec = torch.sign(-b + F.linear(matrix[...,:len(w)].float(), w)).unsqueeze(1)
+    new_vec[new_vec == 0] = 1
+    new_vec = (new_vec + 1)/2
+    #print(torch.t(new_vec).to(torch.int8))
+    return torch.cat([matrix, new_vec], dim = -1)
+
+def constraints(n1, n2, aux = None, degree = 2, radius = None, included = None, desired = None, and_pairs = None, ising=False, function_ands = None, auxfix = False, hyperplanes = None):
+    correct, num_fixed, num_free = make_correct_rows(n1, n2, aux, included, desired, and_pairs, auxfix)
     wrong, rows_per_input = make_wrongs(correct, num_fixed, num_free, radius)
 
     if function_ands is not None:
         correct = add_function_ands(correct, function_ands)
         wrong = add_function_ands(wrong, function_ands)
+    
+    if hyperplanes is not None:
+        for hyperplane in hyperplanes:
+            correct = add_hyperplane(correct, hyperplane)
+            wrong = add_hyperplane(wrong, hyperplane)
 
     if ising:
         correct = (2*correct)-1
@@ -100,8 +101,3 @@ def constraints(n1, n2, aux, degree, radius, included, desired, and_pairs, ising
     terms = [term for term, flag in zip(terms, col_mask) if flag]
 
     return constraints.cpu(), terms, correct
-
-
-
-
-torch.set_printoptions(threshold = 50000)

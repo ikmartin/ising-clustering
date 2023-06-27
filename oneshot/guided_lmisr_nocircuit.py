@@ -813,7 +813,7 @@ def main(n1, n2, solvers, delegators, limit, stop, fullcheckmethod, burnin):
     factory = ConstraintFactory(
         n1, 
         n2, 
-        desired = (0,1,2,3,4),
+        desired = (4,),
         included = (5,),
         and_pairs = None
     )
