@@ -1,10 +1,13 @@
-\documentclass{amsart}
-\usepackage[tmargin=1in, bmargin=1in, lmargin=0.8in, rmargin=1in]{geometry}
+\documentclass{article}
+\usepackage[tmargin=1in, bmargin=1in, lmargin=1.2in, rmargin=1.2in]{geometry}
 %%% Sets numbering depth to subsection level (e.g, no numbered subsubsections)
 \setcounter{secnumdepth}{2}
 
 % include notes style file from Abhishek Shivkumar
 \usepackage{macrosabound, theorem-env}
+
+% redefine amsart subsection 
+
 
 % make font smaller
 \usepackage[fontsize=10pt]{fontsize}%%% Coloring the comment as blue
@@ -36,17 +39,275 @@
 \tableofcontents
 \section{Foundations}
 
-Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible spins ($\Sigma$ for \textbf{s}pin) taken by a single vertex in an Ising graph. For any set $G$, we denote by $\Sigma^G$ the set of all functions $\sigma: G\to \Sigma$.
+\subsection{Circuits}
+Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible spins ($\Sigma$ for \textbf{s}pin) taken by a single vertex in an Ising graph. For any set $X$, we denote by $\Sigma^X$ the set of all functions $\sigma: X\to \Sigma$ and note that $\Sigma^X$. We first review a few elementary facts.
 
-\begin{defn}\label{defn:ising-circuit}
-  An \textbf{Ising circuit} is a tuple $(G, N, M, f_G)$ where
+\begin{prop}Let $X$ be any set.
+  \begin{enumerate}[(a)]
+    \item If $\alpha:N \hookrightarrow X$ then we have a map $\res_{XN}\Sigma^X \to \Sigma^N$ given $\res_{XN}(\sigma) = \sigma \circ \alpha.$ We denote $\res_{XN}(\sigma) = \sigma|_N$.
+  \item If $N, M \subseteq X$ are disjoint, then $\Sigma^N \times \Sigma^M \cong \Sigma^{N \cup M}$. 
+  \item If $N, M \subseteq X$ are not necessarily disjoint, then $\Sigma^N \times_{N\cap M} \Sigma^M \cong \Sigma^{N\cup M}$.
+  \end{enumerate}
+\end{prop}
+\begin{proof}$ $
+  \begin{enumerate}[(a)]
+    \item Trivial; statement of fact.
+    \item This is a special case of (c).
+    \item The object $\Sigma^{N\cup M}$ fits into the following diagram
+      \begin{center}
+        \begin{tikzcd}
+          \Sigma^{N\cup M} \arrow[r, "\res"] \arrow[d, "\res"] & \Sigma^N \arrow[d, "\res"] \\
+          \Sigma^M \arrow[r, "\res"] & \Sigma^{N\cap M}
+        \end{tikzcd}
+      \end{center}
+      where all maps are the appropriate restriction maps. In fact, $\Sigma^{N\cup M}$ together with restriction maps is the universal object of this diagram; suppose we have another object with maps $q_1:P \to \Sigma^M$ and $q_2:P\to \Sigma^N$ making this commute. Then $\res(q_1(p)) = \res(q_2(p))$ so the map $u: P\to \Sigma^{N\cup M}$ given by
+      \begin{align*}
+        u(p)(x) =
+        \begin{cases}
+          q_1(p)(x) & x \in M \\
+          q_2(p)(x) & x \in N
+        \end{cases}
+      \end{align*}
+      is well defined on $M\cap N$. Hence $\Sigma^{N\cup M}$ is the pullback of $\Sigma^M$ and $\Sigma^N$ with restriction maps to $\Sigma^{N\cap M}$.
+  \end{enumerate}
+\end{proof}
+
+
+\begin{defn}\label{defn:abstract-circuit}
+  A \textbf{circuit} is a tuple $(N, M, f)$ where
   \begin{itemize}
-    \item $G$ is a set
-    \item $N, M \subseteq G$
-    \item $f_G: \Sigma^N \to \Sigma^M$ is an arbitrary function called the \emph{logic} function.
+    \item $N, M \subseteq X$ are arbitrary subsets of some universal set $X$ and are almost always chosen so that $N \cap M = \emptyset$. Both $N$ and $M$ should be finite and we call their elements \textbf{input} and \textbf{output} spins respectively.
+    \item $f: \Sigma^N \to \Sigma^M$ is an arbitrary function called the \emph{logic} function.
   \end{itemize}
-  Additionally, 
+  We make special note of the scenarios in which $N$ and $M$ are not disjoint. Additionally, we define the following terminology.
+  \begin{itemize}
+    \item $A = X \setminus (N\cup M)$ is the \textbf{set of auxiliary spins} of $X$.
+    \item $\Sigma^X$ is the \textbf{spin space}, $\Sigma^N$ is the \textbf{input space}, $\Sigma^M$ the \textbf{output space} and $\Sigma^N$ the \textbf{auxiliary space} of $X$. Elements of $\Sigma^X$ are called \textbf{spin states}, elements of $\Sigma^N$ \textbf{input states}, etc.
+    \item $\cR(f) = \{\sigma \in \Sigma^X \mid f(\sigma|_N) = \sigma|_M\}$ is the set of \textbf{correct} or \textbf{right} spin states.
+    \item $\cW(f) = \Sigma^X \setminus \cR(f)$ is the set of \textbf{wrong} spin states.
+    \item $\cL(\sigma) = \cL(\sigma|_N) = \{\sigma' \in \Sigma^X \mid \sigma'|_N = \sigma|_N\}$ is the \textbf{input level} of $\sigma$. It is useful to talk about the input level of both an input state $\sigma|_N$ and a full spin state $\sigma$, so we write $\cL(\sigma)$ and $\cL(\sigma|_N)$ to mean the same thing.
+  \end{itemize}
 \end{defn}
+
+At this point it is worth remarking that this object $(N,M,f)$ in no way carries the data of an Ising system. An Ising system is a collection of spins with connections between them, together with a fixed quadratic Hamiltonian which predicts the dynamics of the system. What we have defined has no Hamiltonian, no notion of dynamics and no real semblance of a graph structure; it has only a function which specifies a desired output to each input and a lot of extra space ($X\setminus (N\cup M)$ with which to begin adding additional structure. An abstract circuit, as defined, is nothing other than a skeleton for an Ising system we wish to design. 
+
+\subsection{The Reverse Ising Problem}
+
+\begin{defn}\label{defn:ising-system}
+  An \textbf{Ising system} is a pair $(X, H)$, often referred to as simply $X$, where
+  \begin{itemize}
+    \item $X \subseteq \bN$ is a set whose elements are called \textbf{spins},
+    \item $H \in \bR[X]$ is a quadratic polynomial called the \emph{Hamiltonian} of $X$.
+  \end{itemize}
+  The \textbf{state space} of $X$ is $\Sigma^X$. An Ising system $X$ in state $\sigma \in \Sigma^X$ has energy $H(\sigma)$ given by evaluating the Hamiltonian at $\sigma$.
+\end{defn}
+
+An Ising system is inherently probabilistic. The probability that an Ising system $X$ is in state $\sigma \in \Sigma^X$ is given by the \textbf{configuration probability}
+\begin{align*}
+  P_\beta = \frac{e^{-\beta H(\sigma)}}{Z_\beta}
+\end{align*}
+where $\beta = (k_BT)^{-1} \geq 0$ is inverse temperature, $k_B$ is the Boltzmann constant and the normalization constant $Z_\beta$ is the partition function $Z_\beta = \sum_{\sigma \in \Sigma^G} e^{-\beta H(\sigma)}$. Notice that probability is maximized whenever the Hamiltonian is minimized, hence low energy states are more probable than high energy states.
+
+With this in mind, for an Ising system with $(X,H)$ with $X$ finite and a subset $U \subseteq X$, we define the \textbf{minimizer with respect to $U$} to be the function $m_U: \Sigma^U \to \Sigma^{X}$ defined
+\begin{align*}
+f_U(\tau) = \argmin_{\sigma \in \Sigma^X, ~\sigma|_U = \tau} H(\sigma).
+\end{align*}
+It answers the question: ``if the states of $U$ are held fixed, then what is the most likely state of $X$?'' We likewise define the \textbf{minimizer logic} of $U$ to be the function $f_U:\Sigma^U \to \Sigma^{U^c}$ given $f_U(\tau) = m_U(\tau)|_{U^c}$.
+
+\bigskip
+
+We would like to design Ising systems with the following features:
+\begin{enumerate}[(1)]
+  \item A subset $N \subseteq X$ of spins whose state can be fixed
+  \item A subset $M \subseteq X$ whose states vary freely with dynamics
+  \item For a choice $\sigma_N \in \Sigma^N$, the most likely spin state in $\sigma_M \in \Sigma^M$ is $f(\sigma_N)$, where $f: \Sigma^N \to \Sigma^M$ is some function.
+\end{enumerate}
+Stated another way, given an abstract circuit $(N,M,f)$, we want to design Ising systems such that for every choice of input state $\sigma|_N$, the state $\sigma'$ which minimizes energy among all states matching $\sigma$ in input is a correct spin state. That is,
+\begin{align*}
+  \argmin_{\sigma' \in \cL(\sigma)} H(\sigma') \in \cR(f) ~ \text{ for all } ~ \sigma \in \Sigma^X.
+\end{align*}
+
+\begin{defn}\label{defn:solves-ising-circuit}
+  Fix an abstract circuit $(N, M, f_G)$. We say that an Ising system $(X, H)$ \textbf{solves} $(N, M, f)$ (in that it solves the reverse Ising problem on $(N,M,f)$) if for each $\sigma \in \Sigma^X$ 
+  \begin{align*}
+    \tau = \argmin_{\sigma' \in \cL(\sigma)} ~H_G(\sigma') \implies \tau \in \cR(f).
+  \end{align*}
+  In other words, a choice of Hamiltonian $H$ for $X$ solves the circuit if the minimizer of the Hamiltonian among all states with matching input states has as its output component the correct output as specified by the circuit logic $f$.
+\end{defn}
+
+\subsection{Constraint Sets for Designing Ising Systems}
+Let us first consider the simplest case of a circuit $(N, M, f)$ with $X = N \cup M$ and $N$ and $M$ disjoint.
+\begin{lem}\label{lem:original-constraint-set}
+  The circuit $X$ is solvable with an Ising system if and only if there exists a Hamiltonian $H$ such that for all $s\in \Sigma^N$ and $t \neq f(s)$ $H(s,t) > H(s,f(s))$.
+\end{lem}
+\begin{proof}
+  Obvious, is essentially the definition of the Ising system solvability.
+\end{proof}
+It is not hard to find examples of circuits which are not solvable, for instance, the naive XOR circuit with $|X| = 3$ is not solvable with an Ising system.
+
+For the remainder of this section, suppose that $X = N \cup M \cup A$ is a finite set and $N$, $M$, and $A$ are all disjoint. We call elements of this extra set $A$ \textbf{auxiliary spins}.
+
+\begin{prop}\label{prop:all-circuits-solvable-with-auxiliaries}
+  Let $X \subseteq \bN$ be infinite and $N$, $M$ be finite disjoint subsets. For any choice of $f_X$, the circuit $(N, M, f)$ is solvable with an Ising system. Since $|X| > |N\cup M|$ in this case, we sometimes say that $X$ is \textbf{solvable with auxiliary spins}.
+\end{prop}
+Notice that this lemma says nothing about the \emph{number} of auxiliary spins needed to solve a circuit; in general, it can be quite large.
+\begin{proof}
+  Take the hamming objective function $\text{ham}:\Sigma^X \to \bR$ defined
+  \begin{align*}
+    \text{ham}(\sigma) = d(\sigma, \cL(\sigma|_N))
+  \end{align*}
+  where $d$ is hamming distance, write it as a multilinear polynomial, add auxiliary variables to reduce to a quadratic using, for instance, Rosenberg reduction.
+\end{proof}
+
+The task of finding an Ising system which solves some abstract circuit $(N, M, f)$ can thus be thought of as finding a sufficiently large cardinality for $A$ and then solving a mixed non-linear optimization problem to find valid $h$ and $J$ values together with auxiliary states which occur at the desired minimizers of input levels. The following lemma demonstrates one way one might attempt to solve an abstract circuit with auxiliaries. 
+
+\begin{lem}\label{lem:weak-constraints}
+  The circuit $X$ is solvable with an Ising system if and only if there exists a function $g:\Sigma^N \to \Sigma^M$ and a Hamiltonian $H$ such that for all $s \in \Sigma^N$, $a \in \Sigma^A$ and $t \neq f(S)$, $H(s,t,a) > H(s, f(s), g(s))$.
+\end{lem}
+The image of the function $g$ is called the \textbf{auxiliary array} of $X$. If we fix a specific spin $a \in A$, then the set $\{g(\sigma_N)_a\}_{\sigma_N \in \Sigma^N}$ is called the \emph{auxiliary vector of $a$}.
+\begin{proof}
+  Again, obvious.
+\end{proof}
+
+A solution to a circuit employing lemma \ref{lem:weak-constraints} consists of two parts: obtaining a feasible auxiliary array $g$ and identifying choices of Hamiltonians such that the constraints in lemma \ref{lem:weak-constraints} are all satisfied. Although it is always possible, choosing a feasible $g$ is quite difficult, and doing so in such a way that minimizes the cardinality of $A$ is even harder. If a feasible $g$ is known, solving for $H$ is a linear programming problem; however, because the number of constraints in lemma \ref{lem:weak-constraints} grows exponentially in $N$, $M$ and $A$, for problems on the order of $|G| \approx 100$ there is no computer on earth that can actually solve the LP-problem as stated.
+
+\begin{defn}[Constraint Sets for Reverse Ising]\label{defn:constraints}
+  Let $(N,M,f)$ be an abstract circuit with $X = N \cup M \cup A$ and $N, M, A$ all disjoint. We say that an Ising system $(X, H)$ together with a choice $g: \Sigma^N\to \Sigma^A$ of auxiliary array satisfies
+  \begin{itemize}
+    \item \textbf{Weak Constraints} if for all $\sigma_N \in \Sigma^N$ and $\sigma_M \neq f(\sigma_N)$
+      \begin{align*}
+        H(\sigma_N, \sigma_M, \sigma_A) > H(\sigma_N, f(\sigma_N), g(\sigma_N)).
+      \end{align*}
+      There are $2^{M + A} - 2^A$ constraints per input level, $2^N(2^{M+A} - 2^A)$ total.
+    \item \textbf{Full Constraints} if for all $\sigma_N \in \Sigma^N$ and $\sigma_M \neq f(\sigma_N)$ \emph{or} $\sigma_A \neq g(\sigma_N)$
+      \begin{align*}
+        H(\sigma_N, \sigma_M, \sigma_A) > H(\sigma_N, f(\sigma_N), g(\sigma_N)).
+      \end{align*}
+      There are $2^{M+A} - 1$ constraints per input level, $2^N(2^{M+A} - 1)$ total.
+    \item \textbf{Threshold Constraints with respect to $F$} if for some function $F:\Sigma^{N} \times \Sigma^M \to \Sigma^A$
+      \begin{align*}
+        H(\sigma_N, \sigma_M, F(\sigma_N, \sigma_M)) > H(\sigma_N, f(\sigma_N), F(\sigma_N, f(\sigma_N))).
+      \end{align*}
+      There are $2^M - 1$ constraints per input level or $2^N(2^M - 1)$ constraints total.
+  \end{itemize}
+\end{defn}
+
+
+\begin{lem}\label{lem:full-constraints}
+  Let $(N, M, f)$ be an abstract circuit with $X = N \cup M \cup A$ and all $N, M$ and $A$ disjoint. This circuit is solved by an Ising system $(X, H)$ if and only if there is an auxiliary array $g:\Sigma^N \to \Sigma^A$ such that $H$ satisfies full constraints.
+\end{lem}
+\begin{proof}
+  The reverse implication is clear, as ever constraint in Lemma \ref{lem:weak-constraints} is a constraint in Lemma \ref{lem:strict-auxiliary-constraints-iff-feasible}. 
+
+  For the forward implication, suppose $(N,M,f)$ is solved by an Ising system $(X,H)$. Defining $g$ to be the auxiliary component of the minimizer with respect to $N$, $g(\sigma_N) = m_N(\sigma_N)|_{A}$, does the trick.
+\end{proof}
+
+\begin{lem}\label{lem:threshold-constraints}
+  Let $(N, M, f)$ again be an abstract circuit. There exists an Ising system which solves this circuit if and only if there is some function $F:\Sigma^N\times\Sigma^M \to \Sigma^A$ such that both
+  \begin{enumerate}[(a)]
+    \item the new circuit $(N\cup M, A, F)$ is solvable by an Ising system with Hamiltonian $R$ with the following additional property:
+      \begin{equation}\label{eqn:weak-neutralizability}\tag{$\dagger$}
+        R(\sigma_N, \sigma_M, F(\sigma_N,\sigma_M)) \geq R(\sigma_N, f(\sigma_N), F(\sigma_N, f(\sigma_N)))
+      \end{equation}
+      for all $\sigma_N$ and $\sigma_M$. We call this the \textbf{weak neutralizability condition.} (If the inequality is instead an equality, we call this the \textbf{strong neutralizability condition.} Likewise, if such an Ising system (X,R) exists, we correspondingly say that $F$ is weakly neutralizable or strongly neutralizable.)
+    \item there is an Ising system $(X, H)$ which satisfies threshold constraints with respect to $F$.
+  \end{enumerate} 
+\end{lem}
+\begin{proof}
+  Throughout this proof let $\sigma, \omega$ and $\eta$ denote elements in $\Sigma^N$, $\Sigma^M$ and $\Sigma^A$ respectively. Suppose first that the circuit $(N, M, f)$ is solvable by an Ising system $(X, H)$. Define $F:\Sigma^N\times \Sigma^M \to \Sigma^A$ to be the auxiliary component of the minimizer with respect to $N\cup M$:
+  \begin{align*}
+    F(\sigma, \omega) = m_{N\cup M}(\sigma, \omega)|_A := \argmin_{\eta\in \Sigma^A} H(\sigma, \omega, \eta).
+  \end{align*}
+  By definition of $F$, the circuit $(N\cup M, A, F)$ is solvable by the Ising system $(X, H)$. Furthermore, since $H$ satisfies the weak constraints, for some value of $\eta' \in \Sigma^A$ we have that
+  \begin{align*}
+    H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), \eta') \geq H(\sigma, f(\sigma), F(\sigma, f(\sigma)))
+  \end{align*}
+  for all $\eta \neq \eta'$ where the second from the definition of $F$. Thus, in particular, it satisfies the weak neutralizability condition.
+
+  Since $(G,h,J)$ solves the circuit $(G, N, M, f)$, by Lemma \ref{lem:weak-constraints} we have that
+  \begin{align*}
+    H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), F(\sigma, f(\sigma)))
+  \end{align*}
+  for all $\omega \neq f(\sigma)$, and all $\eta$ so in particular,
+  \begin{align*}
+    H(\sigma, \omega, F(\sigma, \omega)) > H(\sigma, f(\sigma), F(\sigma, f(\sigma)))
+  \end{align*}
+  Thus $(X, H)$ satisfies the threshold constraints with respect to $F$.
+
+  \vspace{1.5em}
+
+  Now suppose that $F$ is an arbitrary function such that $(N\cup M, A, F)$ is an abstract circuit solvable by an Ising system $(X, R)$ whose Hamiltonian $R$ satisfies (\ref{eqn:weak-neutralizability}) and that $(X,S)$ is an Ising system with Hamiltonian $S$ which satisfies the threshold constraints with respect to $F$. Consider the family of Ising Hamiltonians $H_\lambda = S + \lambda R$ parameterized by $\lambda$. We show that for sufficiently large $\lambda$, $H_\lambda$, $(X,H_\lambda)$ together with auxiliary array $g(\sigma) = F(\sigma, f(\sigma))$ satisfies the weak constraints and hence solves the circuit $(N,M,f)$.
+
+  Fix $\sigma$ and $\omega \neq f(\sigma)$, and consider first the case that $\eta = F(\sigma, \omega)$. Then
+  \begin{align*}
+    H_\lambda&(\sigma, \omega, \eta) - H_\lambda(\sigma, f(\sigma), g(\sigma)) > 0 \\
+    &\iff S(\sigma, \omega, \eta) - S(\sigma, f(\sigma), g(\sigma)) + \lambda (R(\sigma, \omega, \eta) - R(\sigma, f(\sigma), g(\sigma))) > 0 \\
+    &\iff S(\sigma, \omega, F(\sigma, \omega)) - S(\sigma, f(\sigma), F(\sigma, f(\sigma))) + \lambda R(\sigma, \omega, F(\sigma, \omega)) - \lambda R(\sigma, f(\sigma), F(\sigma, f(\sigma))) > 0 \\
+    &\iff S(\sigma, \omega, F(\sigma, \omega)) - S(\sigma, f(\sigma), F(\sigma, f(\sigma))) > 0.\\
+  \end{align*}
+  The final condition in the above chain of bi-conditionals holds irrespective of the value o $\lambda$ since $S$ satisfies the threshold constraints. Now suppose that $\eta \neq F(\sigma, \omega)$. Set
+  \begin{align*}
+  \alpha = \min_{\substack{\omega\in \Sigma^M \\ \omega \neq f(\sigma)}} R(\sigma, \omega, \eta) - R(\sigma, f(\sigma), F(\sigma, f(\sigma))),
+  \end{align*}
+  noting that by (\ref{eqn:weak-neutralizability}), the assumption that $(X,R)$ solves $(N\cup M, A, F)$ and because $\eta \neq \omega$ we have
+  \begin{align*}
+    R(\sigma, \omega, \eta) > R(\sigma, \omega, F(\sigma, \omega)) \geq R(\sigma, f(\sigma), g(\sigma))
+  \end{align*}
+  which in turn implies that $\alpha > 0$. Additionally set
+  \begin{align*}
+    \beta = \max_{\sigma\in \Sigma^G} S(\sigma, f(\sigma), F(\sigma, f(\sigma))) - S(\sigma, \omega, \eta).
+  \end{align*}
+  Then
+  \[
+   H_\lambda(\sigma, \omega, \eta) - H_\lambda(\sigma, f(\sigma), F(\sigma, f(\sigma))) > 0
+   \]
+   \[\iff\]
+    \begin{align*}
+      S(\sigma, \omega, &~\eta) ~-~S(\sigma, f(\sigma), F(\sigma, f(\sigma))) \\&+ ~\lambda R(\sigma, \omega, \eta) ~-~ \lambda R(\sigma, f(\sigma), F(\sigma, f(\sigma))) ~> ~0
+    \end{align*}
+    \[\iff\]
+  \[
+    \lambda ~>~ \frac{S(\sigma, f(\sigma), F(\sigma, f(\sigma))) - S(\sigma, \omega, \eta)}{R(\sigma, \omega, \eta) - R(\sigma, f(\sigma), F(\sigma, f(\sigma)))}.
+  \]
+  Choosing $\lambda > \beta/\alpha$ ensures this is satisfied for all $\sigma \in \Sigma^X$.
+\end{proof}
+
+\bigskip
+
+The following theorem summarizes our results up to this point.
+\begin{thm}\label{thm:ising-solve-equivalences}
+  Let $(N, M, f)$ be an abstract circuit. Then the following are equivalent.
+  \begin{enumerate}[(i)]
+    \item There exists an Ising system $(X, H)$ which solves $(N,M,f)$.
+    \item There exists an Ising system $(X,H)$ which satisfies the weak constraints of $f$.
+    \item There exists an Ising system $(X,H)$ which satisfies the full constraints of $f$.
+    \item There exists a function $F: \Sigma^N \times \Sigma^M\to \Sigma^A$, an Ising system $(X,S)$ satisfying the threshold constraints with respect to $F$ and an Ising system $(X, R)$ which solves the circuit $(N\cup M, A, F)$ and has the weak neutralizability property.
+  \end{enumerate}
+\end{thm}
+\begin{proof}
+  Lemma \ref{lem:weak-constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(ii)}, Lemma \ref{lem:full-constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(iii)} and Lemma \ref{lem:threshold-constraints} proves \emph{(ii)} $\Leftrightarrow$ \emph{(iv)}.
+\end{proof}
+
+\begin{rmk}
+  Of these four equivalences, \emph{(iv)} is perhaps the most opaque. One might wonder what utility it actually buys, especially since the assumption that $R$ has the weak neutralizability condition and solves the circuit $(N\cup M, A, F)$ is awfully close to simply demanding that $R$ satisfies the weak constraints of $f$. The Hamiltonian $S$ appears only to be used to ``fix'' the places where $R$ fails to satisfy the strong inequality version of the weak neutralizability condition. All of this begs the question: how is this ever useful?
+
+  \begin{enumerate}
+    \item \textbf{Threshold constraints do not scale exponentially in $A$.} Both the weak and full constraints grow exponentially in $A$, but the constraint matrices of the threshold constraints always have a fixed number of rows and only grow columnwise on the order of $\cO(A^2)$.
+    \item \textbf{Good choices of $F$ are known.} If $F$ depends only on a few spins, then cooking up reasonable Hamiltonians $R$ becomes far easier. See examples \ref{ex:trivial-weak-neutralizability} and \ref{ex:AND-gate-strong-neutralizable}.
+    \item \textbf{Improvements to $F$ can be made iteratively.} If a function $F_1:\Sigma^N \times \Sigma^M \to \Sigma^{A_1}$ is weakly neutralizable and $F_2:\Sigma^N\times \Sigma^{M\cup A_1} \to \Sigma^{A_2}$ is weakly neutralizable, then the composite function
+      \begin{align*}
+        F(\sigma, \omega) = (F_1(\sigma, \omega), F_2(\sigma, \omega, F_1(\sigma, \omega))) \in \Sigma^{A_1 \cup A_2}
+      \end{align*}
+      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods.
+  \end{enumerate}
+\end{rmk}
+
+\begin{example}\label{ex:trivial-weak-neutralizability}
+  Suppose $F:\Sigma^N \times \Sigma^M \to \Sigma^A$ is constant in the $\Sigma^M$ component. Then any Ising system $(X, R)$ which solves the circuit $(N\cup M, A, R)$ is weakly neutralizable.
+\end{example}
+\begin{example}\label{ex:AND-gate-strong-neutralizable}
+  Let $(\{a,b\}, \{c\}, AND)$ be the 1-bit AND circuit. Then there exists an Ising system $(\{a,b,c\}, R)$ which solves the circuit and is strongly neutralizable.
+\end{example}
 
 \subsection{Partial Ising Circuits}
 
