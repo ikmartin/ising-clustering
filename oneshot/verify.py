@@ -27,8 +27,20 @@ def parseaux(lines):
 
 def verify():
     np.set_printoptions(threshold = 50000000)
-    n1 = 4
+    n1 = 3
     n2 = 4
+    aux_hex = ["000000f300000020003032fa002000c0",
+    "f511fd51f751ff3df575fffefff7fffb",
+    "f000200011110000f3f32120bb932203",
+    "00000000000001000000000002001100",
+    "00000040000000002020808000000000",
+    "3333ffff2200bbbb3333ffff2220bbbb",
+    "0000000000bb57770000000000035577",
+    "3fffdfff0eff0fff0fff0fff00ff01ff",]
+    aux_array = parseaux(aux_hex)
+    objective = call_solver(n1, n2, aux_array)
+    print(objective)
+    return
     # working 3x4
     #aux_keys = [(0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)]
 

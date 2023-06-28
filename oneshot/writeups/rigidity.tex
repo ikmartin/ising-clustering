@@ -93,4 +93,23 @@ Which simplifies to
 	yf(x) - dzy < 0
 \end{align}
 Which is in fact essentially the same thing as the bit-separate case. Actually, if you think about it, bit-separate and hypercube are the same thing, since bit-separate is automatically hypercube, and if we have hypercube, then flipping a bit from wrong to right always decreases the energy, so we could just set all the other bits arbitrarily fixed and obtain a bit-separate solution.
+
+
+Consider input space $\Sigma_N$. For each input configuration $\sigma \in \Sigma_N$, we have a space of considered outputs $\Sigma_M(\sigma)$. The desired function is $f(\sigma) \in \Sigma_M(\sigma)$, so it is useful to have the notation $W(\sigma) = \Sigma_M(\sigma) \setminus \{f(\sigma)\}$. Now, assume that there exists some function $F : \Gamma(\Sigma_M) \longrightarrow B^A$ such that there exist Hamiltonians $G$ and $H$ satisfying
+\begin{align}
+	G(\sigma, \eta, \tau) \geq G(\sigma, \eta, F(\sigma, \eta)) + K_0 &&\forall \sigma \in \Sigma_N, \eta \in \Sigma_M(\sigma), \tau \in B^A\\
+	H(\sigma, \eta, F(\sigma, \eta)) \geq H(\sigma, f(\sigma), F(\sigma, f(\sigma))) + K_1 && \forall \sigma \in \Sigma_N, \eta \in W(\sigma)
+\end{align}
+Define $R = G + H$. Then for any $\sigma \in \Sigma_N, \eta \in \Sigma_M(\sigma), \tau \in B^A$, 
+\begin{align}
+	R(\sigma, \eta, \tau) = H(\sigma, \eta, \tau) + G(\sigma, \eta, \tau) \geq H(\sigma, \eta, \tau) + G(\sigma, \eta, F(\sigma, \eta)) + K_0\\
+	= H(\sigma, \eta, F(\sigma, \eta)) + (H(\sigma, \eta, \tau) - H(\sigma, \eta, F(\sigma, \eta))) + G(\sigma, \eta, F(\sigma, \eta)) + K_0\\
+	\geq H(\sigma, f(\sigma), F(\sigma, f(\sigma))) + K_1 + (H(\sigma, \eta, \tau) - H(\sigma, \eta, F(\sigma, \eta))) + G(\sigma, \eta, F(\sigma, \eta)) + K_0\\
+	= R(\sigma, f(\sigma), F(\sigma, f(\sigma))) + K_0 + K_1\\
+	+(H(\sigma, \eta, \tau) - H(\sigma, \eta, F(\sigma, \eta))) + (G(\sigma, \eta, F(\sigma, \eta)) - G(\sigma, f(\sigma), F(\sigma, f(\sigma))))
+\end{align}
+Therefore, $R$ is a viable Hamiltonian if
+\begin{align}
+	(H(\sigma, \eta, \tau) - H(\sigma, \eta, F(\sigma, \eta))) + (G(\sigma, \eta, F(\sigma, \eta)) - G(\sigma, f(\sigma), F(\sigma, f(\sigma)))) + K_0 + K_1 > 0
+\end{align}
 \end{document}
