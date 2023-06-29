@@ -72,7 +72,7 @@ c_imul_solver.restype = POINTER(c_double)
 c_free_ptr = lib.free_ptr
 
 
-def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=200, fullreturn=False):
+def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=400, fullreturn=False):
     """
     Calls my Mehrotra Predictor-Corrector implementation.
 

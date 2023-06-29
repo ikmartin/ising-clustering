@@ -29,6 +29,7 @@ def verify():
     np.set_printoptions(threshold = 50000000)
     n1 = 3
     n2 = 4
+    """
     aux_hex = ["000000f300000020003032fa002000c0",
     "f511fd51f751ff3df575fffefff7fffb",
     "f000200011110000f3f32120bb932203",
@@ -37,6 +38,30 @@ def verify():
     "3333ffff2200bbbb3333ffff2220bbbb",
     "0000000000bb57770000000000035577",
     "3fffdfff0eff0fff0fff0fff00ff01ff",]
+    """
+    aux_hex = ["000000000000000000000000fb00ff00",
+    "0000800000008000c000f800e000fc00",
+    "11115555000011115555555500001111",
+    "30000000333031303000000032303030",
+    "8bffffff0000ffff0000ffff0000dfff",
+    "af8f0f0fbf2f2f0f0e080000040e0008",
+    "737fffff7373fffff3f7ffff7ff7ffff",
+    "a0800000ffff2222aaa80000ffffa2a0"]
+    aux_hex = ["2000ffffffffffffffffffffffffffff",
+    "002000000000002000f300fb00ff00ff",
+    "000000000000000000000000f010f000",
+    "00000000dddd44440000000044444444",
+    "00000000cccc000088f388aaccfec4ee",
+    "0c0cdf5f0000040400005f5f00000000",
+    "3fffff7f33333f7f7fff7f7f3bbf3b7f",
+    "00007000fcccffff8000f8a0fffeffff"]
+    aux_hex = ["00ff00ff00ff03ff0fff0eff1cff19ff",
+    "33333333777777773333333377777777",
+    "00000f0f33332d2dffffffffffffffff",
+    "000000ff0f0f1ce3ffffffffffffffff",
+    "000000ffffffffff333336c9ffffffff",
+    "0f0f5f5f0f0f5f5f0f0f5f5f0f0f5f5f",
+    "00000f0fffffffff55555a5affffffff"]
     aux_array = parseaux(aux_hex)
     objective = call_solver(n1, n2, aux_array)
     print(objective)
@@ -62,7 +87,8 @@ def verify():
     objective = call_solver(n1,n2, aux_vecs)
     print(objective)
 
-#verify()
+if __name__ == '__main__':
+    verify()
 
 """
 print("making constraints")

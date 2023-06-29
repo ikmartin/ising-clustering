@@ -4,7 +4,7 @@
 
 // Turns off customizable RHS of the original problem, setting it to be equal to the traditional problem.
 #define			VI						1.0
-#define			NUM_THREADS		8
+#define			NUM_THREADS		20
 
 typedef struct {
 	int8_t* values;	
@@ -275,7 +275,7 @@ double* solve(int max_iter, double tolerance) {
 
 	// various small variables
 	double alpha_primal_affine, alpha_dual_affine, alpha_primal, alpha_dual, affine_mu, mu, sigma;
-	double eta = 0.9;
+	double eta = 1.0; //0.9;
 	double initial_error, error, relative_error;
 
 	// Calulate initial guesses
@@ -489,7 +489,7 @@ double* solve(int max_iter, double tolerance) {
 		//printvec(l, n+m, "lambda");
 
     // asymptotic modification of step size, formula copied from Teresa. 
-    eta = 1.0 - 0.1 * pow(0.1, (double)(iteration + 1)/50.0);
+    eta = 1.0 - 0.005 * pow(0.1, (double)(iteration + 1)/50.0);
   }
 
 	if(iteration == max_iter) {
