@@ -159,17 +159,17 @@ Notice that this lemma says nothing about the \emph{number} of auxiliary spins n
   where $d$ is hamming distance, write it as a multilinear polynomial, add auxiliary variables to reduce to a quadratic using, for instance, Rosenberg reduction.
 \end{proof}
 
-The task of finding an Ising system which solves some abstract circuit $(N, M, f)$ can thus be thought of as finding a sufficiently large cardinality for $A$ and then solving a mixed non-linear optimization problem to find valid $h$ and $J$ values together with auxiliary states which occur at the desired minimizers of input levels. The following lemma demonstrates one way one might attempt to solve an abstract circuit with auxiliaries. 
+The task of finding an Ising system which solves some abstract circuit $(N, M, f)$ can thus be thought of as finding a sufficiently large cardinality for $A$ and then solving a mixed non-linear optimization problem to find valid a valid quadratic Hamiltonian together with auxiliary states which occur at the desired minimizers of input levels. The following lemma demonstrates one way one might attempt to solve an abstract circuit with auxiliaries. 
 
 \begin{lem}\label{lem:weak-constraints}
-  The circuit $X$ is solvable with an Ising system if and only if there exists a function $g:\Sigma^N \to \Sigma^M$ and a Hamiltonian $H$ such that for all $s \in \Sigma^N$, $a \in \Sigma^A$ and $t \neq f(S)$, $H(s,t,a) > H(s, f(s), g(s))$.
+  The circuit $X$ is solvable with an Ising system if and only if there exists a function $g:\Sigma^N \to \Sigma^M$ and a Hamiltonian $H$ such that for all $\sigma \in \Sigma^N$, $\eta \in \Sigma^A$ and $f(\sigma) \neq \omega \in \Sigma^M$, $H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), g(\sigma))$.
 \end{lem}
-The image of the function $g$ is called the \textbf{auxiliary array} of $X$. If we fix a specific spin $a \in A$, then the set $\{g(\sigma_N)_a\}_{\sigma_N \in \Sigma^N}$ is called the \emph{auxiliary vector of $a$}.
+The image of the function $g$ is called the \textbf{auxiliary array} of $X$. If we fix a specific spin $a \in A$, then the set $\{g(\sigma)_a\}_{\sigma \in \Sigma^N}$ is called the \emph{auxiliary vector of $a$}.
 \begin{proof}
   Again, obvious.
 \end{proof}
 
-A solution to a circuit employing lemma \ref{lem:weak-constraints} consists of two parts: obtaining a feasible auxiliary array $g$ and identifying choices of Hamiltonians such that the constraints in lemma \ref{lem:weak-constraints} are all satisfied. Although it is always possible, choosing a feasible $g$ is quite difficult, and doing so in such a way that minimizes the cardinality of $A$ is even harder. If a feasible $g$ is known, solving for $H$ is a linear programming problem; however, because the number of constraints in lemma \ref{lem:weak-constraints} grows exponentially in $N$, $M$ and $A$, for problems on the order of $|G| \approx 100$ there is no computer on earth that can actually solve the LP-problem as stated.
+A solution to a circuit employing Lemma \ref{lem:weak-constraints} consists of two parts: obtaining a feasible auxiliary array $g$ and identifying choices of Hamiltonians such that the constraints in Lemma \ref{lem:weak-constraints} are all satisfied. Although it is always possible, choosing a feasible $g$ is quite difficult, and doing so in such a way that minimizes the cardinality of $A$ is even harder. If a feasible $g$ is known, solving for $H$ is a linear programming problem; however, because the number of constraints in Lemma \ref{lem:weak-constraints} grows exponentially in $N$, $M$ and $A$, for problems on the order of $|X| \approx 100$ there is no computer on earth that can actually solve the LP-problem as stated.
 
 \begin{defn}[Constraint Sets for Reverse Ising]\label{defn:constraints}
   Let $(N,M,f)$ be an abstract circuit with $X = N \cup M \cup A$ and $N, M, A$ all disjoint. We say that an Ising system $(X, H)$ together with a choice $g: \Sigma^N\to \Sigma^A$ of auxiliary array satisfies
@@ -298,7 +298,7 @@ The following theorem summarizes our results up to this point.
       \begin{align*}
         F(\sigma, \omega) = (F_1(\sigma, \omega), F_2(\sigma, \omega, F_1(\sigma, \omega))) \in \Sigma^{A_1 \cup A_2}
       \end{align*}
-      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods.
+      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods. In particular, due to the observation that the solvability of a boolean circuit by an Ising system is equivalent to linear separability, 
   \end{enumerate}
 \end{rmk}
 
