@@ -14,10 +14,10 @@ np.set_printoptions(precision = 2, suppress = True)
 #["ffff0003ffffffff", "10007000f550f770", "ecffccccccffccc"]
 
 #aux_hex = ["1033ff675f3fff7f", "0f0b2f02cf8bff2f", "ffffffefcd8b5544"]
-aux_hex = None
 aux_hex = ["3333ffff2200bbbb3333ffff2220bbbb",
  "0000000000bb57770000000000035577",
  "3fffdfff0eff0fff0fff0fff00ff01ff"]
+aux_hex = None
 
 if aux_hex is not None:
     aux_array = parseaux(aux_hex)
@@ -34,7 +34,7 @@ num_outputs = (len(desired) if desired is not None else n1 + n2)
 num_vars = num_inputs + num_outputs
 original_vars = num_vars
 hyperplanes = []
-radius = None
+radius = 1
 search_iterations = 50
 num_samples = 30
 search_sigma = .2
@@ -83,7 +83,7 @@ for i in range(12):
     else:
         plane_dict = min(candidates, key = lambda item: item['val'])
         print(f'current min rho: {plane_dict["val"]}')
-        if plane_dict["val"] < 100:
+        if plane_dict["val"] < 50:
             radius = None
         hyperplanes.append(plane_dict['plane'])
         num_vars += 1
