@@ -36,6 +36,9 @@ c_sparse_solver.argtypes = [
     c_int,
     c_double,
     c_int,
+    c_double,
+    c_double,
+    c_int
 ]
 c_sparse_solver.restype = POINTER(c_double)
 
@@ -54,6 +57,9 @@ c_full_sparse_solver.argtypes = [
     c_int,
 ]
 c_full_sparse_solver.restype = POINTER(c_double)
+
+c_get_initial_lam = lib.get_initial_lam
+c_get_initial_lam.restype = POINTER(c_double)
 
 c_imul_solver = lib.IMul_interface
 c_imul_solver.argtypes = [
@@ -84,7 +90,7 @@ def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=400, fullreturn=Fal
     col_ptr = CSC_constraints.ccol_indices().numpy().astype(np.int32)
     num_workers = 1
     result = c_sparse_solver(
-        num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter
+        num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter, 0.9, 0.1, int(fullreturn)
     )
     result_array = as_array(result, shape=(num_rows + num_cols,))
     objective = sum(result_array[num_cols:])
@@ -92,8 +98,11 @@ def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=400, fullreturn=Fal
     if fullreturn:
         # objective, answer (i.e. solution to LP), artifical variables
         result_array = deepcopy(result_array)
+        saved_lam = c_get_initial_lam()
+        saved_lam_array = deepcopy(as_array(saved_lam, shape=(num_rows + num_cols,)))
+        c_free_ptr(saved_lam)
         c_free_ptr(result)
-        return objective, result_array[:num_cols], result_array[num_cols:]
+        return objective, result_array[:num_cols], result_array[num_cols:], saved_lam_array[:num_cols], saved_lam_array[num_cols:]
 
     c_free_ptr(result)
     return objective

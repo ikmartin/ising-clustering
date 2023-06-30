@@ -65,7 +65,8 @@ def verify():
     aux_array = parseaux(aux_hex)
     objective = call_solver(n1, n2, aux_array)
     print(objective)
-    return
+
+def parse_ands():
     # working 3x4
     #aux_keys = [(0,9), (5,12), (1,13), (1,11), (0,11), (4,10), (3,10)]
 
@@ -74,7 +75,10 @@ def verify():
 
     #aux_keys = [(1, 13), (2, 14), (1, 9), (5, 13), (0, 1), (4, 11), (2, 10), (0, 11), (5, 12), (4, 12)]
     #aux_keys = [(1,2), (4,10), (0,5), (0,8), (3,9), (0,9)]
-    aux_keys = [(0, 1), (4, 11), (0, 10), (2, 13), (2, 14), (5, 13), (5, 12), (4, 12)]
+    #aux_keys = [(0, 1), (4, 11), (0, 10), (2, 13), (2, 14), (5, 13), (5, 12), (4, 12)]
+    aux_keys = [(5, 13), (1, 13), (6, 12), (6, 11), (4, 12), (6, 14), (4, 10), (3, 13), (5, 11), (4, 9), (3, 14), (5, 12)]
+    n1 = 4
+    n2 = 4
     _, _, correct = constraints_building(n1,n2, None, 1, radius=None, mask=None, include=None)
     correct = correct.numpy()
 
@@ -82,12 +86,17 @@ def verify():
     print(aux_array_as_hex(aux_vecs))
 
     with open("saved-aux", "w") as FILE:
-        FILE.write(str(aux_vecs.tolist()))
+        #FILE.write(str(aux_vecs.tolist()))
+        aux_vecs = aux_vecs.T
+        for line in aux_vecs:
+            FILE.write(' '.join([str(int((2*x)-1)) for x in line]) + '\n')
 
+    exit()
     objective = call_solver(n1,n2, aux_vecs)
     print(objective)
 
 if __name__ == '__main__':
+    parse_ands()
     verify()
 
 """

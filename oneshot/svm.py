@@ -25,16 +25,16 @@ if aux_hex is not None:
 else:
     aux = None
 
-n1, n2 = 3,4
+n1, n2 = 3,3
 A = len(aux_hex) if aux_hex is not None else 0
-desired = (0,1,2,3,4,5)
-included = (6,)
+desired = (0,1,2,3,4)
+included = (5,)
 num_inputs = n1 + n2 + A +  (len(included) if included is not None else 0)
 num_outputs = (len(desired) if desired is not None else n1 + n2)
 num_vars = num_inputs + num_outputs
 original_vars = num_vars
 hyperplanes = []
-radius = 1
+radius = None
 search_iterations = 50
 num_samples = 30
 search_sigma = .2
@@ -42,8 +42,9 @@ cache = {}
 for i in range(12):
     candidates = []
     loop = tqdm(range(search_iterations), leave = True)
-    current_weight = torch.randn(num_vars)
-    current_weight[num_inputs:original_vars] = 0
+    #current_weight = torch.randn(num_vars)
+    #current_weight[num_inputs:original_vars] = 0
+    current_weight = torch.randn(num_inputs)
     current_weight = F.normalize(current_weight, dim=0)
     current_bias = torch.randn(1).clamp(0,1).item()
     current_plane = (current_weight, current_bias)
@@ -51,7 +52,8 @@ for i in range(12):
         search_sigma = np.exp(-3 * j/search_iterations)
         samples = []
         for k in range(num_samples):
-            new_weight = search_sigma * torch.randn(num_vars) + current_weight
+            #new_weight = search_sigma * torch.randn(num_vars) + current_weight
+            new_weight = search_sigma * torch.randn(num_inputs) + current_weight
             new_weight[num_inputs:original_vars] = 0
             new_weight = F.normalize(new_weight, dim=0)
             #print(new_weight)

@@ -68,7 +68,17 @@ def add_hyperplane(matrix, hyperplane):
     #print(torch.t(new_vec).to(torch.int8))
     return torch.cat([matrix, new_vec], dim = -1)
 
-def constraints(n1, n2, aux = None, degree = 2, radius = None, included = None, desired = None, and_pairs = None, ising=False, function_ands = None, auxfix = False, hyperplanes = None):
+def add_bool_func(matrix, func):
+    indices, function = func
+    args = matrix[...,indices]
+    new_vec = torch.zeros(matrix.shape[0])
+    two_powers = torch.tensor([(1 << (len(indices) - j - 1)) for j in range(len(indices))])
+    vals = F.linear(args.float(), two_powers.float()).int()
+    new_vec = torch.tensor(function[vals])
+
+    return torch.cat([matrix, new_vec.unsqueeze(1)], dim = -1)
+
+def constraints(n1, n2, aux = None, degree = 2, radius = None, included = None, desired = None, and_pairs = None, ising=False, function_ands = None, auxfix = False, hyperplanes = None, bool_funcs = None):
     correct, num_fixed, num_free = make_correct_rows(n1, n2, aux, included, desired, and_pairs, auxfix)
     wrong, rows_per_input = make_wrongs(correct, num_fixed, num_free, radius)
 
@@ -80,6 +90,12 @@ def constraints(n1, n2, aux = None, degree = 2, radius = None, included = None, 
         for hyperplane in hyperplanes:
             correct = add_hyperplane(correct, hyperplane)
             wrong = add_hyperplane(wrong, hyperplane)
+
+    if bool_funcs is not None:
+        for func in bool_funcs:
+            correct = add_bool_func(correct, func)
+            wrong = add_bool_func(wrong, func)
+            
 
     if ising:
         correct = (2*correct)-1

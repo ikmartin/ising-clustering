@@ -58,6 +58,12 @@ int LD = 1;
 double perturbation = 1e-7;
 
 
+//hyperparameters
+double initial_eta;
+double eta_decay_param;
+double* saved_initial_lam;
+int keep_initial;
+
 // thread pool variables
 int num_started;
 int num_done;
@@ -275,7 +281,7 @@ double* solve(int max_iter, double tolerance) {
 
 	// various small variables
 	double alpha_primal_affine, alpha_dual_affine, alpha_primal, alpha_dual, affine_mu, mu, sigma;
-	double eta = 1.0; //0.9;
+	double eta = initial_eta; //0.9;
 	double initial_error, error, relative_error;
 
 	// Calulate initial guesses
@@ -311,6 +317,12 @@ double* solve(int max_iter, double tolerance) {
 	}
 	multiply_by_A(swap, ds);
 	solve_AKAt(l, swap, dx);
+
+	if(keep_initial != 0) {
+		for(i=0; i < m+n; i++) {
+			saved_initial_lam[i] = l[i];
+		}
+	}
 
 	// s <- c - A^T l
 	multiply_by_At(s, l);
@@ -489,11 +501,11 @@ double* solve(int max_iter, double tolerance) {
 		//printvec(l, n+m, "lambda");
 
     // asymptotic modification of step size, formula copied from Teresa. 
-    eta = 1.0 - 0.005 * pow(0.1, (double)(iteration + 1)/50.0);
+    eta = initial_eta - eta_decay_param * pow(0.1, (double)(iteration + 1)/50.0);
   }
 
 	if(iteration == max_iter) {
-		printf("WARNING: Solver failed to converge!\n");
+		//printf("WARNING: Solver failed to converge!\n");
 	}
 
 	free_vars();
@@ -1058,9 +1070,12 @@ double* interface(double* constraints, int num_rows, int num_cols, int num_worke
 	return solve(max_iter, tolerance);
 }
 
-double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_index, int* col_ptr, int num_workers, double tolerance, int max_iter) {
+double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_index, int* col_ptr, int num_workers, double tolerance, int max_iter, double init_eta, double eta_decay, int keep_init) {
 	m = num_rows;
 	n = num_cols;
+	initial_eta = init_eta;
+	eta_decay_param = eta_decay;
+	keep_initial = keep_init;
 	M_csc.values = values;
 	M_csc.row_index = row_index;
 	M_csc.col_ptr = col_ptr;
@@ -1072,9 +1087,16 @@ double* sparse_interface(int num_rows, int num_cols, int8_t* values, int* row_in
 	}*/
 
 	use_csr = 0;
+	if(keep_initial != 0) {
+		saved_initial_lam = malloc(sizeof(double) * (n+m));
+	}
 
 	openblas_set_num_threads(num_workers); 
 	return solve(max_iter, tolerance);
+}
+
+double* get_initial_lam() {
+	return saved_initial_lam;
 }
 
 double* full_sparse_interface(int num_rows, int num_cols, int8_t* csc_values, int* csc_row_index, int* csc_col_ptr, int8_t* csr_values, int* csr_col_index, int* csr_row_ptr, int num_workers, double tolerance, int max_iter) {
