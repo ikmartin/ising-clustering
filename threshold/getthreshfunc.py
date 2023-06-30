@@ -3,18 +3,39 @@ import numpy as np
 from ortools.linear_solver import pywraplp
 
 
-def build_solver(self, input_spins=[]):
+def dec2bin(num, fill):
+    return list(bool(int(a)) for a in bin(num)[2:].zfill(fill))
+
+
+def bin2dec(blist):
+    return sum([1 << i if k else 0 for i, k in enumerate(blist)])
+
+
+class BoolFunc:
+    def __init__(self, dim, vals):
+        self.dim = dim
+        self.vals = vals
+
+    def __call__(self, x):
+        if isinstance(x, int):
+            return self.vals[x]
+
+        else:
+            assert isinstance(x, list)
+            return self.vals[bin2dec(x)]
+
+    def __getitem__(self, x):
+        return self.vals[x]
+
+    @staticmethod
+    def randfunc():
+        pass
+
+
+def build_solver(bfunc):
     """Builds the lp solver for this circuit, returns solver. Made purposefully verbose/explicit to aid in debugging, should be shortened eventually however."""
 
     # check that each input has same number of auxiliary states
-    if self.check_aux_all_set(input_spins) == False:
-        raise Error(
-            f"Not all auxiliary states are the same size! Cannot build constraints.\n { {s : self.Ain(s) for s in input_spins} }"
-        )
-
-    G = self.Gin(self.inspace[0])
-    if input_spins == []:
-        input_spins = [s for s in self.inspace]
 
     solver = pywraplp.Solver.CreateSolver("GLOP")
     inf = solver.infinity()

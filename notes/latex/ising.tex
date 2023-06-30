@@ -40,7 +40,7 @@
 \section{Foundations}
 
 \subsection{Circuits}
-Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible spins ($\Sigma$ for \textbf{s}pin) taken by a single vertex in an Ising graph. For any set $X$, we denote by $\Sigma^X$ the set of all functions $\sigma: X\to \Sigma$ and note that $\Sigma^X$. We first review a few elementary facts.
+Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible spins ($\Sigma$ for \textbf{s}pin) taken by a single vertex in an Ising graph. For any set $X$, we denote by $\Sigma^X$ the set of all functions $\sigma: X\to \Sigma$ and note, by setting $n = |X|$, that $\Sigma^X$ can equivalently be viewed as the set of $n$-tuples valued in $\{-1, 1\}$, $\Sigma^X \cong \{(\sigma_1, ..., \sigma_n) \in \Sigma^n \}$ or as the set of binary strings of length $n$ under the identification $\Sigma \leftrightarrow \{0,1\}$. We first review a few elementary facts.
 
 \begin{prop}Let $X$ be any set.
   \begin{enumerate}[(a)]
@@ -60,7 +60,7 @@ Throughout this document we set $\Sigma = \{-1,1\}$ to be the set of possible sp
           \Sigma^M \arrow[r, "\res"] & \Sigma^{N\cap M}
         \end{tikzcd}
       \end{center}
-      where all maps are the appropriate restriction maps. In fact, $\Sigma^{N\cup M}$ together with restriction maps is the universal object of this diagram; suppose we have another object with maps $q_1:P \to \Sigma^M$ and $q_2:P\to \Sigma^N$ making this commute. Then $\res(q_1(p)) = \res(q_2(p))$ so the map $u: P\to \Sigma^{N\cup M}$ given by
+      where all maps are the appropriate restriction maps. In fact, $\Sigma^{N\cup M}$ together with restriction maps is the universal object of this diagram; suppose we have another object $P$ with maps $q_1:P \to \Sigma^M$ and $q_2:P\to \Sigma^N$ making this commute. Then $\res(q_1(p)) = \res(q_2(p))$ so the map $u: P\to \Sigma^{N\cup M}$ given by
       \begin{align*}
         u(p)(x) =
         \begin{cases}
@@ -128,9 +128,9 @@ Stated another way, given an abstract circuit $(N,M,f)$, we want to design Ising
 \end{align*}
 
 \begin{defn}\label{defn:solves-ising-circuit}
-  Fix an abstract circuit $(N, M, f_G)$. We say that an Ising system $(X, H)$ \textbf{solves} $(N, M, f)$ (in that it solves the reverse Ising problem on $(N,M,f)$) if for each $\sigma \in \Sigma^X$ 
+  Fix an abstract circuit $(N, M, f)$. We say that an Ising system $(X, H)$ \textbf{solves} $(N, M, f)$ (in that it solves the reverse Ising problem on $(N,M,f)$) if for each $\sigma \in \Sigma^X$ 
   \begin{align*}
-    \tau = \argmin_{\sigma' \in \cL(\sigma)} ~H_G(\sigma') \implies \tau \in \cR(f).
+    \tau = \argmin_{\sigma' \in \cL(\sigma)} ~H(\sigma') \implies \tau \in \cR(f).
   \end{align*}
   In other words, a choice of Hamiltonian $H$ for $X$ solves the circuit if the minimizer of the Hamiltonian among all states with matching input states has as its output component the correct output as specified by the circuit logic $f$.
 \end{defn}
@@ -224,7 +224,7 @@ A solution to a circuit employing Lemma \ref{lem:weak-constraints} consists of t
   \end{align*}
   for all $\eta \neq \eta'$ where the second from the definition of $F$. Thus, in particular, it satisfies the weak neutralizability condition.
 
-  Since $(G,h,J)$ solves the circuit $(G, N, M, f)$, by Lemma \ref{lem:weak-constraints} we have that
+  Since $(X,H)$ solves the circuit $(N, M, f)$, by Lemma \ref{lem:weak-constraints} we have that
   \begin{align*}
     H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), F(\sigma, f(\sigma)))
   \end{align*}
@@ -298,7 +298,7 @@ The following theorem summarizes our results up to this point.
       \begin{align*}
         F(\sigma, \omega) = (F_1(\sigma, \omega), F_2(\sigma, \omega, F_1(\sigma, \omega))) \in \Sigma^{A_1 \cup A_2}
       \end{align*}
-      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods. In particular, due to the observation that the solvability of a boolean circuit by an Ising system is equivalent to linear separability, 
+      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods. In particular, due to the observation that the solvability of a boolean circuit by an Ising system is equivalent to linear separability, we can attach auxiliary spins one at a time (see Section \ref{sec:bool-circuits}).
   \end{enumerate}
 \end{rmk}
 
@@ -391,12 +391,15 @@ The advantage of using this algorithm over an auxiliary solve is that each itera
 
 
 
-\section{Boolean Ising Circuits}
-In this section we consider Ising circuits $(G,f)$ with only one output. This special case proves tractable enough to produce useful theoretical results, and yet general enough to yield good solutions to the general case.
+\section{Boolean Circuits and Functions}\label{sec:bool-circuits}
+In this section we consider abstract circuits $(N, M, f)$ where $|M| = 1$. We start with some definitions 
 
 \begin{prop}\label{prop:boolean-ising-svm-equiv}
-  
+  Let $(N, {y}, f)$ be an abstract circuit with one output -- i.e. let $f$ be a boolean function. There exists an Ising system $(X,H)$ with $X = N \cup {y}$ if and only if the set of true vectors $T = f^{-1}(1)$ is linearly separable from the set of false vectors $F = X \setminus F = f^{-1}(-1)$.
 \end{prop}
+\begin{proof}
+  View the set $\Sigma^N$ as a set of tuples consisting of $+1/-1$ in each entry with every data point labeled 
+\end{proof}
 \section{Hierarchical Clustering}
 
 A choice of ``auxililary array'' can be thought of as a function $a:\Sigma^N \to \Sigma^A$ which assigns an auxiliary state to each input state. The collection of germs of this function partitions $\Sigma^N$ into subsets of inputs which share the same auxiliary state. To be clear, we're talking about the partition

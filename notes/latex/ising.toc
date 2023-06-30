@@ -3,6 +3,6 @@
 \contentsline {subsection}{\numberline {1.2}The Reverse Ising Problem}{2}{subsection.1.2}%
 \contentsline {subsection}{\numberline {1.3}Constraint Sets for Designing Ising Systems}{3}{subsection.1.3}%
 \contentsline {subsection}{\numberline {1.4}Partial Ising Circuits}{7}{subsection.1.4}%
-\contentsline {section}{\numberline {2}Boolean Ising Circuits}{8}{section.2}%
+\contentsline {section}{\numberline {2}Boolean Circuits and Functions}{8}{section.2}%
 \contentsline {section}{\numberline {3}Hierarchical Clustering}{8}{section.3}%
 \contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{8}{section.4}%
