@@ -542,10 +542,7 @@ class BCircuit(PICircuit):
         return Spin(out, shape=(1,))
 
     def func(self):
-        def f(a):
-            return self.vals[a]
-
-        return f
+        return self.vals
 
     def asdict(self):
         return {Spin(a, (self.N,)): self.vals[a] for a in range(1 << self.N)}
