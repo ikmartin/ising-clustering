@@ -112,4 +112,23 @@ Therefore, $R$ is a viable Hamiltonian if
 \begin{align}
 	(H(\sigma, \eta, \tau) - H(\sigma, \eta, F(\sigma, \eta))) + (G(\sigma, \eta, F(\sigma, \eta)) - G(\sigma, f(\sigma), F(\sigma, f(\sigma)))) + K_0 + K_1 > 0
 \end{align}
+
+\section{Entropy}
+
+I have a hypothesis about which threshold functions are better than others. A threshold function based on a set of inputs and outputs should be trying to give us information about whether or not the pattern is correct. One based on only inputs should be trying to tell us information about what the answer is. It is rather annoying that these two interpretations are so different. They are also likely wrong, and it would be a bad idea to assume we know what the aux spin is meant to do, in absence of an actually compelling theory. Therefore, it is better to go with an abstract measure of interpretation.
+
+Consider the set of all I/O patterns $P$, and call the set of correct patterns $R$ and the wrong patterns $W$. Consider a family of binary threshold functions $\hat{f} : P \rightarrow \{0,1\}^a$. Consider a probability density function $p : P \rightarrow [0,1]$, which is in practice given by the input-level-relative Boltzmann probabilities from a best-guess Hamiltonian. There is a true hidden state $x \in P$, and it is up to us to make a guess $\hat{f}$, which will yield a result pattern $\hat{f}(x)$. There are exactly $2^a$ possible result patterns. If we see a possible result pattern $y \in \{0,1\}^a$, then we know that there are $|\hat{f}^{-1}(y)|$ possible true states which could yield that outcome. Therefore,
+\begin{align}
+	\mathbb{P}(y) = \sum_{z \in \hat{f}^{-1}(y)} p(z) 
+\end{align}
+It follows that the amount of information given by $y$ is
+\begin{align}
+	I(y) = -\log_2\sum_{z \in \hat{f}^{-1}(y)} p(z)
+\end{align}
+Therefore, the expected amount of information given by $\hat{f}$ is 
+\begin{align}
+	I(\hat{f}) = -\sum_{y \in \{0,1\}^a} \left(\sum_{z \in \hat{f}^{-1} (y)} p(z)\right) \log_2 \sum_{z \in \hat{f}^{-1}(y)} p(z)
+\end{align}
+
+
 \end{document}
