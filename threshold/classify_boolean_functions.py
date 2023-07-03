@@ -213,5 +213,6 @@ def check_duals_for_strong_neutralizability(N):
     print(f"  {len(neuts_from_selfdualncirc)} neutralizable functions found")
 
 
-reduce_classes_of_boolean_functions(5)
-# check_duals_for_strong_neutralizability(4)
+if __name__ == "__main__":
+    reduce_classes_of_boolean_functions(5)
+    # check_duals_for_strong_neutralizability(4)
