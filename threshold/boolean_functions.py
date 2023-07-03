@@ -196,7 +196,7 @@ def display_orbits(N):
 
 
 if __name__ == "__main__":
-    N = 3
+    N = 4
     spin = [0, 0, 0, 1, 1]
     """
     print(spin, bin2dec(spin))
