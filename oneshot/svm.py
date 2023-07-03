@@ -36,7 +36,7 @@ original_vars = num_vars
 hyperplanes = []
 radius = None
 search_iterations = 50
-num_samples = 30
+num_samples = 150
 search_sigma = .2
 cache = {}
 for i in range(12):
@@ -44,12 +44,24 @@ for i in range(12):
     loop = tqdm(range(search_iterations), leave = True)
     #current_weight = torch.randn(num_vars)
     #current_weight[num_inputs:original_vars] = 0
-    current_weight = torch.randn(num_inputs)
-    current_weight = F.normalize(current_weight, dim=0)
-    current_bias = torch.randn(1).clamp(0,1).item()
-    current_plane = (current_weight, current_bias)
+    for j in range(num_samples):
+        current_weight = torch.randn(num_inputs)
+        current_weight = F.normalize(current_weight, dim=0)
+        current_bias = torch.randn(1).clamp(0,1).item()
+        current_plane = (current_weight, current_bias)
+        M, terms, correct = constraints(n1, n2, aux = aux, radius = radius, desired = desired, included = included, hyperplanes = hyperplanes + [current_plane], auxfix = True)
+        M_hash = hash(M.numpy().data.tobytes())
+        if M_hash in cache:
+            objective = cache[M_hash]
+        else:
+            objective = call_my_solver(M.to_sparse_csc(), tolerance = 1e-8, fullreturn = False)
+            cache[M_hash] = objective
+        candidates.append({'plane': current_plane, 'val': objective})
+    best = min(candidates, key = lambda item: item['val'])
+    current_plane = best['plane']
+    current_weight, current_bias = current_plane
     for j in loop:
-        search_sigma = np.exp(-3 * j/search_iterations)
+        search_sigma = 0.05 * (1 - j/search_iterations)#np.exp(-3 * j/search_iterations)
         samples = []
         for k in range(num_samples):
             #new_weight = search_sigma * torch.randn(num_vars) + current_weight
@@ -65,7 +77,7 @@ for i in range(12):
             if M_hash in cache:
                 objective = cache[M_hash]
             else:
-                objective, coeffs, rhos = call_my_solver(M.to_sparse_csc(), tolerance = 1e-8, fullreturn = True)
+                objective = call_my_solver(M.to_sparse_csc(), tolerance = 1e-8, fullreturn = False)
                 cache[M_hash] = objective
             if objective < 1e-2:
                 print("done")
