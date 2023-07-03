@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from fast_constraints import all_answers_basic
 import pandas as pd
+import matplotlib.pyplot as plt
 
 n1, n2 = 3,3
 desired = (0,1,2,3,4)
@@ -23,11 +24,11 @@ M, _, _ = constraints(n1, n2, desired = desired, included = included)
 reference_objective = call_my_solver(M.to_sparse_csc())
 
 hyperplanes = []
-loop = tqdm(range(10000), leave=True)
+loop = tqdm(range(1000), leave=True)
 for i in loop:
     weights = torch.randn(num_vars)
     weights = F.normalize(weights, dim=0)
-    bias = torch.rand(1).item()
+    bias = torch.randn(1).item()
     hyperplanes.append((weights, bias))
 
 planes = []
@@ -48,4 +49,4 @@ for plane in loop:
     planes.append(pattern.tolist())
 
 df = pd.DataFrame({'planes': planes, 'objective': results})
-df.to_csv('3x3.csv')
+df.to_csv('3x3-1k-test.csv')
