@@ -1,5 +1,5 @@
 # Fdb version 4
-["bibtex ising"] 1688420694 "ising.aux" "ising.bbl" "ising" 1688420694 0
+["bibtex ising"] 1688422556 "ising.aux" "ising.bbl" "ising" 1688422556 0
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/natbib/abbrvnat.bst" 1233624470 26532 66bed5cc59495faaa3f9ae9af9fa5e42 ""
   "ising.aux" 1688139371 2998 969866045267fecbe6cfb05a2e718384 "pdflatex"
   "ising.bib" 0 -1 0 ""
@@ -7,7 +7,7 @@
   "ising.bbl"
   "ising.blg"
   (rewritten before read)
-["pdflatex"] 1688139370 "ising.tex" "ising.pdf" "ising" 1688420694 0
+["pdflatex"] 1688139370 "ising.tex" "ising.pdf" "ising" 1688422556 0
   "/home/ikmarti/texmf/tex/style-sheets/macrosabound.sty" 1687885235 37466 749dcdf4e46f19421ccdbe3df159c73e ""
   "/home/ikmarti/texmf/tex/style-sheets/theorem-env.sty" 1682379113 3236 2517f736f8a012476a7df9915a3bc3f9 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc" 1640468671 3136 aac2e2476de8af6c827239df395814ee ""

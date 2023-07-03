@@ -145,9 +145,13 @@ def get_orbits(N):
 
 
 def check_strong_neutralizability_among_orbits(N):
-    from classify_boolean_functions import check_strong_neutralizability as sncheck
+    from classify_boolean_functions import (
+        check_strong_neutralizability as sncheck,
+        dual,
+        selfdual,
+    )
 
-    orbits = get_orbits(N)
+    orbits = list(get_orbits(N))
     success_rate = []
     trigger = False
     for i, orbit in enumerate(orbits):
@@ -161,10 +165,21 @@ def check_strong_neutralizability_among_orbits(N):
         if success_rate[-1] != 0 and success_rate[-1] != 1:
             trigger = True
 
-    if trigger:
-        print("FAILURE")
-    else:
-        print("SUCCESS! All success rates either 1 or 0")
+    data = list(zip(orbits, success_rate))
+    good_orbits = [row[0] for row in data if row[1] == 1]
+    print(f" {len([row for row in data if row[1] == 1])} strongly neutralizable orbits")
+    for k in range(1, N + 2):
+        count = len([row for row in data if len(row[0].orbit) <= 1 << k])
+        print(f"  {count} orbits of size {1<< k} or less")
+
+    for i, orbit in enumerate(good_orbits):
+        dualorb = [dual(bf.vals) for bf in orbit.orbit]
+        selfdualorb = [selfdual(bf.vals) for bf in orbit.orbit]
+        hexorb = [bin2hex(bf.vals) for bf in orbit.orbit]
+        print(f"GOOD ORBIT {i}")
+        print(f"  {hexorb}")
+        print(f"  {[bin2hex(bf) for bf in dualorb]}")
+        print(f"  {[bin2hex(bf) for bf in selfdualorb]}")
 
 
 def save_strongly_neutralizable_orbits(N):
@@ -196,11 +211,12 @@ def display_orbits(N):
 
 
 if __name__ == "__main__":
-    N = 4
+    N = 3
     spin = [0, 0, 0, 1, 1]
     """
     print(spin, bin2dec(spin))
     func = BooleanFunction(36478, 4)
     display_spin_action(func, bin2dec(spin))
     """
-    save_strongly_neutralizable_orbits(N)
+    check_strong_neutralizability_among_orbits(N)
+    # save_strongly_neutralizable_orbits(N)
