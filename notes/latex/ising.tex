@@ -309,90 +309,40 @@ The following theorem summarizes our results up to this point.
   Let $(\{a,b\}, \{c\}, AND)$ be the 1-bit AND circuit. Then there exists an Ising system $(\{a,b,c\}, R)$ which solves the circuit and is strongly neutralizable.
 \end{example}
 
-\subsection{Partial Ising Circuits}
-
-\begin{defn}\label{defn:ising-subcircuit}
-  As always, let $\Sigma = \{-1,+1\}$ and let $(G,f)$ be an Ising circuit with $G = N \cup M$. An \textbf{Ising subcircuit} of $(G,f)$ is some pair $(G', f')$ such that $G' = N\cup M'$ with $M' \subset M$ and $f'$ agrees with $f$ on the $M'$ coordinates; i.e. there is some function $g:\Sigma^N \to \Sigma^{M \setminus M'}$ such that $f = f'\times g$.
-\end{defn}
-
-\begin{defn}\label{defn:partial-ising}
-  Let $\Sigma = \{-1, +1\}$ and let $(G,f)$ be an Ising circuit with further decompositions of the output space into $M = M_1 \cup M_2$ and the logic into $f = f_1\times f_2$. We say that $(G,f)$ is \emph{partially} solvable with respect to $M_2$ if there exists some Hamiltonian such that
-  \begin{align*}
-    (s,f_1(s),f_2(s)) < (s,f_1(s),t)
-  \end{align*}
-  for all $s \in \Sigma^N$ and $f_2(s) \neq t \in \Sigma^{M_2}$.
-\end{defn}
-
-\begin{prop}\label{prop:partial_solvability}
-  Let $(G,f)$ be an Ising circuit with subcircuit $(N\cup M_1, f_1)$, and set $M_2 = M \setminus M_1$ . If the subcircuit $(G_1 = N\cup M_1, f_1)$ is solvable and $(G,f)$ is partially solvable with respect to $M_2$ then $(G,f)$ is solvable.
-\end{prop}
-\begin{proof}
-    Suppose $(G_1,f_1)$ is solvable with Hamiltonian $H_1$ and $(G,f)$ is partially solvable by Hamiltonian $H_2$. By definition this means
-    \begin{align*}
-        H_1(s,f_1(s)) < H_1(s,r) \hspace{1em} \text{for all } s\in \Sigma^N \text{ and } f_1(s) \neq r \in \Sigma^{M_1}
-    \end{align*}
-    and
-    \begin{align*}
-        H_2(s,f_1(s),f_2(s)) < H_2(s,f_1(s), t) \hspace{1em} \text{for all } s\in \Sigma^N \text{ and } f_2(s) \neq t \in \Sigma^{M_2}.
-    \end{align*}
-    Define $H_\lambda(s,r,t) = H_2(s,r,t) + \lambda H_1(s,r)$. By definition, $H_\lambda$ is a Hamiltonian which solves $(G,f)$ if and only if for all $(r,t) \neq (f_1(s), f_2(s))$,
-    \begin{align*}
-        H_\lambda(s,r,t) > H_\lambda(s,f_1(s),f_2(s))
-        &\iff H_\lambda(s,r,t) - H_\lambda(s,f_1(s),f_2(s)) > 0\\
-        &\iff H_2(s,r,t) - H_2(s,f_1(s),f_2(s)) + \lambda(H_1(s,r) - H_1(s,f_1(r))) > 0 \\
-        &\iff H_2(s,r,t) - H_2(s,f_1(s),f_2(s)) > \lambda(H_1(s,f_1(r)) - H_1(s,r)).
-    \end{align*}
-    Set $\alpha = \max_{s,r}(H_1(s,f_1(s)) - H_1(s,r))$ and $\beta = \min_{s,r,t} (H_2(s,r,t) - H_2(s,f_1(s),f_2(s)))$. Then any choice of $\lambda$ such that $\beta > \lambda\alpha$ will ensure the above inequality is satisfied for all $s$, $r\neq f_1(s)$ and $t\neq f_2(x)$.
-\end{proof}
-
-\begin{rmk}
-    The converse of Proposition \ref{prop:partial_solvability} is false; solvability of $(G,f)$ does not necessarily imply the solvability of its subcircuits.
-\end{rmk}
-\begin{rmk}
-    Decomposing an Ising circuit $G$ into $G_1 = N \cup M_1$ and $G_2 = N \cup M_2$ seems dual to the addition of auxiliary spins $A$ to circuit $G_1 = N \cup M_1$, however, the two processes are distinct in a subtle way. Solving an Ising circuit $G$ through the addition of auxiliary spins $A$ and an auxiliary array $g:\Sigma^N \to \Sigma^A$ results in a constraint set
-    \begin{align*}
-        (s,f(s),g(s)) < (s,t,a) ~\text{ for all }~ s\in \Sigma^N ~\text{ and }~ f(s) \neq t\in \Sigma^M,
-    \end{align*}
-    for a total of $2^N(2^{M+A} - 2^A)$ constraints. However, solving $G = N \cup M_1 \cup M_2$ requires satisfying the constraints
-    \begin{align*}
-        (s,f_1(s),f_2(s)) < (s,r,t) ~\text{ for all }~ s\in \Sigma^N ~\text{ and }~ (f_1(s), f_2(s)) \neq (r,t) \in \Sigma^{M_1}\times \Sigma^{M_2},
-    \end{align*}
-    for a total of $2^N(2^{M_1 + M_2} - 1)$ constraints. \textbf{Circuits with auxiliaries care only about correctness in the output component, whereas circuits with decomposed output spaces require correctness in all output components. Auxiliary spins are therefore not the same as output spins.}
-\end{rmk}
-
-These remarks notwithstanding, Proposition \ref{prop:partial_solvability} is a powerful tool for solving Ising circuits. For instance, suppose we have an algorithm PartialSolve which takes as input $(G,M_2)$ where
-\begin{itemize}
-  \item $G = N\cup M_1 \cup M_2$ is an ising circuit
-  \item $(G,M_1)$ is a solvable subcircuit
-\end{itemize}
-and returns an Ising circuit $G'$ which is partially solvable with respect to $M_2$. Such an algorithm can be achieved using an auxiliary solve, for instance. We can then solve \emph{any} Ising circuit by
-\begin{algorithm}[!ht]
-\DontPrintSemicolon
-  
-  \KwInput{Ising Circuit $(G=N\cup M, f)$ with decomposition $M = M_1 \cup ...\cup M_k$.}
-  \KwOutput{Ising circuit $G' = G \cup A$ solving $G$ with auxiliary spins $A$.}
-    $i = 1$
-    $G' = N\cup M_i$.
-
-  \While{$i \neq k$}
-  {
-     $i = i + 1$
-
-    $G' = G' \cup M_i$
-
-    $G' = \text{PartialSolve}(G')$
-  }
-\caption{RecursivePartialSolve}
-\end{algorithm}
-
-Since $G'$ is always solvable, the full circuit $G$ (together with the auxiliary spins accrued by the solves of $G'$) is solvable if and only if $G'$ is solvable with respect to $M_{i+1} \cup ... \cup M_k$, due to Proposition \ref{prop:partial_solvability}. By the time RecursivePartialSolve terminates, $G'$ will be a solution to $G$ with auxiliaries.
-
-The advantage of using this algorithm over an auxiliary solve is that each iteration of $PartialSolve$ only has to operate over $|2^N\times (2^{M_2} - 1)|$ many constraints.
-
-
 
 \section{Boolean Circuits and Functions}\label{sec:bool-circuits}
-In this section we consider abstract circuits $(N, M, f)$ where $|M| = 1$. We start with some definitions 
+\begin{center}
+  <Under construction>
+\end{center}
+
+A \textbf{boolean function} is a map $f:\Sigma^N \to \Sigma$. A \textbf{boolean circuit} is an abstract circuit $(N, M, f)$ where $|M| = 1$, and hence where $f$ is a boolean function.
+
+\begin{rmk}[Disambiguation of 0,1 and -1,1 $\Sigma$ representations]\label{rmk:sigma_convention}
+  Boolean algebra appears in many disparate fields of math -- game theory, decision theory, coding theory, artificial intelligence and distributed algorithms to name a few -- and hence conventions can vary quite a bit. In particular, the set $\Sigma$ assumes various roles and alternates between $\{-1, 1\}$ and $\{0,1\}$ representations. Results in section \ref{sec:bool-circuits} do not depend on whether $\Sigma = \{0,1\}$ or $\Sigma = \{-1,1\}$, and we will take care to note which definition is currently in use when ambiguity arises. Here is a context-dependent key for swapping between the $\{0,1\}$ and $\{-1,1\}$ representations.
+  \begin{itemize}
+    \item When $\Sigma$ is regarded as a 2-element set with no additional structure, any bijection between $\{0,1\}$ and $\{-1,1\}$ will suffice.
+    \item When $\Sigma$ is regarded as a subset of $\bR$, the change of variables $x \mapsto 2x - 1$ swaps the roles of $0$ and $-1$. This situation arises when considering pseudo-boolean functions $f:\Sigma^N \to \bR$, all of which have unique polynomial representations and hence depend on whether $-1$ or $0$ in use (consider evaluating an Ising Hamiltonian on strings of $0,1$, for instance). It also comes up when one treats a boolean function $f:\Sigma^N \to \Sigma$ as a labeling of the corners of the hypercube $\Sigma^N$, in which case the $\{-1,1\}$ convention is more convenient as it makes the SVM formulas slightly more concise.
+    \item When $\Sigma$ is regarded as the unique group $G$ of order 2, there is only identification between $\{0,1\}$ and $\{-1,1\}$ which makes sense: $0 \mapsto 1$ and $1 \mapsto -1$. This is because, $0$ is the identity element when $G$ is regarded as the additive group $\bZ/2\bZ$, but $1$ is the identity when $G$ is regarded as the multiplicative group $\bZ^\times$. Annoyingly, this is distinct from the typical identification, and hence special care must be taken to avoid confusion in situations where the group structure of $\Sigma$ is relevant. The change of variables formula given above can be modified to $x \mapsto 1 - 2x$ if one wishes it to match the group isomorphism.
+  \end{itemize}
+\end{rmk}
+\subsection{Concepts from Boolean Algebra}
+\begin{center}
+  <Under construction>
+\end{center}
+
+\begin{defn}\label{defn:dual-selfdual}
+  Let $f:\Sigma^N \to \Sigma$ be a boolean function. The \textbf{dual} of $f$ is a boolean function $f^d$ of the same dimension defined
+  \begin{align*}
+    f^d(x) = \ol{f(\olx)}.
+  \end{align*}
+  The \textbf{self-dual} of $f$ is a boolean function $f^{sd}$ of dimension $N+1$ defined
+  \begin{align*}
+    f^{sd}(x_0, x_1,...,x_n) = \olx_0\cdot f^d(x_1,...,x_n) ~+~ x_0\cdot f(x_1,...,x_n).
+  \end{align*}
+  The additional bit $x_0$ ``turns $f^d$ and $f$ on and off''.
+\end{defn}
+
+\subsection{Ising systems which solve boolean circuits}
 
 \begin{prop}\label{prop:boolean-ising-svm-equiv}
   Let $(N, {y}, f)$ be an abstract circuit with one output -- i.e. let $f$ be a boolean function. There exists an Ising system $(X,H)$ with $X = N \cup {y}$ if and only if the set of true vectors $T = f^{-1}(1)$ is linearly separable from the set of false vectors $F = X \setminus F = f^{-1}(-1)$.
@@ -411,7 +361,7 @@ of input spin space. If the choice of auxiliary array $a$ makes the Ising circui
 This simple observation motivates a simple question: \emph{can a partition of $\Sigma^N$ be found such that it matches the partition produced by some feasible auxiliary array using only the logic of the Ising circuit?} Producing such a partition is a clustering problem on input spinspace.
 
 \section{Pseudo-boolean optimization and polynomial fitting}
-A pseudo boolean function (PBF) is any function $f:\{0,1\}\to \bR$. It is a well known fact that any such PBF can be uniquely represented by a multilinear polynomial in $n$ variables [pseudo-boolean optimization Boros, Hammer]; that is, a polynomial
+A pseudo boolean function (PBF) is any function $f:\Sigma^N\to \bR$, typically defined so that $\Sigma = \{0,1\}$. It is a well known fact that any such PBF can be uniquely represented by a multilinear polynomial in $n$ variables [pseudo-boolean optimization Boros, Hammer]; that is, a polynomial
 \begin{align*}
   g(x_1,...,x_n) = \sum_{S \subset [n]} a_S \prod_{j \in S}x_j
 \end{align*}

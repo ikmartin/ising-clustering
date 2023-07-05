@@ -628,7 +628,6 @@ INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-t
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Regular-tlf-t1.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Regular-tlf-t1.tfm
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Bold-tlf-t1.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-sc-t1.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-t1.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-sc-t1.tfm
