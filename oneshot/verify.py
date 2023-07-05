@@ -18,7 +18,6 @@ def parseaux(lines):
     array = None
     for line in lines:
         binary_string = ''.join([f'{int(c,16):04b}' for c in line])
-        print(binary_string)
         numpy_line = np.array([[int(x) for x in binary_string]])
         array = numpy_line if array is None else np.concatenate([array,numpy_line])
 

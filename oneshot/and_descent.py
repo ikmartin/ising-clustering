@@ -13,9 +13,9 @@ from verify import parseaux
 
 
 def run(num_aux):
-    n1, n2 = 3,3
-    desired = (0,1,2,3,4)
-    included = (5,)
+    n1, n2 = 4,4
+    desired = (0,1,2,3,4,5,6)
+    included = (7,)
     num_inputs = n1 + n2 + (len(included) if included is not None else 0)
     num_outputs = (len(desired) if desired is not None else n1 + n2)
     num_vars = num_inputs + num_outputs
@@ -50,6 +50,8 @@ def run(num_aux):
     and_gate_list = []
     for func in neutrals:
         for indices in combinations(range(num_vars), thresh_power):
+            if min(indices) >= num_inputs or max(indices) < num_inputs:
+                continue
             and_gate_list.append((indices, func))
 
     current_gates = choices(and_gate_list, k=num_aux)
@@ -80,7 +82,7 @@ def run(num_aux):
                     current_objective = objective
                     current_gates = new_gate_list
                     #print(f'{i} {objective}')
-                    while current_objective < 1e-2:
+                    while current_objective < 1:
                         if radius < num_outputs:
                             radius += 1
                             cache = {}
@@ -90,6 +92,8 @@ def run(num_aux):
                         else:
                             print(current_gates)
                             return
+                    break
+
                 else:
                     num_since_last_success += 1
                     if num_since_last_success > total_tasks:
