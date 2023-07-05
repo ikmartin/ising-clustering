@@ -1,6 +1,8 @@
 from lmisr_interface import call_solver
 from fast_constraints import constraints_building
+from new_constraints import constraints
 import numpy as np
+from numpy import array
 from solver import LPWrapper
 import torch
 
@@ -75,16 +77,43 @@ def parse_ands():
     #aux_keys = [(1, 13), (2, 14), (1, 9), (5, 13), (0, 1), (4, 11), (2, 10), (0, 11), (5, 12), (4, 12)]
     #aux_keys = [(1,2), (4,10), (0,5), (0,8), (3,9), (0,9)]
     #aux_keys = [(0, 1), (4, 11), (0, 10), (2, 13), (2, 14), (5, 13), (5, 12), (4, 12)]
-    aux_keys = [(5, 13), (1, 13), (6, 12), (6, 11), (4, 12), (6, 14), (4, 10), (3, 13), (5, 11), (4, 9), (3, 14), (5, 12)]
+    #aux_keys = [(5, 13), (1, 13), (6, 12), (6, 11), (4, 12), (6, 14), (4, 10), (3, 13), (5, 11), (4, 9), (3, 14), (5, 12)]
     n1 = 4
     n2 = 4
-    _, _, correct = constraints_building(n1,n2, None, 1, radius=None, mask=None, include=None)
-    correct = correct.numpy()
 
-    aux_vecs = np.concatenate([np.expand_dims(np.prod(correct[...,key], axis=-1), axis=0) for key in aux_keys]).astype(np.int8)
-    print(aux_array_as_hex(aux_vecs))
 
-    with open("saved-aux", "w") as FILE:
+    functions = [
+        ((0, 4, 11), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((4, 5, 10), array([1, 1, 1, 1, 1, 0, 1, 0])), 
+        ((2, 6, 11), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((2, 7, 13), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((1, 4, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((0, 1, 12), array([1, 1, 1, 1, 1, 0, 1, 0])), 
+        ((0, 5, 11), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((6, 8, 11), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((3, 15, 13), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((4, 6, 9), array([1, 0, 0, 0, 1, 1, 1, 0]))
+    ]
+    
+    functions = [
+        ((0, 4, 11), 	array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((1, 9, 10), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((3, 6, 13), 	array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((4, 5, 11), 	array([1, 1, 1, 1, 1, 0, 1, 0])), 
+        ((6, 9, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((0, 9, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((0, 5, 12), 	array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((1, 12, 13), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+        ((0, 2, 13), 	array([1, 0, 1, 1, 1, 0, 1, 1])), 
+        ((2, 4, 10), 	array([1, 0, 0, 0, 1, 1, 1, 0]))
+    ]
+
+    _, _, correct = constraints(n1,n2, degree=1, radius=1, bool_funcs = functions)
+    correct = correct[...,(2*(n1+n2)):].numpy()
+    print(aux_array_as_hex(correct.T))
+    aux_vecs = correct.T
+
+    with open("saved-aux2", "w") as FILE:
         #FILE.write(str(aux_vecs.tolist()))
         aux_vecs = aux_vecs.T
         for line in aux_vecs:
@@ -96,7 +125,7 @@ def parse_ands():
 
 if __name__ == '__main__':
     parse_ands()
-    verify()
+    #verify()
 
 """
 print("making constraints")

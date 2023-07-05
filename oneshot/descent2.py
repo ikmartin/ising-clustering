@@ -42,7 +42,7 @@ def make_wrapper(n1, n2, desired, included):
 
 
 def run(num_aux):
-    global cache_hits, cache_misses
+    global cache, cache_hits, cache_misses
 
     n1, n2 = 4,4
     desired = (0,1,2,3,4,5,6)
@@ -50,7 +50,7 @@ def run(num_aux):
     num_inputs = n1 + n2 + (len(included) if included is not None else 0)
     num_outputs = (len(desired) if desired is not None else n1 + n2)
     num_vars = num_inputs + num_outputs
-    radius = 3
+    radius = 1
     attempt_fn = make_wrapper(n1, n2, desired, included)
 
     thresh_power = 3
@@ -77,13 +77,13 @@ def run(num_aux):
     # Try out all the gates in isolation to give them an approximate score
     print("Calculating initial scores...")
     base_objective = attempt_fn(radius, None)
-    progress = tqdm(gate_list, leave=True)
+    progress = tqdm(gate_list, desc = 'scores', leave=True)
     reference_scores = [base_objective - attempt_fn(radius, [func]) for func in progress]
     gates_with_progress = sorted(zip(reference_scores, gate_list), key = lambda item: -item[0])
     print(f'Cache efficiency: {cache_hits/(cache_hits+cache_misses)}')
     
     print("Generating initial aux array...")
-    aux_maps = gates_with_progress[:num_aux]
+    aux_maps = choices(gates_with_progress, k = num_aux)
     current_objective = attempt_fn(radius, [pair[1] for pair in aux_maps])
     print(f'Initial objective is {current_objective}')
     
@@ -93,6 +93,7 @@ def run(num_aux):
 
     while True:
         for i in range(num_aux):
+            cache = {}
             cache_hits = 0
             cache_misses = 0
             objective_before_loop = current_objective
@@ -124,7 +125,9 @@ def run(num_aux):
 
                 loop.set_postfix(improve = current_improvement, curscore = score, objective = current_objective, hitrate = cache_hits/(cache_hits + cache_misses))
 
+                radius_updated = False
                 while current_objective < 1:
+                    radius_updated = True
                     if radius < num_outputs:
                         radius += 1
                         current_objective = attempt_fn(radius, [pair[1] for pair in aux_maps])
@@ -133,6 +136,14 @@ def run(num_aux):
                     else:
                         print(current_gates)
                         return
+
+                if radius_updated:
+                    base_objective = attempt_fn(radius, None)
+                    progress = tqdm(gate_list, desc = 'scores', leave=True)
+                    reference_scores = [base_objective - attempt_fn(radius, [func]) for func in progress]
+                    gates_with_progress = sorted(zip(reference_scores, gate_list), key = lambda item: -item[0])
+                    print(f'Cache efficiency: {cache_hits/(cache_hits+cache_misses)}')
+                    break
 
 
 @click.command()

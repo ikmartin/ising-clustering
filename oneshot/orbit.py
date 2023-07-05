@@ -5,6 +5,7 @@ from ast import literal_eval
 import torch
 from itertools import combinations
 
+torch.set_printoptions(threshold = 50000)
 orbits = []
 with open('dat/orbit4.dat', 'r') as FILE:
     for line in FILE.readlines():
@@ -24,7 +25,10 @@ for indices in combinations(range(num_vars), 4):
         for func in orbit:
             M, _, _ = constraints(n1, n2, desired = desired, included = included, bool_funcs = [(indices, func)])
 
-            results.append(call_my_solver(M.to_sparse_csc()))
+            objective, coeffs, rhos, _, _ = call_my_solver(M.to_sparse_csc(), fullreturn = True)
+            results.append(torch.tensor(rhos).unsqueeze(0))
 
-        print(torch.var(torch.tensor(results)))
+        vars = torch.var(torch.cat(results), dim=0)
+        print(torch.any(vars > 1e-4))
+
 
