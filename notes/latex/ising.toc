@@ -3,8 +3,8 @@
 \contentsline {subsection}{\numberline {1.2}The Reverse Ising Problem}{2}{subsection.1.2}%
 \contentsline {subsection}{\numberline {1.3}Constraint Sets for Designing Ising Systems}{3}{subsection.1.3}%
 \contentsline {subsection}{\numberline {1.4}Symmetries of Circuits and Systems}{7}{subsection.1.4}%
-\contentsline {section}{\numberline {2}Boolean Circuits and Functions}{7}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Concepts from Boolean Algebra}{8}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Ising systems which solve boolean circuits}{8}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Hierarchical Clustering}{8}{section.3}%
-\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{9}{section.4}%
+\contentsline {section}{\numberline {2}Boolean Circuits and Functions}{8}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Concepts from Boolean Algebra}{9}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Ising systems which solve boolean circuits}{9}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Hierarchical Clustering}{9}{section.3}%
+\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{10}{section.4}%
