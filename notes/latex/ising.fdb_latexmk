@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex ising"] 1688678790 "ising.aux" "ising.bbl" "ising" 1688678790 0
+["bibtex ising"] 1688754426 "ising.aux" "ising.bbl" "ising" 1688754426 0
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/natbib/abbrvnat.bst" 1233624470 26532 66bed5cc59495faaa3f9ae9af9fa5e42 ""
-  "ising.aux" 1688664850 3324 881dd108f2bcb7690631b1046904d519 "pdflatex"
+  "ising.aux" 1688744252 3324 d1d7f00ddbf55505b92c3b4c44e958d5 "pdflatex"
   "ising.bib" 0 -1 0 ""
   (generated)
   "ising.bbl"
   "ising.blg"
   (rewritten before read)
-["pdflatex"] 1688664850 "ising.tex" "ising.pdf" "ising" 1688678790 0
+["pdflatex"] 1688744252 "ising.tex" "ising.pdf" "ising" 1688754426 0
   "/home/ikmarti/texmf/tex/style-sheets/macrosabound.sty" 1688659851 37578 7d748dd4b910ba78c7d6ecd5c7ef8ce8 ""
   "/home/ikmarti/texmf/tex/style-sheets/theorem-env.sty" 1682379113 3236 2517f736f8a012476a7df9915a3bc3f9 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc" 1640468671 3136 aac2e2476de8af6c827239df395814ee ""
@@ -249,11 +249,11 @@
   "/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1685982560 4643411 5ced174c6d521e21dd58a10751c00482 ""
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1685982583 7892047 9d758834e93a9e2e1e7e4b543026d851 ""
   "/usr/local/texlive/2023/texmf.cnf" 1685982557 455 5b996dcaa0eb4ef14a83b026bc0a008c ""
-  "ising.aux" 1688664850 3324 881dd108f2bcb7690631b1046904d519 "pdflatex"
+  "ising.aux" 1688744252 3324 d1d7f00ddbf55505b92c3b4c44e958d5 "pdflatex"
   "ising.bbl" 0 -1 0 "bibtex ising"
-  "ising.out" 1688664850 2074 da4aee821550e0cff52bf9874d31730c "pdflatex"
-  "ising.tex" 1688664849 37592 ee6edb8a21a3fca4e7ea398c3a1e855f ""
-  "ising.toc" 1688664850 916 3914dca09157ea97d758bc4afd825072 "pdflatex"
+  "ising.out" 1688744252 2074 da4aee821550e0cff52bf9874d31730c "pdflatex"
+  "ising.tex" 1688744251 38079 5e97b791641fae3590c7ac58bfbd4fe0 ""
+  "ising.toc" 1688744252 916 3914dca09157ea97d758bc4afd825072 "pdflatex"
   (generated)
   "ising.aux"
   "ising.log"

@@ -33,7 +33,7 @@
 %%% The Title and Author only need to be set once at the start of the document. If you take notes for multiple courses in the same document (for example, in a multi-semester sequence for the same course), you can separate the courses with a new Part, and the semester, lecturer, and course only need to be set once at the start of the new course.
 \newpage
 \title{The Reverse Ising Problem}
-\author{Isaac Martin}
+\author{Isaac Martin and Andrew Moore}
 \date{Summer 2023}
 \maketitle
 \tableofcontents
@@ -362,6 +362,8 @@ Morphisms of Ising circuits is a function on $\Zing(N,M)$ which \emph{preserves 
 Notice that if $\alpha$ is an Ising symmetry and $\alpha'$ is another Ising symmetry, then $\alpha\circ \alpha'$ is again an Ising symmetry. Since the identity map $\id_{\Zing(N,M)}$ is an Ising morphism, we see that $\Zing(N,M)$ forms a category. Notice also that if $\alpha$ is a bijective Ising symmetry then its inverse $\alpha^{-1}$ is as well, so $\Aut(\Zing(N,M))$ is a group under function composition.
 
 Consider the implications of this setup to the reverse Ising problem. If the group $\Aut(\Zing(N,M))$ were well understood, then every solution $(X,H)$ to $(N,M,f)$ would yield a family of Ising circuits in $\Zing(N,M)$ given by the orbit of $((X,H), (N,M,f))$ under $\Aut(\Zing(N,M))$. This is particularly useful when one isn't interested in solving a specific circuit but rather in understanding the space $\Zing(N,M)$ as a whole for fixed $N$ and $M$, for instance, when designing auxiliary circuits for use with $F$-augmented constraints. The rest of this section is therefore dedicated to developing an understanding of $\Zing(N,M)$.
+
+Let us first imagine enumerating all possible elements of $\Aut(\Zing(N,M))$. One approach might be to write down all bijective maps on $\Circ(N,M)$ and then check which preserve the solvability relation. As a set, $\Circ(N,M)$ is the same as the collection of all functions $f:\Sigma^N \to \Sigma^M$, hence it has size $2^{|N|\cdot 2^{|M|}}$. There are then $\left(2^{|N|\cdot 2^{|M|}}\right)!$ many bijective functions on $\Circ(N,M)$ -- a bit too many to enumerate.
 
 \section{Boolean Circuits and Functions}\label{sec:bool-circuits}
 \begin{center}
