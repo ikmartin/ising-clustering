@@ -1,4 +1,5 @@
 from lmisr_interface import call_solver
+from mysolver_interface import call_my_solver
 from fast_constraints import constraints_building
 from new_constraints import constraints
 import numpy as np
@@ -94,7 +95,7 @@ def parse_ands():
         ((3, 15, 13), array([1, 0, 0, 0, 1, 1, 1, 0])), 
         ((4, 6, 9), array([1, 0, 0, 0, 1, 1, 1, 0]))
     ]
-    
+    """    
     functions = [
         ((0, 4, 11), 	array([1, 0, 0, 0, 1, 1, 1, 0])), 
         ((1, 9, 10), array([1, 0, 0, 0, 1, 1, 1, 0])), 
@@ -107,8 +108,21 @@ def parse_ands():
         ((0, 2, 13), 	array([1, 0, 1, 1, 1, 0, 1, 1])), 
         ((2, 4, 10), 	array([1, 0, 0, 0, 1, 1, 1, 0]))
     ]
+    """
 
-    _, _, correct = constraints(n1,n2, degree=1, radius=1, bool_funcs = functions)
+    functions = [
+            ((0, 4, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((4, 5, 11), array([1, 1, 1, 1, 1, 0, 1, 0])), 
+            ((2, 6, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((2, 7, 14), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((1, 4, 13), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((0, 1, 13), array([1, 1, 1, 1, 1, 0, 1, 0])), 
+            ((0, 5, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((6, 9, 12), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((3, 8, 14), array([1, 0, 0, 0, 1, 1, 1, 0])), 
+            ((4, 6, 10), array([1, 0, 0, 0, 1, 1, 1, 0]))
+    ]
+    M, _, correct = constraints(n1,n2, degree=2, radius=None, included=(7,), desired=(0,1,2,3,4,5,6), bool_funcs = functions)
     correct = correct[...,(2*(n1+n2)):].numpy()
     print(aux_array_as_hex(correct.T))
     aux_vecs = correct.T
@@ -119,8 +133,7 @@ def parse_ands():
         for line in aux_vecs:
             FILE.write(' '.join([str(int((2*x)-1)) for x in line]) + '\n')
 
-    exit()
-    objective = call_solver(n1,n2, aux_vecs)
+    objective = call_my_solver(M.to_sparse_csc())
     print(objective)
 
 if __name__ == '__main__':

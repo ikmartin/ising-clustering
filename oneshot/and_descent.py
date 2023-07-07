@@ -92,7 +92,6 @@ def run(num_aux):
                         else:
                             print(current_gates)
                             return
-                    break
 
                 else:
                     num_since_last_success += 1

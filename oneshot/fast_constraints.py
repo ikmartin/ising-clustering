@@ -24,7 +24,7 @@ def all_answers_basic(size):
 def batch_tensor_power(input, power):
     num_rows, num_cols = input.shape
     index = (
-        torch.combinations(torch.arange(num_cols).to(DEVICE), r=power)
+        torch.combinations(torch.arange(num_cols).to(input.device), r=power)
         .unsqueeze(0)
         .expand(num_rows, -1, -1)
     )

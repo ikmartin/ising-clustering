@@ -78,7 +78,7 @@ def run(num_aux):
     print("Calculating initial scores...")
     base_objective = attempt_fn(radius, None)
     progress = tqdm(gate_list, desc = 'scores', leave=True)
-    reference_scores = [base_objective - attempt_fn(radius, [func]) for func in progress]
+    reference_scores = [base_objective for func in progress]
     gates_with_progress = sorted(zip(reference_scores, gate_list), key = lambda item: -item[0])
     print(f'Cache efficiency: {cache_hits/(cache_hits+cache_misses)}')
     
@@ -91,59 +91,70 @@ def run(num_aux):
     num_since_last_success = 0
 
 
+    i = -1
     while True:
-        for i in range(num_aux):
-            cache = {}
-            cache_hits = 0
-            cache_misses = 0
-            objective_before_loop = current_objective
-            loop = tqdm(gates_with_progress, desc = f'bit {i}', leave=True)
-            for score, gate in loop:
-                # A guess about how to end the loop early: the idea is that a gate 
-                # cannot possibly improve our situation more than it would improve the 
-                # artificial variable score if used in isolation.
-                current_improvement = objective_before_loop - current_objective
-                if score < current_improvement:
-                    break
+        aux_scores = []
+        for k in range(num_aux):
+            if k == i:
+                aux_scores.append(100000)
+                continue
+
+            maps_without_k = [item for j, item in enumerate(aux_maps) if j != k]
+            aux_scores.append(attempt_fn(radius, [pair[1] for pair in maps_without_k]) - current_objective)
+        print(aux_scores)
+        i = np.argmin(aux_scores)
+        cache = {}
+        cache_hits = 0
+        cache_misses = 0
+        objective_before_loop = current_objective
+        loop = tqdm(gates_with_progress, desc = f'bit {i}', leave=True)
+        for score, gate in loop:
+            # A guess about how to end the loop early: the idea is that a gate 
+            # cannot possibly improve our situation more than it would improve the 
+            # artificial variable score if used in isolation.
+            current_improvement = objective_before_loop - current_objective
 
 
-                # Try the new gate
-                new_aux_maps = deepcopy(aux_maps)
-                new_aux_maps[i] = (score, gate)
-                new_objective = attempt_fn(radius, [pair[1] for pair in new_aux_maps])
+            # Try the new gate
+            new_aux_maps = deepcopy(aux_maps)
+            new_aux_maps[i] = (score, gate)
+            new_objective = attempt_fn(radius, [pair[1] for pair in new_aux_maps])
 
-                # report success
-                if new_objective < current_objective:
-                    num_since_last_success = 0
-                    current_objective = new_objective
-                    aux_maps = new_aux_maps
-                else:
-                    num_since_last_success += 1
-                    if num_since_last_success > total_tasks:
-                        print("stuck")
-                        return
+            # report success
+            if new_objective < current_objective:
+                num_since_last_success = 0
+                current_objective = new_objective
+                aux_maps = new_aux_maps
+                print(aux_maps)
+            else:
+                num_since_last_success += 1
+                if num_since_last_success > total_tasks:
+                    print("stuck")
+                    return
 
-                loop.set_postfix(improve = current_improvement, curscore = score, objective = current_objective, hitrate = cache_hits/(cache_hits + cache_misses))
+            loop.set_postfix(improve = current_improvement, curscore = score, objective = current_objective, hitrate = cache_hits/(cache_hits + cache_misses))
 
-                radius_updated = False
-                while current_objective < 1:
-                    radius_updated = True
-                    if radius < num_outputs:
-                        radius += 1
-                        current_objective = attempt_fn(radius, [pair[1] for pair in aux_maps])
-                        objective_before_loop = current_objective
-                        print(f'radius now {radius} objective {current_objective}')
-                    else:
-                        print(current_gates)
-                        return
+            radius_updated = False
+            while current_objective < 1:
+                if radius == num_outputs:
+                    print("done")
+                    return
 
-                if radius_updated:
-                    base_objective = attempt_fn(radius, None)
-                    progress = tqdm(gate_list, desc = 'scores', leave=True)
-                    reference_scores = [base_objective - attempt_fn(radius, [func]) for func in progress]
-                    gates_with_progress = sorted(zip(reference_scores, gate_list), key = lambda item: -item[0])
-                    print(f'Cache efficiency: {cache_hits/(cache_hits+cache_misses)}')
-                    break
+                radius_updated = True
+                radius += 1
+                current_objective = attempt_fn(radius, [pair[1] for pair in aux_maps])
+                objective_before_loop = current_objective
+                print(f'radius now {radius} objective {current_objective}')
+
+            """
+            if radius_updated:
+                base_objective = attempt_fn(radius, None)
+                progress = tqdm(gate_list, desc = 'scores', leave=True)
+                reference_scores = [base_objective - attempt_fn(radius, [func]) for func in progress]
+                gates_with_progress = sorted(zip(reference_scores, gate_list), key = lambda item: -item[0])
+                print(f'Cache efficiency: {cache_hits/(cache_hits+cache_misses)}')
+                break
+            """
 
 
 @click.command()
