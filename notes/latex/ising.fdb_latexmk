@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex ising"] 1688422556 "ising.aux" "ising.bbl" "ising" 1688422556 0
+["bibtex ising"] 1688678790 "ising.aux" "ising.bbl" "ising" 1688678790 0
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/natbib/abbrvnat.bst" 1233624470 26532 66bed5cc59495faaa3f9ae9af9fa5e42 ""
-  "ising.aux" 1688139371 2998 969866045267fecbe6cfb05a2e718384 "pdflatex"
+  "ising.aux" 1688664850 3324 881dd108f2bcb7690631b1046904d519 "pdflatex"
   "ising.bib" 0 -1 0 ""
   (generated)
   "ising.bbl"
   "ising.blg"
   (rewritten before read)
-["pdflatex"] 1688139370 "ising.tex" "ising.pdf" "ising" 1688422556 0
-  "/home/ikmarti/texmf/tex/style-sheets/macrosabound.sty" 1687885235 37466 749dcdf4e46f19421ccdbe3df159c73e ""
+["pdflatex"] 1688664850 "ising.tex" "ising.pdf" "ising" 1688678790 0
+  "/home/ikmarti/texmf/tex/style-sheets/macrosabound.sty" 1688659851 37578 7d748dd4b910ba78c7d6ecd5c7ef8ce8 ""
   "/home/ikmarti/texmf/tex/style-sheets/theorem-env.sty" 1682379113 3236 2517f736f8a012476a7df9915a3bc3f9 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc" 1640468671 3136 aac2e2476de8af6c827239df395814ee ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc" 1640468671 2914 8283dfc24eaf1964346f843d7605c2b0 ""
@@ -18,6 +18,9 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/cyrillic/wncyr10.tfm" 1246382020 1560 6124d052cbd335b9a9796fb029bfb3e2 ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm10.tfm" 1246382020 1040 b84415f97d114011685943ade933dc71 ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm5.tfm" 1246382020 1040 a9d2074f3fa062d4d9046b92e2334d8c ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm7.tfm" 1246382020 1040 82eb6630b094bff824fccca83ff507f9 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm" 1246382020 924 9904cf1d39e9767e7a3622f2a125a565 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm" 1246382020 928 2dc8d444221b7a635bb58038579b861a ""
@@ -60,6 +63,8 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb" 1248133631 32915 7bf7720c61a5b3a7ff25b0964421c9b6 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb" 1248133631 32716 08e384dc442464e7285e891af9f45947 ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/euler/eufm10.pfb" 1336858727 21098 d4aee7c0aac232caac5688b586b9363c ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/euler/eufm7.pfb" 1336858727 21251 56705123063d7b34002d6b6e7142345e ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb" 1248133631 34694 ad62b13721ee8eda1dcc8993c8bd7041 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb" 1248133631 35309 940e81a5b9e04201a07e8b33a3ae6e64 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/newtx/ztmb.pfb" 1640468671 239149 b459cdf3364a26072e94167b64f425b2 ""
@@ -147,6 +152,7 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/amsfonts.sty" 1359763108 5949 3f3fd50a8cc94c3d4cbf4fc66cd3df1c ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/amssymb.sty" 1359763108 13829 94730e64147574077f8ecfea9bb69af4 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/euscript.sty" 1359763108 1319 275cecae59b75cbd38ce73df76acdb23 ""
+  "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/ueuf.fd" 1359763108 1047 4252767c0fde12e3ce9f914ef4bb1ea1 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd" 1359763108 961 6518c6525a34feb5e8250ffa91731cff ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsfonts/umsb.fd" 1359763108 961 d02606146ba5601b5645f987c92e6193 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/amsmath/amsbsy.sty" 1654720880 2222 78b930a5a6e3dc2ac69b78c2057b94d7 ""
@@ -243,11 +249,11 @@
   "/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1685982560 4643411 5ced174c6d521e21dd58a10751c00482 ""
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1685982583 7892047 9d758834e93a9e2e1e7e4b543026d851 ""
   "/usr/local/texlive/2023/texmf.cnf" 1685982557 455 5b996dcaa0eb4ef14a83b026bc0a008c ""
-  "ising.aux" 1688139371 2998 969866045267fecbe6cfb05a2e718384 "pdflatex"
+  "ising.aux" 1688664850 3324 881dd108f2bcb7690631b1046904d519 "pdflatex"
   "ising.bbl" 0 -1 0 "bibtex ising"
-  "ising.out" 1688139371 1514 7374200d6811894d09a49fe68e608b15 "pdflatex"
-  "ising.tex" 1688139370 33505 05e0c91dde0408c76089b020fa04547f ""
-  "ising.toc" 1688139371 700 98fbe3489e84f74cb4c3e0b4c1a1d792 "pdflatex"
+  "ising.out" 1688664850 2074 da4aee821550e0cff52bf9874d31730c "pdflatex"
+  "ising.tex" 1688664849 37592 ee6edb8a21a3fca4e7ea398c3a1e855f ""
+  "ising.toc" 1688664850 916 3914dca09157ea97d758bc4afd825072 "pdflatex"
   (generated)
   "ising.aux"
   "ising.log"
