@@ -62,7 +62,7 @@ def add_function_ands(matrix, functions):
 
 def add_hyperplane(matrix, hyperplane):
     w, b = hyperplane
-    new_vec = torch.sign(-b + F.linear(matrix[...,:len(w)].float(), w)).unsqueeze(1)
+    new_vec = torch.sign(-b + F.linear((2*matrix[...,:len(w)].float() - 1), w)).unsqueeze(1)
     new_vec[new_vec == 0] = 1
     new_vec = (new_vec + 1)/2
     #print(torch.t(new_vec).to(torch.int8))

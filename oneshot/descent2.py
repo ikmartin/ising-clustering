@@ -25,6 +25,7 @@ def hash_constraints(M):
 
 def make_wrapper(n1, n2, desired, included):
 
+
     def attempt(radius, functions):
         global cache_hits, cache_misses
         M, _, _ = constraints(n1, n2, radius = radius, desired=desired, included=included, bool_funcs = functions)
@@ -34,7 +35,7 @@ def make_wrapper(n1, n2, desired, included):
             objective = cache[key]
         else:
             cache_misses += 1
-            objective = call_my_solver(M.to_sparse_csc())
+            objective = call_my_solver(M.to_sparse_csc(), tolerance=1e-4)
             cache[key] = objective
         return objective
 
@@ -65,6 +66,8 @@ def run(num_aux):
         neutrals.append(orbit[0])
         
 
+    neutrals = [np.array([1,0,0,0,1,1,1,0])]
+
     #and_gate_list = list(product(range(num_inputs), range(num_inputs, num_vars)))
     gate_list = []
     for func in neutrals:
@@ -91,28 +94,33 @@ def run(num_aux):
     num_since_last_success = 0
 
 
-    i = -1
+    block_set = {}
     while True:
         aux_scores = []
         for k in range(num_aux):
-            if k == i:
+            if k in block_set:
                 aux_scores.append(100000)
                 continue
 
             maps_without_k = [item for j, item in enumerate(aux_maps) if j != k]
             aux_scores.append(attempt_fn(radius, [pair[1] for pair in maps_without_k]) - current_objective)
-        print(aux_scores)
+        print(" ".join([f"{score:.2f}" for score in aux_scores]))
         i = np.argmin(aux_scores)
         cache = {}
         cache_hits = 0
         cache_misses = 0
         objective_before_loop = current_objective
-        loop = tqdm(gates_with_progress, desc = f'bit {i}', leave=True)
+        if current_objective < 50 or True:
+            k = len(gates_with_progress)
+        else:
+            k = 30
+        loop = tqdm(list(choices(gates_with_progress, k=k)), desc = f'bit {i}', leave=True)
         for score, gate in loop:
+            if gate[0] in [pair[1][0] for pair in aux_maps]:
+                continue
             # A guess about how to end the loop early: the idea is that a gate 
             # cannot possibly improve our situation more than it would improve the 
             # artificial variable score if used in isolation.
-            current_improvement = objective_before_loop - current_objective
 
 
             # Try the new gate
@@ -122,17 +130,21 @@ def run(num_aux):
 
             # report success
             if new_objective < current_objective:
+                block_set = {i}
                 num_since_last_success = 0
                 current_objective = new_objective
                 aux_maps = new_aux_maps
-                print(aux_maps)
             else:
                 num_since_last_success += 1
+                block_set |= {i}
+                if len(block_set) == len(aux_maps):
+                    block_set = {i}
                 if num_since_last_success > total_tasks:
                     print("stuck")
                     return
 
-            loop.set_postfix(improve = current_improvement, curscore = score, objective = current_objective, hitrate = cache_hits/(cache_hits + cache_misses))
+            current_improvement = objective_before_loop - current_objective
+            loop.set_postfix(improve = current_improvement, curscore = new_objective, objective = current_objective)
 
             radius_updated = False
             while current_objective < 1:
@@ -145,6 +157,8 @@ def run(num_aux):
                 current_objective = attempt_fn(radius, [pair[1] for pair in aux_maps])
                 objective_before_loop = current_objective
                 print(f'radius now {radius} objective {current_objective}')
+                for m in aux_maps:
+                    print(m)
 
             """
             if radius_updated:

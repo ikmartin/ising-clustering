@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from ast import literal_eval
 import matplotlib.pyplot as plt
-from new_constraints import constraints
+from new_constraints import constraints, make_correct_rows, make_wrongs
 from fast_constraints import batch_tensor_power, batch_vspin
 from mysolver_interface import call_my_solver
 
@@ -25,7 +25,37 @@ class Model(nn.Module):
     def setgamma(self, g):
         self.gamma = g
 
-    def forward(self, inps):
+    def forward(self, right, wrong, wrong_per_input):
+        w1 = self.thresh(right)
+        w2 = self.thresh(wrong)
+        
+        t1 = self.s(self.gamma * w1)
+        t2 = self.s(self.gamma * w2)
+
+        b1 = torch.cat([right, t1], dim=-1)
+        b2 = torch.cat([wrong, t2], dim=-1)
+
+        v1 = batch_vspin(b1, 2)
+        v2 = batch_vspin(b2, 2)
+
+        v1_exp = (
+            v1.unsqueeze(1)
+            .expand(-1, wrong_per_input, -1)
+            .reshape(wrong.shape[0], -1)
+        )
+
+        right_thresh_energies = (
+            (t1*w1).unsqueeze(1)
+            .expand(-1, wrong_per_input, -1)
+            .reshape(wrong.shape[0], -1)
+        )
+
+        rhosum = torch.sum(self.r(self.main(v1_exp - v2) + 1))
+        int_penalty = (self.gamma / 300) * (torch.sum((1-t1**2)**2) + torch.sum((1-t2**2)**2))
+        neutral_penalty = torch.sum(self.r(t2*w2 - right_thresh_energies) ** 2)
+        return rhosum, int_penalty, neutral_penalty
+
+    def forward_bit(self, inps):
         inps=inps.float()
         x = inps[..., :-1]
         y = inps[..., -1]
@@ -47,9 +77,10 @@ class Model(nn.Module):
 
         diff = self.main(v1-v2) + 1
         int_penalty = torch.sum((self.gamma/300) * ((1-t1**2)**2 + (1-t2**2)**2))
-        neut_penalty = torch.sum((t2 * w2 - t1 * w1) ** 2)
+        # Quadratic penalty: strong neutralizability
+        #neut_penalty = torch.sum((t2 * w2 - t1 * w1) ** 2)
+        neut_penalty = torch.sum(self.r(t2 * w2 - t1 * w1) ** 2)
 
-        print(f'int_penalty = {int_penalty} neut_penalty = {neut_penalty}')
         """
         nearest_t1 = torch.sign(self.thresh(i_right))
         nearest_t2 = torch.sign(self.thresh(i_wrong))
@@ -78,8 +109,11 @@ def main():
 
     model = Model(12).to(device)
 
-    _, _, correct = get_constraints(None, True)
-    correct = correct.to(device)
+    correct, num_fixed, num_free = make_correct_rows(4, 4, included = (7,), desired = (0,1,2,3,4,5,6))
+    wrong, rows_per_input = make_wrongs(correct, num_fixed, num_free, None)
+    correct, wrong = correct.float().to(device), wrong.float().to(device)
+    correct = (correct * 2) - 1
+    wrong = (wrong * 2) - 1
 
     optimizer = torch.optim.SGD(
         params = model.parameters(),
@@ -89,30 +123,23 @@ def main():
         nesterov = True
     )
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1000, verbose = True)
+    #optimizer = torch.optim.Adam(model.parameters())
 
-    constraint_loss = nn.Softplus()
-    rho_loss = nn.ReLU().to(device)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1000, verbose = True)
 
 
     for epoch in range(100000):
 
-        rho, int_penalty, neut_penalty = model(correct)
-        closs = constraint_loss(rho)
-        rhosum = sum(rho_loss(rho))
-        loss = rhosum + int_penalty + neut_penalty
+        rho, int_penalty, neut_penalty = model(correct, wrong, rows_per_input)
+        loss = rho + int_penalty# + neut_penalty
 
         model.setgamma(epoch/100)
 
-        print(f'loss={loss} ai={rhosum}')
+        print(f'loss={loss.item():.6f} ai={rho.item():.2f} int_pen={int_penalty.item():.2f} neut_pen={neut_penalty.item():.2f}')
         
         if loss < 1e-6:
-            print(model.thresh.weight)
-            print(model.thresh.bias)
-            planes = [(w,b.item()) for w,b in zip(model.thresh.weight.clone().detach(), model.thresh.bias)]
-            M, _, _ = get_constraints(planes, True)
-            objective = call_my_solver(M.to_sparse_csc())
-            print(objective)
+            planes = [(w,-b.item()) for w,b in zip(model.thresh.weight.clone().detach().cpu(), model.thresh.bias)]
+            print(planes)
             exit()
 
         optimizer.zero_grad()

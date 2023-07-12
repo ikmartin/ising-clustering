@@ -281,7 +281,7 @@ double* solve(int max_iter, double tolerance) {
 
 	// various small variables
 	double alpha_primal_affine, alpha_dual_affine, alpha_primal, alpha_dual, affine_mu, mu, sigma;
-	double eta = initial_eta; //0.9;
+	double eta = initial_eta - eta_decay_param; //0.9;
 	double initial_error, error, relative_error;
 
 	// Calulate initial guesses
@@ -505,7 +505,7 @@ double* solve(int max_iter, double tolerance) {
   }
 
 	if(iteration == max_iter) {
-		//printf("WARNING: Solver failed to converge!\n");
+		printf("WARNING: Solver failed to converge!\n");
 	}
 
 	free_vars();
