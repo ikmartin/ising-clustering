@@ -6,6 +6,7 @@ import numpy as np
 from numpy import array
 from solver import LPWrapper
 import torch
+from itertools import product
 
 
 def aux_array_as_hex(aux_array):
@@ -79,8 +80,8 @@ def parse_ands():
     #aux_keys = [(1,2), (4,10), (0,5), (0,8), (3,9), (0,9)]
     #aux_keys = [(0, 1), (4, 11), (0, 10), (2, 13), (2, 14), (5, 13), (5, 12), (4, 12)]
     #aux_keys = [(5, 13), (1, 13), (6, 12), (6, 11), (4, 12), (6, 14), (4, 10), (3, 13), (5, 11), (4, 9), (3, 14), (5, 12)]
-    n1 = 4
-    n2 = 4
+    n1 = 5
+    n2 = 5
 
 
     functions = [
@@ -122,7 +123,13 @@ def parse_ands():
             ((3, 8, 14), array([1, 0, 0, 0, 1, 1, 1, 0])), 
             ((4, 6, 10), array([1, 0, 0, 0, 1, 1, 1, 0]))
     ]
-    M, _, correct = constraints(n1,n2, degree=2, radius=None, included=(7,), desired=(0,1,2,3,4,5,6), bool_funcs = functions)
+
+
+    functions = list(product(range(0,n1), range(n1, n1+n2)))
+    functions = [func for func in functions if func != (n1-1, n1+n2-1)]
+    print(functions)
+
+    M, _, correct = constraints(n1,n2, function_ands = functions)
     correct = correct[...,(2*(n1+n2)):].numpy()
     print(aux_array_as_hex(correct.T))
     aux_vecs = correct.T
@@ -133,7 +140,7 @@ def parse_ands():
         for line in aux_vecs:
             FILE.write(' '.join([str(int((2*x)-1)) for x in line]) + '\n')
 
-    objective = call_my_solver(M.to_sparse_csc())
+    objective = call_my_solver(M.to_sparse_csc(), tolerance = 1e-10)
     print(objective)
 
 if __name__ == '__main__':

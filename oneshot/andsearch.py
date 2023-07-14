@@ -26,13 +26,15 @@ if aux_hex is not None:
 else:
     aux = None
 
+ands = [(8,9), (3,14), (2,13), (7,10), (7,13), (3,8), (0,12), (7,12)]
+
 n1, n2 = 5,5
 A = len(aux_hex) if aux_hex is not None else 0
-desired = (0,1,2,3,4,5,6,7,8)
-included = (9,)
+desired = (2,3,4,5,6)
+included = (9,0,1,7,8,)
 num_inputs = n1 + n2 + A +  (len(included) if included is not None else 0)
 num_outputs = (len(desired) if desired is not None else n1 + n2)
-num_vars = num_inputs + num_outputs
+num_vars = num_inputs + num_outputs + len(ands)
 original_vars = num_vars
 hyperplanes = []
 radius = 1
@@ -40,10 +42,10 @@ search_iterations = 50
 num_samples = 30
 search_sigma = .2
 cache = {}
-for i in range(16):
+for i in range(25):
     candidates = []
     #loop = tqdm(list(combinations(range(num_vars), 2)), leave = True)
-    loop = tqdm(list(product(range(num_inputs), range(num_inputs, original_vars))), leave=True)
+    loop = tqdm(list(product(range(original_vars), range(0, original_vars))), leave=True)
     current_weight = torch.randn(num_vars)
     current_weight[num_inputs:original_vars] = 0
     current_weight = F.normalize(current_weight, dim=0)
@@ -55,12 +57,12 @@ for i in range(16):
         new_weight[y] = 1
 
         new_plane = (new_weight, 0.5)
-        M, terms, correct = constraints(n1, n2, aux = aux, radius = radius, desired = desired, included = included, hyperplanes = hyperplanes + [new_plane], auxfix = True)
-        M_hash = hash(M.numpy().data.tobytes())
+        M, terms, correct = constraints(n1, n2, aux = aux, radius = radius, desired = desired, included = included, function_ands = ands, hyperplanes = hyperplanes + [new_plane], auxfix = True)
+        M_hash = M.numpy().data.tobytes()
         if M_hash in cache:
             objective = cache[M_hash]
         else:
-            objective, coeffs, rhos = call_my_solver(M.to_sparse_csc(), tolerance = 1e-8, fullreturn = True)
+            objective, coeffs, rhos, _, _ = call_my_solver(M.to_sparse_csc(), tolerance = 1e-8, fullreturn = True)
             cache[M_hash] = objective
         if objective < 1e-2:
             if radius is not None:

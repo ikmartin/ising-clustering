@@ -67,6 +67,11 @@ def run(num_aux):
         
 
     neutrals = [np.array([1,0,0,0,1,1,1,0])]
+    neutrals = [np.array([0, 1, 1, 0, 1, 0, 0, 1])]
+
+
+    #thresh_power = 2
+    #neutrals = [np.array([1,1,1,0])]
 
     #and_gate_list = list(product(range(num_inputs), range(num_inputs, num_vars)))
     gate_list = []
@@ -94,7 +99,7 @@ def run(num_aux):
     num_since_last_success = 0
 
 
-    block_set = {}
+    block_set = set([])
     while True:
         aux_scores = []
         for k in range(num_aux):
