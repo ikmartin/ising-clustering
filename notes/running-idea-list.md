@@ -1,0 +1,6 @@
+## Ising list of ideas
+
+- Attempt to fit some form of neutralizability condition into Andrew's continuous relaxation setup
+- Use reduced constraint sets in Fourier-Motskin to make deductions about the space of auxiliary functions in the augmented approach
+- Prove/disprove that the hyperoctahedral group $G(n)$ of cube of dimension $n$ somehow gives the group of automorphisms of $\mathfrak{Z}(N,M)$. Suspect that $G(N)\times G(M)$ might not actually be large enough.
+- In same vein, understand the following: suppose have group $G$ acting on set $X$ and $H$ acting on set $Y$. Then have a natural group action of $G\times H$ acting on set of functions $\text{Hom}(X,Y)$. We know that $G\times H$ is not the entire group of symmetries of all such functions, unless we demand that $\text{Hom}(X,Y)$ has additional structure. What additional structure do we want $\text{Hom}(X,Y)$ to have in the case that $f$ is a circuit function paired with an Ising system which solves it? More generally, what additional structure can we endow $\text{Hom}(X,Y)$ with such that $G\times H$ is indeed the total group of symmetries of this space of functions?

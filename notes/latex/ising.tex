@@ -4,9 +4,41 @@
 \setcounter{secnumdepth}{2}
 
 \usepackage{macrosabound, theorem-env}
+\usepackage[shortlabels]{enumitem}
 
-% redefine amsart subsection 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% TIKZ SETUP FOR FLOWCHARTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzstyle{startstop} = [rectangle, rounded corners, 
+minimum height=1cm,
+minimum width=2cm,
+text centered, 
+draw=black, 
+fill=red!30]
 
+% tikzstyle stuff
+\tikzstyle{io} = [trapezium, 
+trapezium stretches=true, % A later addition
+trapezium left angle=70, 
+trapezium right angle=110, 
+minimum height=1cm, text centered, 
+draw=black, fill=blue!30]
+
+\tikzstyle{process} = [rectangle,
+minimum height=1cm, 
+text centered, 
+align=center,
+draw=black, 
+fill=orange!30]
+
+\tikzstyle{decision} = [rectangle, rounded corners,
+minimum height=1cm, 
+text centered, 
+align=center,
+draw=black, 
+fill=green!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
 
 % make font smaller
 \usepackage[fontsize=10pt]{fontsize}%%% Coloring the comment as blue
@@ -138,7 +170,7 @@ Stated another way, given an abstract circuit $(N,M,f)$, we want to design Ising
 
 \subsection{Constraint Sets for Designing Ising Systems}
 Let us first consider the simplest case of a circuit $(N, M, f)$ with $X = N \cup M$ and $N$ and $M$ disjoint.
-\begin{lem}\label{lem:original-constraint-set}
+\begin{lem}\label{lem:basic_constraints}
   The circuit $X$ is solvable with an Ising system if and only if there exists a Hamiltonian $H$ such that for all $s\in \Sigma^N$ and $t \neq f(s)$ $H(s,t) > H(s,f(s))$.
 \end{lem}
 \begin{proof}
@@ -148,7 +180,7 @@ It is not hard to find examples of circuits which are not solvable, for instance
 
 For the remainder of this section, suppose that $X = N \cup M \cup A$ is a finite set and $N$, $M$, and $A$ are all disjoint. We call elements of this extra set $A$ \textbf{auxiliary spins}.
 
-\begin{prop}\label{prop:all-circuits-solvable-with-auxiliaries}
+\begin{prop}\label{prop:can_solve_with_aux}
   Let $X \subseteq \bN$ be infinite and $N$, $M$ be finite disjoint subsets. For any choice of $f$, the circuit $(N, M, f)$ is solvable with an Ising system. Since $|X| > |N\cup M|$ in this case, we sometimes say that $X$ is \textbf{solvable with auxiliary spins}.
 \end{prop}
 Notice that this lemma says nothing about the \emph{number} of auxiliary spins needed to solve a circuit; in general, it can be quite large.
@@ -162,7 +194,7 @@ This has minimum value $0$ obtained precisely at spins with correct output coord
 
 The task of finding an Ising system which solves some abstract circuit $(N, M, f)$ can thus be thought of as finding a sufficiently large cardinality for $A$ and then solving a mixed non-linear optimization problem to find valid a valid quadratic Hamiltonian together with auxiliary states which occur at the desired minimizers of input levels. The following lemma demonstrates one way one might attempt to solve an abstract circuit with auxiliaries. 
 
-\begin{lem}\label{lem:weak-constraints}
+\begin{lem}\label{lem:weak_constraints}
   The circuit $(N,M,f)$ is solvable with an Ising system if and only if there exists a function $g:\Sigma^N \to \Sigma^A$ and a Hamiltonian $H$ such that for all $\sigma \in \Sigma^N$, $\eta \in \Sigma^A$ and $f(\sigma) \neq \omega \in \Sigma^M$, $H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), g(\sigma))$.
 \end{lem}
 The image of the function $g$ is called the \textbf{auxiliary array} of $X$. If we fix a specific spin $a \in A$, then the set $\{g(\sigma)_a\}_{\sigma \in \Sigma^N}$ is called the \emph{auxiliary vector of $a$}.
@@ -170,7 +202,7 @@ The image of the function $g$ is called the \textbf{auxiliary array} of $X$. If 
   Again, obvious.
 \end{proof}
 
-A solution to a circuit employing Lemma \ref{lem:weak-constraints} consists of two parts: obtaining a feasible auxiliary array $g$ and identifying choices of Hamiltonians such that the constraints in Lemma \ref{lem:weak-constraints} are all satisfied. Although it is always possible, choosing a feasible $g$ is quite difficult, and doing so in such a way that minimizes the cardinality of $A$ is even harder. If a feasible $g$ is known, solving for $H$ is a linear programming problem; however, because the number of constraints in Lemma \ref{lem:weak-constraints} grows exponentially in $N$, $M$ and $A$, for problems on the order of $|X| \approx 100$ there is no computer on earth that can actually solve the LP-problem as stated.
+A solution to a circuit employing Lemma \ref{lem:weak_constraints} consists of two parts: obtaining a feasible auxiliary array $g$ and identifying choices of Hamiltonians such that the constraints in Lemma \ref{lem:weak_constraints} are all satisfied. Although it is always possible, choosing a feasible $g$ is quite difficult, and doing so in such a way that minimizes the cardinality of $A$ is even harder. If a feasible $g$ is known, solving for $H$ is a linear programming problem; however, because the number of constraints in Lemma \ref{lem:weak_constraints} grows exponentially in $N$, $M$ and $A$, for problems on the order of $|X| \approx 100$ there is no computer on earth that can actually solve the LP-problem as stated.
 
 \begin{defn}[Constraint Sets for Reverse Ising]\label{defn:constraints}
   Let $(N,M,f)$ be an abstract circuit with $X = N \cup M \cup A$ and $N, M, A$ all disjoint. We say that an Ising system $(X, H)$ together with a choice $g: \Sigma^N\to \Sigma^A$ of auxiliary array satisfies
@@ -194,11 +226,11 @@ A solution to a circuit employing Lemma \ref{lem:weak-constraints} consists of t
 \end{defn}
 
 
-\begin{lem}\label{lem:full-constraints}
+\begin{lem}\label{lem:full_constraints}
   Let $(N, M, f)$ be an abstract circuit with $X = N \cup M \cup A$ and all $N, M$ and $A$ disjoint. This circuit is solved by an Ising system $(X, H)$ if and only if there is an auxiliary array $g:\Sigma^N \to \Sigma^A$ such that $H$ satisfies full constraints.
 \end{lem}
 \begin{proof}
-  The reverse implication is clear, as every constraint in Lemma \ref{lem:weak-constraints} is a constraint in Lemma \ref{lem:full-constraints}. 
+  The reverse implication is clear, as every constraint in Lemma \ref{lem:weak_constraints} is a constraint in Lemma \ref{lem:full_constraints}. 
 
   For the forward implication, suppose $(N,M,f)$ is solved by an Ising system $(X,H)$. Defining $g$ to be the auxiliary component of the minimizer with respect to $N$, $g(\sigma_N) = m_N(\sigma_N)|_{A}$, does the trick.
 \end{proof}
@@ -229,7 +261,7 @@ The next lemma addresses the use of the $F$-augmented constraints, and is the mo
   \end{align*}
   for all $\eta \neq \eta'$ where the second from the definition of $F$. Thus, in particular, it satisfies the weak neutralizability condition.
 
-  Since $(X,H)$ solves the circuit $(N, M, f)$, by Lemma \ref{lem:weak-constraints} we have that
+  Since $(X,H)$ solves the circuit $(N, M, f)$, by Lemma \ref{lem:weak_constraints} we have that
   \begin{align*}
     H(\sigma, \omega, \eta) > H(\sigma, f(\sigma), F(\sigma, f(\sigma)))
   \end{align*}
@@ -290,7 +322,7 @@ The following theorem summarizes our results up to this point.
   \end{enumerate}
 \end{thm}
 \begin{proof}
-  Lemma \ref{lem:weak-constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(ii)}, Lemma \ref{lem:full-constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(iii)} and Lemma \ref{lem:augemented_constraints} proves \emph{(ii)} $\Leftrightarrow$ \emph{(iv)}.
+  Lemma \ref{lem:weak_constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(ii)}, Lemma \ref{lem:full_constraints} proves \emph{(i)} $\Leftrightarrow$ \emph{(iii)} and Lemma \ref{lem:augmented_constraints} proves \emph{(ii)} $\Leftrightarrow$ \emph{(iv)}.
 \end{proof}
 
 \begin{rmk}
@@ -298,23 +330,126 @@ The following theorem summarizes our results up to this point.
 
   \begin{enumerate}
     \item \textbf{Augmented constraints do not scale exponentially in $A$.} Both the weak and full constraints grow exponentially in $A$, but the constraint matrices of the $F$-augmented constraints always have a fixed number of rows and grow quadratically columnwise due to the addition of quadratic coefficients. Hence this problem scales on the order of $\cO(|N \cup M \cup A|^2)$.
-    \item \textbf{Good choices of $F$ are known.} If $F$ depends only on a few spins, then cooking up reasonable Hamiltonians $R$ becomes far easier. See examples \ref{ex:trivial-weak-neutralizability} and \ref{ex:AND-gate-strong-neutralizable}.
+    \item \textbf{Good choices of $F$ are known.} If $F$ depends only on a few spins, then cooking up reasonable Hamiltonians $R$ becomes far easier. See examples \ref{ex:trivial_weak_neutralizability} and \ref{ex:AND_gate_strong_neutralizable}.
     \item \textbf{Improvements to $F$ can be made iteratively.} If a function $F_1:\Sigma^N \times \Sigma^M \to \Sigma^{A_1}$ is weakly neutralizable and $F_2:\Sigma^N\times \Sigma^{M\cup A_1} \to \Sigma^{A_2}$ is weakly neutralizable, then the composite function
       \begin{align*}
         F(\sigma, \omega) = (F_1(\sigma, \omega), F_2(\sigma, \omega, F_1(\sigma, \omega))) \in \Sigma^{A_1 \cup A_2}
       \end{align*}
-      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods. In particular, due to the observation that the solvability of a boolean circuit by an Ising system is equivalent to linear separability, we can attach auxiliary spins one at a time (see Section \ref{sec:bool-circuits}).
+      is also strongly neutralizable. This means the threshold constraint approach to the reverse Ising problem lends itself well to iterative methods. In particular, due to the observation that the solvability of a boolean circuit by an Ising system is equivalent to linear separability, we can attach auxiliary spins one at a time (see Section \ref{sec:bool_circuits}).
   \end{enumerate}
 \end{rmk}
 
-\begin{example}\label{ex:trivial-weak-neutralizability}
+\begin{example}\label{ex:trivial_weak_neutralizability}
   Suppose $F:\Sigma^N \times \Sigma^M \to \Sigma^A$ is constant in the $\Sigma^M$ component. Then any Ising system $(X, R)$ which solves the circuit $(N\cup M, A, R)$ is weakly neutralizable.
 \end{example}
-\begin{example}\label{ex:AND-gate-strong-neutralizable}
-  Let $(\{a,b\}, \{c\}, AND)$ be the 1-bit AND circuit. Then there exists an Ising system $(\{a,b,c\}, R)$ which solves the circuit and is strongly neutralizable.
+\begin{example}\label{ex:AND_gate_strong_neutralizable}
+  Let $(\{a,b\}, \{c\}, AND)$ be the 1-bit AND circuit. There exists an Ising system $(\{a,b,c\}, R)$ which solves the circuit and is strongly neutralizable.
 \end{example}
 
+\subsection{The Augmented Approach}
+
+This section is dedicated to discussing general algorithms which utilize the $F$-augmented constraints and Lemma \ref{lem:augmented_constraints}. As is quickly becoming standard, fix a decomposition $X = N\cup M \cup A$ with $N$, $M$ and $A$ pairwise disjoint and an abstract circuit $(N,M,f)$, the \textbf{base circuit} of our augmented system. Our task is to choose an auxiliary function $F$ such that
+\begin{enumerate}[(a)]
+  \item there exists an Ising system which satisfies the $F$-augmented constraints of $(N,M,f)$
+  \item $F$ is an Ising function, i.e. $(N\cup M, A,F)$ is a solvable circuit
+  \item $F$ satisfies weak neutralizability.
+\end{enumerate}
+All of these properties can be checked using linear programming for a fixed choice of $F$, but they depend on different portions of the Hamiltonian. To illustrate this, consider the following decomposition of an Ising Hamiltonian on $X$.
+
+Denote by $x$ the indeterminants with indices in $N$, $y$ the indeterminants with indices in $M$ and $z$ the indeterminants with indices in $A$. An arbitrary Ising Hamiltonian on $X$ without a constant term can then be written
+\begin{equation}\label{eq:ham_decomp}
+  H(x,y,z) = h_x(x) + h_y(x) + h_z(z) + p_x(x) + p_y(y) + p_z(z) + q_{xy}(x,y) + q_{xz}(x,z) + q_{yz}(y,z)
+\end{equation}
+where the $h$ terms denote linear polynomials, the $p$ terms denote self-interaction quadratic forms and the $q$ terms denote cross-type interaction quadratic terms (e.g. input/output interactions, etc.).
+
+Imagine we've chosen an auxiliary function $F$. Condition (b) on $F$ demands that the weak constraints $(N\cup M, A,F)$ be solvable without auxiliary variables, which is the following familiar constraint set:
+\begin{align*}
+  H(x,y,F(x,y)) < H(x,y,z) ~ \text{ for all } ~ F(x,y) \neq z \in \Sigma^A.
+\end{align*}
+Subtracting $H(x,y,F(x,y))$ from both sides and writing our Hamiltonian in the form of Equation \ref{eq:ham_decomp} gives us
+\begin{align*}
+  q_{yz}(y,z - F(x,y)) + q_{xz}(x,z - F(x,y)) + p_z(z - F(x,y)) + h_z(z - F(x,y))>0
+\end{align*}
+for all $F(x,y) \neq x \in \Sigma^A$, meaning property (b) is entirely determined by $q_xz,$ $q_{yz}$, $p_z$ and $h_z$; the terms which depend on $z$. A similar argument demonstrates that neutralizability conditions, both strong and weak forms, depend on all terms involving $y$ and $z$.
+
+We summarize this discussion with a definition and a remark.
+
+\begin{defn}\label{defn:properties_of_aux_function}
+  Let $F:\Sigma^N \times \Sigma^M \to \Sigma^A$ be an auxiliary circuit. We saw that $F$ has the...
+\begin{enumerate}[(a)]
+  \item ...\textbf{augmented property} if there exists an Ising Hamiltonian $R$ on $X$ which solves the auxiliary circuit $(N\cup M, A,F)$. In this case we say that $F$ is an \emph{augmented} auxiliary function.
+  \item ...\textbf{circuit property} if there exists an Ising Hamiltonian $R$ on $X$ which solves the auxiliary circuit $(N\cup M,A,F)$. In this case we say that $F$ is an \emph{Ising} auxiliary function.
+  \item ...\textbf{weak} (resp. \textbf{strong}) \textbf{neutralizability} property if there exists a Hamiltonian $R$ which satisfies the weak (resp. strong) neutralizability conditions. In this case we say that $F$ is either a \emph{weakly neutralizable} auxiliary function with respect to the circuit $(N,M,f)$ or a \emph{strongly neutralizable} auxiliary function. Strong neutralizability does not depend on the circuit $(N,M,f)$ and hence need not make reference to it.
+\end{enumerate}
+\end{defn}
+
+\begin{rmk}\label{rmk:properties_of_aux_function}
+  Continue letting $x$, $y$ and $z$ denote indeterminants indexed in $N$, $M$ and $A$ respectively. An auxiliary function $F:\Sigma^N \times \Sigma^M \to \Sigma^A$ is...
+  \begin{enumerate}[(a)]
+    \item ...augmented if there exists a Hamiltonian $S$ such that
+      \begin{align*}
+        S(x,f(x),F(x,f(x))) < S(x,y,F(x,y)) ~ \text{ for all }~ x \in \Sigma^N ~\text{ and } ~ y\neq f(x)
+      \end{align*}
+    \item ...an Ising function if there exists a Hamiltonian $R$ such that
+      \begin{align*}
+        R(x,y,F(x,y)) < R(x,y,z) ~\text{ for all }~ (x,y) \in \Sigma^N\times \Sigma^M ~\text{ and }~ z \neq F(x,y),
+      \end{align*}
+      which is the constrained linear programming problem from Lemma \ref{lem:basic_constraints} depending only on $h_z$, $p_z$, $q_{xz}$ and $q_{yz}$.
+    \item ...weakly neutralizable function with respect to $N,M,f)$ if there exists an Ising Hamiltonian $R$ on $X$ such that
+      \begin{align*}
+        R(x,f(x), F(x,f(x))) \leq R(x,y,F(x,y)) ~\text{ for all }~ x \in \Sigma^N ~ \text{ and } ~ f(x) \neq y \in \Sigma^M.
+      \end{align*}
+      Both cases depend on $h_y, h_z, p_y, p_z, q_{xy}, q_{xz}$ and $q_{yz}$. The weak case is a constrained linear programming problem while the second is a system of linear equations.
+  \end{enumerate}
+\end{rmk}
+
+Remark \ref{rmk:properties_of_aux_function} should be interpreted to mean that, given a choice of $F$, we know how to check whether or not it satisfies the conditions requisite for solving the circuit $(N,M,f)$ using the augmented approach. If auxiliary functions satisfying all three properties were common, then we could simply search randomly through all the possibilities until we found a neutralizable augmented Ising function -- reverse Ising solved! Such an algorithm would look like this:
+
+\begin{figure}
+  \centering
+  \include{images/tikz/augmented_algo_1.tex}
+  \caption{The most na\"ive version of \textsc{AugSolve}, an algorithm which solves a circuit $(N,M,f)$ using the augmented constraints and Lemma \ref{lem:augmented_constraints}}\label{fig:augmented_solve_flowchart}
+\end{figure}
+However, auxiliary functions which are simultaneously augmented, Ising and neutralizable are exceedingly rare and the space of all auxiliary functions is absurdly large. We therefore need smarter ways of searching for auxiliary functions $F$ if this is to work. Here are some general ideas for improvement:
+
+\begin{idea}[Improvements to \textsc{AugSolve}]\label{idea:improvements_to_AugSolve}$ $
+  \begin{enumerate}[(i)]
+    \item Instead of choosing $F$ randomly, choose auxiliary functions which are guaranteed to satisfy one of the properties (a), (b) and (c). If possible, this would both drastically shrink the search space $S$ and reduce computation time by removing one of the property verifications. Several versions of this improvement are discussed in the remainder of this section.
+    \item Some choices of $F$ are redundant; for example, $F$ and its ``inverse'' $-F$ either both satisfy properties (a) - (c) or both fail to satisfy the same property. Hence, when $F$ is removed from $S$ once might as well remove $-F$ too.
+  \end{enumerate}
+\end{idea}
+
+\subsubsection{Randomly Sampling Ising Hamiltonians: choosing auxiliary functions which are Ising functions}
+Recall that the values of $F$ don't matter -- we care about them only insofar as they allow us to solve the circuit in question. Given this, we can easily find auxiliary functions which are also Ising functions -- simply choose a Hamiltonian $R$ on $X$ and define
+\begin{align*}
+  F(x,y) = \argmin_{z \in \Sigma^A} H(x,y,z).
+\end{align*}
+In the case that $|A| = 1$, discussed further in Section \ref{sec:bool_circuits}, this is equivalent to choosing a random hyperplane in $\bR^{N\cup M}$ and using it to partition the cube $\Sigma^{N\cup M}$ into two subsets. This produces the following variation of AugSolve:
+
+\bigskip
+
+\bigg<Algo with [Random Choice] step swapped for \big[Sample Random Ising Hamiltonian from $\bR^P$\big]\bigg>
+
+\bigskip
+
+This easily produces auxiliary functions which satisfy property (b), but there is still lots of redundancy. The Hamiltonian $R$ is entirely parameterized by its coefficients, and small perturbations in these coefficients will produce distinct Hamiltonians without changing the auxiliary function $F$. If it were possible to partition the parameter space $\bR^P$ of $R$ into distinct regions depending on the auxiliary function $F$ induced, then this method on its own might prove quite powerful. As of yet, we do not understand this partition.
+
+\subsubsection{Finding neutralizable Ising functions}
+
+Given a Hamiltonian $R$ on $X$ it is theoretically (if not computationally) straightforward to check whether the auxiliary function $F$ it induces is strongly neutralizable; check whether the ground states associated to a single $x$ are all equal. This requires solving a boolean optimization problem, however; famously difficult.
+
+Instead, consider if for small cardinalities $|A|$, each time we generate a Hamiltonian $R$ we cache the result of the neutralizability check. Over time, we build up a library of auxiliary functions which satisfy both the Ising and neutralizable properties. These can then be ``glued''together to form larger auxiliary functions which are still both neutralizable and Ising.
+
+This method has proven successful even for quite limited libraries of neutralizable Ising functions. An example of this is the ``AND auxiliary'' method. An additional drawback, however, is that the process of desigining a large auxiliary function stitched together from smaller auxiliary functions again involves iterating over a large search space. Designing auxiliary functions with fewer auxiliaries requires a larger library of these smaller functions, and consequently, creates a larger search space.
+
+Another approach for designing neutralizable Ising functions might be to build a pseudo boolean function with the desired properties and reduce it until it is quadratic. This will likely lead to an explosion in the number of auxiliaries, however.
+
+\subsubsection{Reducing the auxiliary function search space using the mixed-integer augmented constraints}
+
+Searching directly for auxiliary functions $F$ such that the $F$-augmented constraints of $N,M,f)$ are satisfiable is a special type of auxiliary search. However, as the number of auxiliaries grows, no columns are added, so perhaps finding ``augmented-feasible'' auxiliaries is easier than finding typical feasible auxiliary arrays. Even if the full search is still prohibitively expensive, perhaps deductions can be made which reduce the space of possible auxiliary arrays. This could be done by performing Fourier-Motskin on a reduced augmented constraint set for example.
+
 \subsection{Symmetries of Circuits and Systems}
+<UNDER CONSTRUCTION>
 
 Let $\Circ(N,M)$ denote the set of all circuits $(N,M,f)$ and $\Ising(X)$ the set of all Ising systems $(X, H)$. We then define the \textbf{Z-space} or \textbf{Zing-space} of $N, M \subset X$ by
 \begin{align*}
@@ -364,7 +499,7 @@ Consider the implications of this setup to the reverse Ising problem. If the gro
 
 Let us first imagine enumerating all possible elements of $\Aut(\Zing(N,M))$. One approach might be to write down all bijective maps on $\Circ(N,M)$ and then check which preserve the solvability relation. As a set, $\Circ(N,M)$ is the same as the collection of all functions $f:\Sigma^N \to \Sigma^M$, hence it has size $2^{|N|\cdot 2^{|M|}}$. There are then $\left(2^{|N|\cdot 2^{|M|}}\right)!$ many bijective functions on $\Circ(N,M)$ -- a bit too many to enumerate.
 
-\section{Boolean Circuits and Functions}\label{sec:bool-circuits}
+\section{Boolean Circuits and Functions}\label{sec:bool_circuits}
 \begin{center}
   <Under construction>
 \end{center}
@@ -372,13 +507,14 @@ Let us first imagine enumerating all possible elements of $\Aut(\Zing(N,M))$. On
 A \textbf{boolean function} is a map $f:\Sigma^N \to \Sigma$. A \textbf{boolean circuit} is an abstract circuit $(N, M, f)$ where $|M| = 1$, and hence where $f$ is a boolean function.
 
 \begin{rmk}[Disambiguation of 0,1 and -1,1 $\Sigma$ representations]\label{rmk:sigma_convention}
-  Boolean algebra appears in many disparate fields of math -- game theory, decision theory, coding theory, artificial intelligence and distributed algorithms to name a few -- and hence conventions can vary quite a bit. In particular, the set $\Sigma$ assumes various roles and alternates between $\{-1, 1\}$ and $\{0,1\}$ representations. Results in section \ref{sec:bool-circuits} do not depend on whether $\Sigma = \{0,1\}$ or $\Sigma = \{-1,1\}$, and we will take care to note which definition is currently in use when ambiguity arises. Here is a context-dependent key for swapping between the $\{0,1\}$ and $\{-1,1\}$ representations.
+  Boolean algebra appears in many disparate fields of math -- game theory, decision theory, coding theory, artificial intelligence and distributed algorithms to name a few -- and hence conventions can vary quite a bit. In particular, the set $\Sigma$ assumes various roles and alternates between $\{-1, 1\}$ and $\{0,1\}$ representations. Results in section \ref{sec:bool_circuits} do not depend on whether $\Sigma = \{0,1\}$ or $\Sigma = \{-1,1\}$, and we will take care to note which definition is currently in use when ambiguity arises. Here is a context-dependent key for swapping between the $\{0,1\}$ and $\{-1,1\}$ representations.
   \begin{itemize}
     \item When $\Sigma$ is regarded as a 2-element set with no additional structure, any bijection between $\{0,1\}$ and $\{-1,1\}$ will suffice.
     \item When $\Sigma$ is regarded as a subset of $\bR$, the change of variables $x \mapsto 2x - 1$ swaps the roles of $0$ and $-1$. This situation arises when considering pseudo-boolean functions $f:\Sigma^N \to \bR$, all of which have unique polynomial representations and hence depend on whether $-1$ or $0$ in use (consider evaluating an Ising Hamiltonian on strings of $0,1$, for instance). It also comes up when one treats a boolean function $f:\Sigma^N \to \Sigma$ as a labeling of the corners of the hypercube $\Sigma^N$, in which case the $\{-1,1\}$ convention is more convenient as it makes the SVM formulas slightly more concise.
     \item When $\Sigma$ is regarded as the unique group $G$ of order 2, there is only identification between $\{0,1\}$ and $\{-1,1\}$ which makes sense: $0 \mapsto 1$ and $1 \mapsto -1$. This is because, $0$ is the identity element when $G$ is regarded as the additive group $\bZ/2\bZ$, but $1$ is the identity when $G$ is regarded as the multiplicative group $\bZ^\times$. Annoyingly, this is distinct from the typical identification, and hence special care must be taken to avoid confusion in situations where the group structure of $\Sigma$ is relevant. The change of variables formula given above can be modified to $x \mapsto 1 - 2x$ if one wishes it to match the group isomorphism.
   \end{itemize}
 \end{rmk}
+
 \subsection{Concepts from Boolean Algebra}
 \begin{center}
   <Under construction>

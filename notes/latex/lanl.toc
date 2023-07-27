@@ -1,2 +1,3 @@
 \beamer@sectionintoc {1}{Terminology}{2}{0}{1}
-\beamer@sectionintoc {2}{Pseudo Boolean Results}{8}{0}{2}
+\beamer@sectionintoc {2}{Pseudo Boolean Results}{9}{0}{2}
+\beamer@sectionintoc {3}{Augmented Approach/Circuit Gluing}{15}{0}{3}

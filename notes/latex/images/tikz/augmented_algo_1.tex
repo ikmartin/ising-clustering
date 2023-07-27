@@ -1,0 +1,23 @@
+\begin{tikzpicture}[node distance=2cm]
+    \node (start) [startstop] {START};
+    \node (init) [process, below of=start] {Initialize $S$ as \\the set of functions\\ $\Sigma^N \times \Sigma^M \rightarrow \Sigma^A$ };
+    \node (rand) [process, below of=init] {Choose random\\ $F \in S$};
+    \node (dec1) [decision, right of=rand, xshift=1.5cm] {Verify: $F$ has\\ property (a)};
+    \node (dec2) [decision, right of=dec1, xshift=1.5cm] {Verify: $F$ has\\ property (b)};
+    \node (dec3) [decision, right of=dec2, xshift=1.5cm] {Verify: $F$ has\\ property (c)};
+    \node (reinit) [process, below of=dec1] {Redefine $S = S \setminus \{F\}$};
+    \node (out) [io, below of=dec3] {Return $F$};
+    \node (stop) [startstop, below of=out] {STOP};
+
+    \draw [arrow] (start) -- (init);
+    \draw [arrow] (init) -- (rand);
+    \draw [arrow] (rand) -- (dec1);
+    \draw [arrow] (dec1) -- node[anchor=south] {TRUE} (dec2);
+    \draw [arrow] (dec2) -- node[anchor=south] {TRUE} (dec3);
+    \draw [arrow] (dec3) -- node[anchor=west] {TRUE} (out);
+    \draw [arrow] (dec1) -- node[anchor=east] {FALSE} (reinit);
+    \draw [arrow] (dec2) -- node[anchor=south] {FALSE} (reinit);
+    \draw [arrow] (dec3) -- node[anchor=north] {FALSE} (reinit);
+    \draw [arrow] (reinit) -| node[anchor=west] {} (rand);
+    \draw [arrow] (out) -- (stop);
+\end{tikzpicture}

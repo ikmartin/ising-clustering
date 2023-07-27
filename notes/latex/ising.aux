@@ -2,10 +2,13 @@
 \providecommand\hyper@newdestlabel[2]{}
 \providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
 \HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
 \global\let\oldnewlabel\newlabel
 \gdef\newlabel#1#2{\newlabelxx{#1}#2}
 \gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
 \AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
 \let\newlabel\oldnewlabel
 \fi}
 \fi}
@@ -21,30 +24,41 @@
 \newlabel{defn:ising-system}{{1.3}{2}{}{thm.1.3}{}}
 \newlabel{defn:solves-ising-circuit}{{1.4}{3}{}{thm.1.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Constraint Sets for Designing Ising Systems}{3}{subsection.1.3}\protected@file@percent }
-\newlabel{lem:original-constraint-set}{{1.5}{3}{}{thm.1.5}{}}
-\newlabel{prop:all-circuits-solvable-with-auxiliaries}{{1.6}{4}{}{thm.1.6}{}}
-\newlabel{lem:weak-constraints}{{1.7}{4}{}{thm.1.7}{}}
+\newlabel{lem:basic_constraints}{{1.5}{3}{}{thm.1.5}{}}
+\newlabel{prop:can_solve_with_aux}{{1.6}{4}{}{thm.1.6}{}}
+\newlabel{lem:weak_constraints}{{1.7}{4}{}{thm.1.7}{}}
 \newlabel{defn:constraints}{{1.8}{4}{Constraint Sets for Reverse Ising}{thm.1.8}{}}
-\newlabel{lem:full-constraints}{{1.9}{5}{}{thm.1.9}{}}
+\newlabel{lem:full_constraints}{{1.9}{5}{}{thm.1.9}{}}
 \newlabel{lem:augmented_constraints}{{1.10}{5}{}{thm.1.10}{}}
 \newlabel{eqn:weak-neutralizability}{{{$\dagger $}}{5}{}{AMS.2}{}}
 \newlabel{rmk:auxiliary_system_role}{{1.11}{5}{}{thm.1.11}{}}
 \newlabel{thm:ising-solve-equivalences}{{1.12}{6}{}{thm.1.12}{}}
-\newlabel{ex:trivial-weak-neutralizability}{{1.14}{7}{}{thm.1.14}{}}
-\newlabel{ex:AND-gate-strong-neutralizable}{{1.15}{7}{}{thm.1.15}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Symmetries of Circuits and Systems}{7}{subsection.1.4}\protected@file@percent }
-\newlabel{defn:ising-symmetry}{{1.16}{7}{}{thm.1.16}{}}
-\newlabel{ex:spinaction}{{1.17}{8}{}{thm.1.17}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Boolean Circuits and Functions}{8}{section.2}\protected@file@percent }
-\newlabel{sec:bool-circuits}{{2}{8}{Boolean Circuits and Functions}{section.2}{}}
-\newlabel{rmk:sigma_convention}{{2.1}{9}{Disambiguation of 0,1 and -1,1 $\Sigma $ representations}{thm.2.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Concepts from Boolean Algebra}{9}{subsection.2.1}\protected@file@percent }
-\newlabel{defn:dual-selfdual}{{2.2}{9}{}{thm.2.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Ising systems which solve boolean circuits}{9}{subsection.2.2}\protected@file@percent }
-\newlabel{prop:boolean-ising-svm-equiv}{{2.3}{9}{}{thm.2.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Hierarchical Clustering}{9}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{10}{section.4}\protected@file@percent }
-\newlabel{thm:rosenberg-reduction}{{4.1}{10}{}{thm.4.1}{}}
+\newlabel{ex:trivial_weak_neutralizability}{{1.14}{7}{}{thm.1.14}{}}
+\newlabel{ex:AND_gate_strong_neutralizable}{{1.15}{7}{}{thm.1.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}The Augmented Approach}{7}{subsection.1.4}\protected@file@percent }
+\@input{images/tikz/augmented_algo_1.aux}
+\newlabel{eq:ham_decomp}{{1}{8}{The Augmented Approach}{equation.1.1}{}}
+\newlabel{defn:properties_of_aux_function}{{1.16}{8}{}{thm.1.16}{}}
+\newlabel{rmk:properties_of_aux_function}{{1.17}{8}{}{thm.1.17}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The most na\"ive version of \textsc  {AugSolve}, an algorithm which solves a circuit $(N,M,f)$ using the augmented constraints and Lemma \ref  {lem:augmented_constraints}}}{9}{figure.1}\protected@file@percent }
+\newlabel{fig:augmented_solve_flowchart}{{1}{9}{The most na\"ive version of \textsc {AugSolve}, an algorithm which solves a circuit $(N,M,f)$ using the augmented constraints and Lemma \ref {lem:augmented_constraints}}{figure.1}{}}
+\newlabel{idea:improvements_to_AugSolve}{{1.18}{9}{Improvements to \textsc {AugSolve}}{thm.1.18}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Randomly Sampling Ising Hamiltonians: choosing auxiliary functions which are Ising functions}{9}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Finding neutralizable Ising functions}{10}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Reducing the auxiliary function search space using the mixed-integer augmented constraints}{10}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Symmetries of Circuits and Systems}{10}{subsection.1.5}\protected@file@percent }
+\newlabel{defn:ising-symmetry}{{1.19}{10}{}{thm.1.19}{}}
+\newlabel{ex:spinaction}{{1.20}{11}{}{thm.1.20}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Boolean Circuits and Functions}{11}{section.2}\protected@file@percent }
+\newlabel{sec:bool_circuits}{{2}{11}{Boolean Circuits and Functions}{section.2}{}}
+\newlabel{rmk:sigma_convention}{{2.1}{12}{Disambiguation of 0,1 and -1,1 $\Sigma $ representations}{thm.2.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Concepts from Boolean Algebra}{12}{subsection.2.1}\protected@file@percent }
+\newlabel{defn:dual-selfdual}{{2.2}{12}{}{thm.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Ising systems which solve boolean circuits}{12}{subsection.2.2}\protected@file@percent }
+\newlabel{prop:boolean-ising-svm-equiv}{{2.3}{12}{}{thm.2.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Hierarchical Clustering}{12}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{13}{section.4}\protected@file@percent }
+\newlabel{thm:rosenberg-reduction}{{4.1}{13}{}{thm.4.1}{}}
 \bibstyle{abbrvnat}
 \bibdata{ising}
-\gdef \@abspage@last{10}
+\gdef \@abspage@last{13}

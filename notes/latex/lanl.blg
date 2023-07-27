@@ -1,15 +1,15 @@
-[0] Config.pm:306> INFO - This is Biber 2.18
-[0] Config.pm:309> INFO - Logfile is 'lanl.blg'
-[46] biber:340> INFO - === Tue Jul 25, 2023, 21:52:01
-[55] Biber.pm:418> INFO - Reading 'lanl.bcf'
-[100] Biber.pm:975> INFO - Using all citekeys in bib section 0
-[108] Biber.pm:4401> INFO - Processing section 0
-[114] Biber.pm:4592> INFO - Looking for bibtex file 'bib.bib' for section 0
-[115] bibtex.pm:1713> INFO - LaTeX decoding ...
-[116] bibtex.pm:1518> INFO - Found BibTeX data source 'bib.bib'
-[136] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
-[136] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[136] Biber.pm:4221> INFO - Sorting list 'nty/global//global/global' of type 'entry' with template 'nty' and locale 'en-US'
-[136] Biber.pm:4227> INFO - No sort tailoring available for locale 'en-US'
-[137] bbl.pm:654> INFO - Writing 'lanl.bbl' with encoding 'UTF-8'
-[137] bbl.pm:757> INFO - Output to lanl.bbl
+[0] Config.pm:307> INFO - This is Biber 2.17
+[0] Config.pm:310> INFO - Logfile is 'lanl.blg'
+[43] biber-darwin:340> INFO - === Wed Jul 26, 2023, 17:04:06
+[53] Biber.pm:418> INFO - Reading 'lanl.bcf'
+[101] Biber.pm:969> INFO - Using all citekeys in bib section 0
+[111] Biber.pm:4383> INFO - Processing section 0
+[117] Biber.pm:4574> INFO - Looking for bibtex file 'bib.bib' for section 0
+[118] bibtex.pm:1713> INFO - LaTeX decoding ...
+[119] bibtex.pm:1518> INFO - Found BibTeX data source 'bib.bib'
+[142] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[142] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[142] Biber.pm:4203> INFO - Sorting list 'nty/global//global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[142] Biber.pm:4209> INFO - No sort tailoring available for locale 'en-US'
+[143] bbl.pm:654> INFO - Writing 'lanl.bbl' with encoding 'UTF-8'
+[143] bbl.pm:757> INFO - Output to lanl.bbl
