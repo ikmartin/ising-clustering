@@ -1,11 +1,11 @@
 # Fdb version 3
-["biber lanl"] 1690409045 "lanl.bcf" "lanl.bbl" "lanl" 1690413782
+["biber lanl"] 1690419183 "lanl.bcf" "lanl.bbl" "lanl" 1690419191
   "bib.bib" 1690402255 262 acbb11effc256ac2b57097ff470410cf ""
-  "lanl.bcf" 1690413782 107138 b53bf14cc376643ca6363804268201bf "pdflatex"
+  "lanl.bcf" 1690419191 107138 b53bf14cc376643ca6363804268201bf "pdflatex"
   (generated)
   "lanl.bbl"
   "lanl.blg"
-["pdflatex"] 1690413780 "lanl.tex" "lanl.pdf" "lanl" 1690413782
+["pdflatex"] 1690419189 "lanl.tex" "lanl.pdf" "lanl" 1690419191
   "/Users/isaac/Library/texmf/tex/latex/style-sheets/macrosabound.sty" 1690412981 36854 8d7f301fe8ceb3cbd4c5805fef205c56 ""
   "/Users/isaac/Library/texmf/tex/latex/style-sheets/theorem-env.sty" 1690409179 3287 a4936a57d316e02a8486bb8769c70358 ""
   "/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc" 1640468671 3136 aac2e2476de8af6c827239df395814ee ""
@@ -294,12 +294,12 @@
   "/usr/local/texlive/2022/texmf-var/web2c/pdftex/pdflatex.fmt" 1676399263 2826451 d93c80d8a60ecfe737f8da20e0ce13e4 ""
   "/usr/local/texlive/2022/texmf.cnf" 1647878952 577 209b46be99c9075fd74d4c0369380e8c ""
   "images/rosenberg-algo.png" 1690402255 176470 18e3622e4cf47163f291694558e11cb2 ""
-  "lanl.aux" 1690413782 5129 d02e5fc02b08e5ea2225e10a36cf6c1c "pdflatex"
-  "lanl.bbl" 1690409046 1794 7e378d59b01fe721d15105dfb489d3b9 "biber lanl"
-  "lanl.nav" 1690413782 2534 d1620924955424e68855a24291e57884 "pdflatex"
-  "lanl.out" 1690413782 564 36b2142175093b41446c834a907f224f "pdflatex"
-  "lanl.run.xml" 1690413782 2298 84acebea9f8961130603e670e7ac052e "pdflatex"
-  "lanl.tex" 1690413777 11127 435e7a0fca224496a2fe22c9a0182b67 ""
+  "lanl.aux" 1690419191 5257 010220a80ddb6e4325df56bc7065896b "pdflatex"
+  "lanl.bbl" 1690419184 1794 7e378d59b01fe721d15105dfb489d3b9 "biber lanl"
+  "lanl.nav" 1690419191 2626 ca07cc8370b8e0afc18d8c01159ba8bb "pdflatex"
+  "lanl.out" 1690419191 564 36b2142175093b41446c834a907f224f "pdflatex"
+  "lanl.run.xml" 1690419191 2298 84acebea9f8961130603e670e7ac052e "pdflatex"
+  "lanl.tex" 1690419178 11186 648896497ce9140500685674ac3e8eb0 ""
   (generated)
   "lanl.aux"
   "lanl.bcf"
