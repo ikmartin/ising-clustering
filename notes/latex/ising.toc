@@ -10,5 +10,5 @@
 \contentsline {section}{\numberline {2}Boolean Circuits and Functions}{11}{section.2}%
 \contentsline {subsection}{\numberline {2.1}Concepts from Boolean Algebra}{12}{subsection.2.1}%
 \contentsline {subsection}{\numberline {2.2}Ising systems which solve boolean circuits}{12}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Hierarchical Clustering}{12}{section.3}%
-\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{13}{section.4}%
+\contentsline {section}{\numberline {3}Hierarchical Clustering}{14}{section.3}%
+\contentsline {section}{\numberline {4}Pseudo-boolean optimization and polynomial fitting}{14}{section.4}%

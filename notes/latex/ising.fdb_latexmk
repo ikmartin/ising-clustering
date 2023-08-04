@@ -1,15 +1,15 @@
 # Fdb version 3
-["bibtex ising"] 1690418622 "ising.aux" "ising.bbl" "ising" 1690418623
+["bibtex ising"] 1691112761 "ising.aux" "ising.bbl" "ising" 1691112762
   "/usr/local/texlive/2022/texmf-dist/bibtex/bst/natbib/abbrvnat.bst" 1233624470 26532 66bed5cc59495faaa3f9ae9af9fa5e42 ""
-  "images/tikz/augmented_algo_1.aux" 1690418622 824 73edeaa0ed7080bd393c920365a6cfcb "pdflatex"
-  "ising.aux" 1690418622 4920 64cdb9da29fd604f40a9911255608cb9 "pdflatex"
+  "images/tikz/augmented_algo_1.aux" 1691112762 824 73edeaa0ed7080bd393c920365a6cfcb "pdflatex"
+  "ising.aux" 1691112762 6159 91987ff3a68ed087fbf023cec3f5c4db "pdflatex"
   "ising.bib" 0 -1 0 ""
   (generated)
   "ising.bbl"
   "ising.blg"
-["pdflatex"] 1690418622 "ising.tex" "ising.pdf" "ising" 1690418623
+["pdflatex"] 1691112761 "ising.tex" "ising.pdf" "ising" 1691112762
   "/Users/isaac/Library/texmf/tex/latex/style-sheets/macrosabound.sty" 1690412981 36854 8d7f301fe8ceb3cbd4c5805fef205c56 ""
-  "/Users/isaac/Library/texmf/tex/latex/style-sheets/theorem-env.sty" 1690409179 3287 a4936a57d316e02a8486bb8769c70358 ""
+  "/Users/isaac/Library/texmf/tex/latex/style-sheets/theorem-env.sty" 1690738071 3287 a4936a57d316e02a8486bb8769c70358 ""
   "/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc" 1640468671 3136 aac2e2476de8af6c827239df395814ee ""
   "/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc" 1640468671 2914 8283dfc24eaf1964346f843d7605c2b0 ""
   "/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc" 1529098226 3124 3813fd4c981d99822890a2861b0d274c ""
@@ -254,13 +254,14 @@
   "/usr/local/texlive/2022/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1647878959 4410336 7d30a02e9fa9a16d7d1f8d037ba69641 ""
   "/usr/local/texlive/2022/texmf-var/web2c/pdftex/pdflatex.fmt" 1676399263 2826451 d93c80d8a60ecfe737f8da20e0ce13e4 ""
   "/usr/local/texlive/2022/texmf.cnf" 1647878952 577 209b46be99c9075fd74d4c0369380e8c ""
-  "images/tikz/augmented_algo_1.aux" 1690418622 824 73edeaa0ed7080bd393c920365a6cfcb "pdflatex"
-  "images/tikz/augmented_algo_1.tex" 1690417227 1341 c1c2a772fa1ca85ade5ad65b8b41be83 ""
-  "ising.aux" 1690418622 4920 64cdb9da29fd604f40a9911255608cb9 "pdflatex"
+  "images/AND_XOR_labeling.jpeg" 1691107176 216440 233dda11710e347e03abbacfac3c70f7 ""
+  "images/tikz/augmented_algo_1.aux" 1691112762 824 73edeaa0ed7080bd393c920365a6cfcb "pdflatex"
+  "images/tikz/augmented_algo_1.tex" 1690738071 1341 c1c2a772fa1ca85ade5ad65b8b41be83 ""
+  "ising.aux" 1691112762 6159 91987ff3a68ed087fbf023cec3f5c4db "pdflatex"
   "ising.bbl" 0 -1 0 "bibtex ising"
-  "ising.out" 1690418622 3589 d98d513729c27a7c5bf81b83f178d5dd "pdflatex"
-  "ising.tex" 1690418621 49153 6f1124850646576d28a6cb7761e12200 ""
-  "ising.toc" 1690418622 1374 e90421c619d7ee53228211c1bf973a1c "pdflatex"
+  "ising.out" 1691112762 3589 d98d513729c27a7c5bf81b83f178d5dd "pdflatex"
+  "ising.tex" 1691112760 53537 765fca9329f4041e72c7c314e782eaa8 ""
+  "ising.toc" 1691112762 1374 c875a02cb9733a2f8b5d00bd2c5b1ba1 "pdflatex"
   (generated)
   "images/tikz/augmented_algo_1.aux"
   "ising.aux"

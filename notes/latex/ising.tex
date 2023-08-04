@@ -446,7 +446,7 @@ Another approach for designing neutralizable Ising functions might be to build a
 
 \subsubsection{Reducing the auxiliary function search space using the mixed-integer augmented constraints}
 
-Searching directly for auxiliary functions $F$ such that the $F$-augmented constraints of $N,M,f)$ are satisfiable is a special type of auxiliary search. However, as the number of auxiliaries grows, no columns are added, so perhaps finding ``augmented-feasible'' auxiliaries is easier than finding typical feasible auxiliary arrays. Even if the full search is still prohibitively expensive, perhaps deductions can be made which reduce the space of possible auxiliary arrays. This could be done by performing Fourier-Motskin on a reduced augmented constraint set for example.
+Searching directly for auxiliary functions $F$ such that the $F$-augmented constraints of $(N,M,f)$ are satisfiable is a special type of auxiliary search. However, as the number of auxiliaries grows, no columns are added, so perhaps finding ``augmented-feasible'' auxiliaries is easier than finding typical feasible auxiliary arrays. Even if the full search is still prohibitively expensive, perhaps deductions can be made which reduce the space of possible auxiliary arrays. This could be done by performing Fourier-Motskin on a reduced augmented constraint set for example.
 
 \subsection{Symmetries of Circuits and Systems}
 <UNDER CONSTRUCTION>
@@ -533,13 +533,62 @@ A \textbf{boolean function} is a map $f:\Sigma^N \to \Sigma$. A \textbf{boolean 
 \end{defn}
 
 \subsection{Ising systems which solve boolean circuits}
-
-\begin{prop}\label{prop:boolean-ising-svm-equiv}
-  Let $(N, {y}, f)$ be an abstract circuit with one output -- i.e. let $f$ be a boolean function. There exists an Ising system $(X,H)$ with $X = N \cup {y}$ if and only if the set of true vectors $T = f^{-1}(1)$ is linearly separable from the set of false vectors $F = X \setminus F = f^{-1}(-1)$.
+\begin{defn}\label{defn:linear_separability}
+  Suppose we have a dataset $\cX = (\bfx_1,y_1),...,(\bfx_n,y_n)$ where $\bfx_i$ is a point in $\bR^d$ labeled by $y_i \in \{-1,+1\}$. We say that $\cX$ is \emph{linearly separable} if there exist $\bfw \in \bR^d$ and $b\in \bR$ such that
+  \begin{equation}\label{eqn:linear_separability_condition}
+    y_i(\bfw^\top \bfx_i - b) > 0.
+  \end{equation}
+\end{defn}
+It turns out that linearly separable labeled datasets correspond precisely to boolean circuits solvable by Ising systems without auxiliaries.
+\begin{prop}\label{prop:boolean_ising_svm_equiv}
+  Let $(N, M, f)$ be a circuit with one output; i.e., let $|M| = 1$ so that $f$ is a boolean function. There exists an Ising system $(X,H)$ with $X = N \cup M$ which solves $(N,M,f)$ if and only if the set of true vectors $T = f^{-1}(1)$ is linearly separable from the set of false vectors $F = X \setminus F = f^{-1}(-1)$.
 \end{prop}
 \begin{proof}
-  View the set $\Sigma^N$ as a set of tuples consisting of $+1/-1$ in each entry with every data point labeled 
+  Set $n = |N|$. Under the identifications $\Sigma^N \cong \{-1,1\}^n$ and $M = \Sigma = \{-1,1\}$, we may view $\Sigma^N$ as the vertices of the $n$-dimensional hypercube in $\bR^n$ and the circuit logic $f$ as a labeling of $\Sigma^N$ by $\pm 1$. Denote by $T = f^{-1}(1)$ the set of all vertices in $\Sigma^N$ with label $1$ and by $F = f^{-1}(-1)$ the set of all vertices in $\Sigma^N$ with label $-1$.
+
+  The general form of an Ising Hamiltonian on $X$ is given by
+  \begin{equation}\label{eqn:boolean_ising_hamiltonian}
+    H(\bfx, y) = \sum_{i = 1}^n h_ix_i ~+~ yh_{n+1} ~+~\sum_{i < j \leq n} J_{ij}\bfx_i\bfx_j ~+~ \sum_{i=1}^nJ_{i,n+1}\bfx_iy.
+  \end{equation}
+  for some coefficients $h_i$ and $J_{ij}$. The Ising system $(X,H)$ solves the circuit $(N,M,f)$ if and only if the following inequalities are satisfied for all $\bfx \in \Sigma^N$:
+  \begin{align*}
+    H(\bfx, f(\bfx)) < H(\bfx, -f(\bfx)) 
+    ~&\iff~ H(\bfx, -f(\bfx)) - H(\bfx, f(\bfx)) > 0.
+  \end{align*}
+  Plugging in equation \ref{eqn:boolean_ising_hamiltonian} and canceling terms yields
+  \begin{align*}
+    H(\bfx, -f(\bfx)) - H(\bfx, f(\bfx)) > 0 
+      &\iff \sum_{i=1}^nJ_{i,n+1}\bfx_i(-f(\bfx) - f(\bfx)) ~+~ h_{n+1}(-f(\bfx) - f(\bfx)) > 0 \\
+      &\iff f(\bfx)\left(\sum_{i=1}^n -2J_{i,n+1} \bfx_i ~-~ 2h_{n+1}\right) > 0.
+  \end{align*}
+  This is identical to the linear separability condition \ref{eqn:linear_separability_condition} from Definition \ref{defn:linear_separability} obtained by setting $\bfw = -2J_{\bullet, n+1}$ and $b = -2h_{n+1}$. 
 \end{proof}
+\begin{rmk}\label{rmk:threshold_functions}
+  A boolean function $f:\Sigma^N \to \Sigma$ which produces a linearly separable labeling of $\Sigma^N$ is known as a \textbf{threshold function}. Hence Proposition \ref{prop:boolean_ising_svm_equiv} can be restated as ``a boolean circuit $(N,M,f)$ is solvable if and only if $f$ is a threshold function.'' Counting the number of threshold functions on the $n$-dimensional hypercube is a well studied problem; see OEIS sequence A000609 for instance.
+\end{rmk}
+
+Proposition \ref{prop:boolean_ising_svm_equiv} gives us a nice way visualizing Ising solvability. 
+
+\begin{example}\label{ex:AND_XOR_linear_separability}
+  Let $N = \{1,2\}$ and $M = \{3\}$. Define two boolean functions $f_1(x_1,x_2) = 4x_1x_2 - 2x_1 - 2x_2 + 1$ and $f_2(x_1,x_2) = -x_1x_2$. Then $(N,M,f_1)$ is the AND circuit and $(N,M,f_2)$ is the XOR circuit, and the labelings they produce on the square $\{-1,1\}^2$ are seen in Figure \ref{fig:AND_XOR_lin_sep}.
+  \begin{center}
+  \begin{figure}[h]
+    \includegraphics[width=0.95\linewidth]{images/AND_XOR_labeling.jpeg}
+    \caption{The labelings produced by AND (left) and XOR (right) where green denotes $+1$ and red denotes $-1$. One can easily draw a line separating the green corner from the three red corners in the AND labeling, but a bit of experimentation should convince the reader that it is impossible to linearly separate the XOR labeling.}
+    \label{fig:AND_XOR_lin_sep}
+  \end{figure}
+  \end{center}
+\end{example}
+
+We can use Proposition \ref{prop:boolean_ising_svm_equiv} to easily prove that parity-check circuits are infeasible without auxiliaries.
+
+\begin{prop}\label{prop:parity_checks_are_infeasible}
+  Let $N = [n]$, $M = \{n+1\}$ and $f(x_1,...,x_n) = x_1x_2\ldots x_n$. The circuit $(N,M,f)$, called a \textbf{$\bfn$-dimensional parity check}, is infeasible without auxiliaries for $n \geq 2$.
+\end{prop}
+\begin{proof}
+  Consider a hyperplane $\bfw^\top\bfx - b = 0$ in $\bR^n$. If this hyperplane were a linear separation of the $n$-dimensional hypercube labeled by the parity-check circuit, then it would restrict to a linear separation of the $2$-dimensional face $S = \{(x_1,x_2,-1,1,1,...,1) \in \bR^n ~\mid~ x_1,x_2 \in \{-1,+1\}\}$. This is impossible since the parity-check labeling on $S$ is given by $-x_1x_2$. This is exactly the XOR labeling and is hence infeasible.
+\end{proof}
+
 \section{Hierarchical Clustering}
 
 A choice of ``auxililary array'' can be thought of as a function $a:\Sigma^N \to \Sigma^A$ which assigns an auxiliary state to each input state. The collection of germs of this function partitions $\Sigma^N$ into subsets of inputs which share the same auxiliary state. To be clear, we're talking about the partition

@@ -1366,6 +1366,11 @@ INPUT /usr/local/texlive/2022/texmf-dist/tex/latex/amsfonts/ueuf.fd
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm10.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm7.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/amsfonts/euler/eufm5.tfm
+INPUT ./images/AND_XOR_labeling.jpeg
+INPUT ./images/AND_XOR_labeling.jpeg
+INPUT images/AND_XOR_labeling.jpeg
+INPUT ./images/AND_XOR_labeling.jpeg
+INPUT ./images/AND_XOR_labeling.jpeg
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-sc-t1.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-t1.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/newtx/ntx-Italic-tlf-sc-t1.tfm
