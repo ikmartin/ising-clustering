@@ -2,6 +2,10 @@ from ising import BCircuit as BoolCirc
 from copy import deepcopy
 import math
 
+####################
+# BASE CONVERSIONS
+####################
+
 
 def dec2bin(num, fill):
     return list(int(a) for a in bin(num)[2:].zfill(fill))
@@ -15,7 +19,7 @@ def bin2dec(blist):
 def bin2hex(b):
     return "".join(
         [
-            format(int("".join([str(int(x)) for x in b[i : (i + 4)]]), 2), "x")
+            format(int("".join([str(int(x)) for x in b[i: (i + 4)]]), 2), "x")
             for i in range(0, len(b), 4)
         ]
     )
@@ -23,6 +27,10 @@ def bin2hex(b):
 
 def hex2bin(num, fill):
     return dec2bin(int(num, 16), fill)
+
+################################
+# FUNCTION CLASS CHECKS
+################################
 
 
 def check_strong_neutralizability(func):
@@ -44,6 +52,27 @@ def check_threshold(func):
     tsolver = circ.build_solver()
     return tsolver.Solve() == tsolver.OPTIMAL
 
+##############################
+# OPERATIONS ON FUNCTIONS
+##############################
+
+
+def dual(func):
+    N = int(math.log2(len(func)))
+    return [int(not func[~a]) for a in range(1 << N)]
+
+
+def selfdual(func):
+    N = int(math.log2(len(func)))
+    func = list(func)
+    dvals = [int(not func[~a]) for a in range(1 << N)]
+    return func + dvals
+
+
+##################################
+# READING WRITING
+##################################
+
 
 def write_funcs(funcs, dim, func_class_name, ashex=True):
     # format name
@@ -57,18 +86,6 @@ def write_funcs(funcs, dim, func_class_name, ashex=True):
             else:
                 line = func
             file.write(str(line) + "\n")
-
-
-def dual(func):
-    N = int(math.log2(len(func)))
-    return [int(not func[~a]) for a in range(1 << N)]
-
-
-def selfdual(func):
-    N = int(math.log2(len(func)))
-    func = list(func)
-    dvals = [int(not func[~a]) for a in range(1 << N)]
-    return func + dvals
 
 
 def classify_boolean_functions(N, skip=True):
@@ -90,7 +107,8 @@ def classify_boolean_functions(N, skip=True):
             tfuncs.append(func)
         if nstatus:
             nfuncs.append(func)
-        print(f"function {k}: threshold function {tstatus}  neutralizable {nstatus}")
+        print(
+            f"function {k}: threshold function {tstatus}  neutralizable {nstatus}")
 
     neg_tfuncs = []
     neg_nfuncs = []
@@ -214,5 +232,5 @@ def check_duals_for_strong_neutralizability(N):
 
 
 if __name__ == "__main__":
-    reduce_classes_of_boolean_functions(5)
+    reduce_classes_of_boolean_functions(4)
     # check_duals_for_strong_neutralizability(4)

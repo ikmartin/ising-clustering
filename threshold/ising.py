@@ -99,7 +99,7 @@ class PICircuit:
         return self.N + self.M + self.Ain(inspin)
 
     #################################
-    ### Private methods
+    # Private methods
     #################################
 
     def _generate_graph(self):
@@ -107,7 +107,7 @@ class PICircuit:
         return graph
 
     #################################
-    ### AUXILIARY STATE METHODS
+    # AUXILIARY STATE METHODS
     #################################
 
     def Ain(self, inspin):
@@ -120,9 +120,11 @@ class PICircuit:
     def add_single_aux(self, inspin: Spin, auxval: int):
         """Adds a single aux spin (either +1 or -1) to the specified input"""
         try:
-            self._aux_dict[inspin] = Spin.append(self._aux_dict[inspin], auxval)
+            self._aux_dict[inspin] = Spin.append(
+                self._aux_dict[inspin], auxval)
         except KeyError:
-            self._aux_dict[inspin] = Spin(spin=int((auxval + 1) / 2), shape=(1,))
+            self._aux_dict[inspin] = Spin(
+                spin=int((auxval + 1) / 2), shape=(1,))
 
     def set_aux(self, inspin: Spin, auxspin):
         """Associates an auxiliary spin to the specified input"""
@@ -143,7 +145,8 @@ class PICircuit:
 
         # check to ensure either rows or columns matches 2^N
         if aux_array.shape[0] != 2 ** self.N and aux_array.shape[1] != 2**self.N:
-            raise ValueError("The aux_array must have one auxiliary state per input!")
+            raise ValueError(
+                "The aux_array must have one auxiliary state per input!")
 
         # we want the first index to correspond to the input, not to the coordinate of the aux state
         if aux_array.shape[1] == 2**self.N:
@@ -160,7 +163,8 @@ class PICircuit:
         for i in range(aux_array.shape[0]):
             row = aux_array[i]
             if len(row) != self.A:
-                raise ValueError("Not all auxiliary states are the same length!")
+                raise ValueError(
+                    "Not all auxiliary states are the same length!")
 
             self._aux_dict[self.inspace[i]] = Spin(spin=row, shape=(self.A,))
 
@@ -196,7 +200,7 @@ class PICircuit:
         return all(first == self.Ain(x) for x in inspins)
 
     ##################################
-    ### CIRCUIT LOGIC METHODS
+    # CIRCUIT LOGIC METHODS
     ##################################
 
     # this method required to be overwritten in inherited classes
@@ -229,7 +233,7 @@ class PICircuit:
         return Spin.catspin((inspin, self.f(inspin)))
 
     #################################
-    ### GENERATORS
+    # GENERATORS
     #################################
 
     def inputlevelspace(self, inspin):
@@ -274,7 +278,7 @@ class PICircuit:
             yield outaux
 
     ############################################
-    ### VECTOR METHODS
+    # VECTOR METHODS
     ############################################
 
     @cache
@@ -347,7 +351,7 @@ class PICircuit:
         return sum(diffs) / self.N
 
     #############################################
-    ### SOLVER METHODS
+    # SOLVER METHODS
     #############################################
 
     def build_solver(self, input_spins=[]):
@@ -394,7 +398,7 @@ class PICircuit:
         return solver
 
     #############################################
-    ### CHECK SPECIFIC hJ_vecs ON INPUT LEVELS
+    # CHECK SPECIFIC hJ_vecs ON INPUT LEVELS
     #############################################
 
     def energy(self, spin: Spin, hvec: np.ndarray):
@@ -592,7 +596,8 @@ class BCircuit(PICircuit):
                 t = self.inout(self.inspace[nextin])
                 neut_constraint = solver.Constraint(0, 0)
                 for i in range(G):
-                    neut_constraint.SetCoefficient(params[i, i], float(t[i] - s[i]))
+                    neut_constraint.SetCoefficient(
+                        params[i, i], float(t[i] - s[i]))
                     for j in range(i + 1, G):
                         neut_constraint.SetCoefficient(
                             params[i, j], float(t[i] * t[j] - s[i] * s[j])

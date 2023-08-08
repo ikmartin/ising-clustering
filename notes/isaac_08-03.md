@@ -1,0 +1,5 @@
+## Quick Thoughts
+
+- The symmetry group of the $n$-dimensional hypercube is called the *hyperoctahedral group* and is the semidirect product of $(\mathbb Z/2\mathbb Z)^n$ with $S_n$. It's also the set of all $n\times n$ matrices which have only $0,-1$ or $1$ as entires, are invertible, and have precisely one nonzero entry in each row or column.
+- This does not necessarily yield all symmetries of threshold functions. The symmetries we'd hope to consider are those induced by symmetries of the $n$-dimensional hypercube, i.e. maps $f\mapsto f\circ A$ where $A:\{\pm 1\}^n \to \{\pm 1\}^n$ is a symmetry of the $n$-dimensional hypercube and $f$ is a threshold function. If we understood which $A$ preserved the threshold function property we could speed up the search for threshold functions. We can also throw away all inverse labelings, i.e. $f \mapsto -f$ preserves threshold functions.
+- We know that the $(\mathbb Z/2\mathbb Z)^n$ portion of the hyperoctahedral group corresponds to spin actions. These preserve threshold functions.

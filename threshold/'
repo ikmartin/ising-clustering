@@ -1,0 +1,75 @@
+# experiments to efficiently generate orbits of threshold functions under hyperoctahedral orbits
+
+from itertools import permutations
+
+
+def spinactions(n):
+    """Generator which iterates through elements of the spin action group (Z/2Z)^n."""
+    for k in range(2**n):
+        # each integer in range 0 - 2^n - 1 represents a spin action
+        def func(num):
+            # take bitwise XOR against input, equivalent to spin action
+            return num ^ k
+
+        yield func
+
+
+def axisperms(n):
+    """Generator which iterators through all axis permutations of size n"""
+    for arr in permutations(list(range(n))):
+        def func(k):
+            b0 = bin(k)[2:].zfill(n)
+            b1 = ''.join([b0[i] for i in arr])
+            return int(b1, 2)
+
+        yield func
+
+
+for func in axisperms(4):
+    for i in range(2**4):
+        print(func(i))
+
+
+def hyperoctahedral(n):
+    """Generator which iterates through elements of the hyperoctahedral group. Each element is a callable which acts on both integers and on sequences of elements."""
+
+
+class BoolFunc:
+
+    def __init__(self, index, dim):
+        """ Initializer of boolfunc
+        Parameters
+        ----------
+        index : int
+            the boolfunction as an integer
+        dim : int
+            the dimension of the domain of the boolfunction
+        """
+        self.index = index
+        self.func = tuple(bin(index)[2:].zfill(2**dim))
+
+    def __getitem__(self, index):
+        return self.func[index]
+
+    def __call__(self, index):
+        return self.func[index]
+
+    def __str__(self):
+        return str(self.index) + " <-> " + str(self.func)
+
+    @staticmethod
+    def random(dim):
+        import random as rand
+        return BoolFunc(rand.randint(0, 2**(2**dim)-1), dim)
+
+###############################
+# Permutations
+###############################
+
+
+def getperm(index, dim):
+    """Returns a permutation on <dim> elements as a callable function"""
+
+
+for i in range(10):
+    print(BoolFunc.random(4))

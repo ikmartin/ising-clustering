@@ -2,7 +2,7 @@ import numpy as np
 import functools
 
 #########################################
-### Spin Space Methods
+# Spin Space Methods
 #########################################
 
 
@@ -27,7 +27,8 @@ def int2spin(val: int, dim: int) -> np.ndarray:
         a 1-d array consisting of -1 and 1 representing a spin
     """
 
-    b = list(np.binary_repr(val).zfill(dim))  # get binary representation of num
+    # get binary representation of num
+    b = list(np.binary_repr(val).zfill(dim))
     a = [-1 if int(x) == 0 else 1 for x in b]  # convert to spin representation
     return np.array(a).astype(np.int8)  # return as a numpy array
 
@@ -69,7 +70,8 @@ def spin2int(spin: np.ndarray):
     N = len(spin)
 
     # number to return
-    num = tuple([2 ** (N - (i + 1)) * (1 if spin[i] == 1 else 0) for i in range(N)])
+    num = tuple([2 ** (N - (i + 1)) * (1 if spin[i] == 1 else 0)
+                for i in range(N)])
     return sum(num)
 
 
@@ -122,7 +124,8 @@ class Spin:
             elif isinstance(spin[0], int):
                 # if it is splitint
                 # e.g. spin = (2, 1)
-                tempspin = tuple(int2spin(s, self.shape[i]) for i, s in enumerate(spin))
+                tempspin = tuple(
+                    int2spin(s, self.shape[i]) for i, s in enumerate(spin))
                 self.val = spin2int(np.concatenate(tempspin))
             else:
                 raise Exception("val not initialized")
@@ -134,7 +137,7 @@ class Spin:
         return sum(self.shape)
 
     ########################
-    ### FORMAT METHODS
+    # FORMAT METHODS
     ########################
     def asint(self):
         """Return the integer value represented by this spin in binary"""
@@ -149,7 +152,7 @@ class Spin:
         return int2bin(val=self.val, dim=sum(self.shape))
 
     ########################
-    ### SPLIT METHODS
+    # SPLIT METHODS
     ########################
     def splitint(self):
         # convenience variables
@@ -180,11 +183,12 @@ class Spin:
     def split(self):
         vals = self.splitint()
         return tuple(
-            [Spin(spin=vals[i], shape=(self.shape[i],)) for i in range(len(self.shape))]
+            [Spin(spin=vals[i], shape=(self.shape[i],))
+             for i in range(len(self.shape))]
         )
 
     ##########################
-    ### ASSOCIATED SPINS
+    # ASSOCIATED SPINS
     ##########################
 
     def pairspin(self):
@@ -215,7 +219,7 @@ class Spin:
             return Spin(spin=spin.asint(), shape=(self.dim() + pair.dim(),))
 
     ##########################
-    ### SPIN OPERATIONS
+    # SPIN OPERATIONS
     ##########################
     def pspin(self, split=False):
         return self.vspin(split=split).inv()
@@ -232,7 +236,7 @@ class Spin:
         return Spin(spin=np.array([-1 * si for si in s]), shape=self.shape)
 
     ##########################
-    ### PYTHONIC FUNCTIONALITY
+    # PYTHONIC FUNCTIONALITY
     ##########################
     def __getitem__(self, key):
         return self.spin()[key]
@@ -273,7 +277,7 @@ class Spin:
         return self.__str__()
 
     ############################################
-    ### Static Methods
+    # Static Methods
     ############################################
 
     @staticmethod
@@ -447,7 +451,7 @@ class Spinspace:
 
 
 ##################################################################
-## OTHER FUNCTIONS IN THIS MODULE
+# OTHER FUNCTIONS IN THIS MODULE
 ##################################################################
 
 
