@@ -190,6 +190,9 @@ def classify_threshold_functions_efficient(dim):
 
     return tfuncs
 
+def sample_threshold_functions(dim,resolution):
+    pass
+
 def classify_strongly_neutralizable_functions(dim, ashex=True):
     """Classifies all threshold functions of the given dimension."""
     D=1 << dim  # the size of the input space
@@ -226,6 +229,6 @@ def classify_strongly_neutralizable_functions(dim, ashex=True):
 
 
 if __name__ == "__main__":
-    dim = 5
-    classify_threshold_functions_efficient(dim)
-    #classify_strongly_neutralizable_functions(dim)
+    dim = 4
+    classify_threshold_functions(dim)
+    classify_strongly_neutralizable_functions(dim)
