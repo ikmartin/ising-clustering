@@ -1,10 +1,14 @@
+from numpy import dtype
 from boolfunc import BoolFunc
+import torch
+import random
 from ising import BCircuit as BoolCirc
 from copy import deepcopy
 import math
 
 from itertools import filterfalse
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 ####################
 # BASE CONVERSIONS
 ####################
@@ -85,20 +89,22 @@ def filename_builder(dim, func_class_name, ashex=True):
     return f"data/{formatstr}_signed_hyperoctahedral_orbits_of_{func_class_name}_dim={dim}.dat"
 
 
-def write_funcs(funcs, dim, func_class_name, ashex=True):
+def write_funcs(funcs, dim, func_class_name, ashex=True, mode="a"):
     filename = filename_builder(dim, func_class_name, ashex)
-    with open(filename, "w") as file:
+    with open(filename, mode) as file:
         for func in funcs:
             if ashex:
                 line = func if isinstance(func, str) else bin2hex(func)
             else:
                 line = func
-            file.write(str(line) + "\n")
+            file.write(line + "\n")
 
 
 def read_funcs(dim, func_class_name, ashex=True):
-    import json
+    import json, os.path
     filename = filename_builder(dim, func_class_name, ashex)
+    if os.path.isfile(filename) == False:
+        return []
     tfuncs = []
     with open(filename, "r") as file:
         for line in file:
@@ -113,7 +119,7 @@ def classify_threshold_functions(dim):
 
     # create function pool
     print(f"Creating function pool with {1 << (D - 1)} elements...", end="")
-    function_pool=list(range(1 << (D - 1)))
+    function_pool=set(range(1 << (D - 1)))
     print("done")
     # initialize tally and array of threshold functions
     tfuncs=[]  # the threshold functions
@@ -126,23 +132,18 @@ def classify_threshold_functions(dim):
         if tstatus:
             orbit_size=len(orbit)
             print(f"New threshold function orbit found: length {orbit_size}")
+            write_funcs([int2hex(index, hexfill)], dim=dim,
+                        func_class_name="threshold_functions", ashex=True)
             tfuncs.append(int2hex(index, hexfill))
             tally += orbit_size
 
-        for x in orbit:
-            try:
-                function_pool.remove(x)
-            except ValueError:
-                pass
+        function_pool = function_pool.difference(orbit)
 
 
     print(f"\nREPORT\n------")
     print(f"  {1 << D} boolean functions examined")
     print(f"  {tally} threshold functions found")
     print(f"  {len(tfuncs)} unique threshold functions orbits found")
-
-    write_funcs(tfuncs, dim=dim,
-                func_class_name="threshold_functions", ashex=True)
 
     return tfuncs
 
@@ -167,17 +168,19 @@ def classify_threshold_functions_efficient(dim):
         orbit = bfunc.signed_orbit()
         orbit_size = len(orbit)
         minrep = min(orbit)
-        checked += orbit_size
         if minrep in minreps:
             continue
 
+        checked += orbit_size
         minreps.add(minrep)
         tstatus = check_threshold(bfunc.vals)
         if tstatus:
             orbit_size=len(orbit)
-            tally += orbit_size
+            print(f"New threshold function orbit found: length {orbit_size}")
+            write_funcs([int2hex(index, hexfill)], dim=dim,
+                        func_class_name="threshold_functions", ashex=True)
             tfuncs.append(int2hex(index, hexfill))
-            print(f" Length {orbit_size} found, {tally} total")
+            tally += orbit_size
 
 
     print(f"\nREPORT\n------")
@@ -185,13 +188,92 @@ def classify_threshold_functions_efficient(dim):
     print(f"  {tally} threshold functions found")
     print(f"  {len(tfuncs)} unique threshold functions orbits found")
 
-    write_funcs(tfuncs, dim=dim,
-                func_class_name="threshold_functions", ashex=True)
-
     return tfuncs
 
-def sample_threshold_functions(dim,resolution):
-    pass
+def d2b(x, bits):
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(x.device)
+    return x.unsqueeze(-1).bitwise_and(mask).ne(0).float()
+
+def all_answers(dim):
+    return d2b(torch.arange(2**dim).to(DEVICE), dim)
+
+# samples random threshold function from hyperplane
+def getsample(dim, mean=0, std=1, minb=-1, maxb=1, batch=1000):
+    X = all_answers(dim)
+    W = torch.normal(mean, std, size=(dim, batch))
+    b = random.uniform(minb,maxb)
+    A = torch.matmul(X,W)
+    A = torch.unique(A > b, dim=1)
+    A = torch.transpose(A.int(), 0, 1)
+    return A.tolist()
+
+def test_sampling(dim):
+    batch = 1000
+    statuses = []
+    samples = getsample(dim, batch=batch)
+    tcount = 0
+    for func in samples:
+        print(func)
+        bfunc = BoolFunc.from_func(func)
+        statuses.append(check_threshold(bfunc.vals))
+        tcount += statuses[-1]
+
+    print(f"T = {tcount},  F = {len(samples) - tcount}")
+
+def sample_threshold_functions(dim, batch_size=1000, maxiter=100):
+    OEIS = [2, 4, 14, 104, 1882, 94572, 15028134, 8378070864, 17561539552946, 144130531453121108]
+
+    # hyperparameters
+    D=1 << dim  # the size of the input space
+    hexfill=math.ceil(math.log(1 << D, 16))
+
+    # loop
+    loopcount = 0
+    minreps = set(read_funcs(dim=dim, func_class_name="threshold_functions", ashex=True))
+    # calculate initial tally
+    tally = 0
+    for i,index in enumerate(minreps):
+        if i % 10:
+            print(f"{i} out of {len(minreps)} tallied")
+        tally += len(BoolFunc(dim, index).signed_orbit())
+
+    print(f"CURRENTLY HAVE {tally} out of {OEIS[dim]} {math.ceil(tally/OEIS[dim] * 10000)/100} % of dim = {dim} threshold functions.\n")
+    while OEIS[dim] > tally and loopcount < maxiter:
+        # update loop count
+        loopcount += 1
+        print(f"Sample {loopcount}")
+
+        # acquire samples
+        samples = getsample(dim, batch=batch_size)
+        for func in samples:
+            bfunc = BoolFunc.from_func(func)
+            orbit = bfunc.signed_orbit()
+            orbit_size = len(orbit)
+            minrep = min(orbit) 
+            print(f"  [{int2hex(minrep, hexfill)}] orbit size {orbit_size}...", end="")
+            # check if already found orbit
+            if minrep in minreps:
+                print("is a REPEAT.")
+                continue
+
+            print("is NEW!")
+            minreps.add(minrep)
+            tally += orbit_size
+
+            write_funcs([int2hex(minrep, hexfill)], dim=dim,
+                        func_class_name="threshold_functions", ashex=True)
+
+            # stop check if finished
+            if tally >= OEIS[dim]:
+                break
+
+        print(f"BATCH {loopcount} REPORT: \n  {tally} out of {OEIS[dim]} {math.ceil(tally/OEIS[dim] * 10000)/100} % of dim = {dim} threshold functions found.\n")
+
+    print(f"\nREPORT\n------")
+    print(f"  {tally} threshold functions found")
+    print(f"  {len(minreps)} unique threshold functions orbits found")
+
+    return minreps
 
 def classify_strongly_neutralizable_functions(dim, ashex=True):
     """Classifies all threshold functions of the given dimension."""
@@ -229,6 +311,11 @@ def classify_strongly_neutralizable_functions(dim, ashex=True):
 
 
 if __name__ == "__main__":
-    dim = 4
-    classify_threshold_functions(dim)
+    dim = 7
+    batch = 20
+    maxiter = 300
+    #classify_threshold_functions(dim)
+    #classify_threshold_functions_efficient(dim)
+    #classify_strongly_neutralizable_functions(dim)
+    sample_threshold_functions(dim,batch, maxiter)
     classify_strongly_neutralizable_functions(dim)
