@@ -6,10 +6,17 @@ from mysolver_interface import call_my_solver
 import torch
 import numpy as np
 from tqdm import tqdm
+import os
+from pathlib import Path
 
-inputs_per_threshold = 5
 
-n1, n2 = 3, 4
+cache = set()
+
+this_dir = Path(__file__).parent.absolute()
+
+inputs_per_threshold = list(range(3,8))
+
+n1, n2 = 4,4
 num_variables = 2 * (n1 + n2)
 degree = 2
 
@@ -22,6 +29,14 @@ def test_F(F):
     wrong_aug_states = torch.cat([all_base_states, (1-right_aug_states[...,-1]).unsqueeze(-1)], dim = -1)
     base_right = add_hyperplane(correct, F)
     base_wrong = add_hyperplane(wrong, F)
+
+    hash_str = str(base_right.tolist())
+    global cache
+    if hash_str in cache:
+        print('skipping')
+        return None
+    else:
+        cache |= {hash_str}
 
     virtual_right = batch_vspin(base_right, degree)
     exp_virtual_right = (
@@ -50,26 +65,27 @@ def test_F(F):
 
     return objective
 
-with open(f"dat/WNTF{n1}{n2}.dat", "a") as FILE:
+with open(os.path.join(this_dir, f"dat/WNTF{n1}{n2}.dat"), "a") as FILE:
     finds = 0
-    loop = tqdm(range(10000), leave=True)
-    for i in loop:
+    while True:
         w = torch.zeros(num_variables)
-        indices = choice(list(combinations(range(num_variables), inputs_per_threshold)))
+        scale = choice(inputs_per_threshold)
+        indices = choice(list(combinations(range(num_variables), scale)))
         for i in indices:
-            w[i] = torch.randn(1)
-        b = torch.randn(1).item()
+            w[i] = torch.abs(torch.randn(1))
+        b = abs(torch.randn(1).item())
         #print(w)
         obj = test_F((w,b))
         #print(obj)
+        if obj is None:
+            continue
 
         if obj < 1:
             FILE.write(str((w.tolist(),b)))
             FILE.write("\n")
             FILE.flush()
             finds += 1
-
-        loop.set_postfix(finds = finds)
+            print(f'finds: {finds} ({w}, {b})')
 
 
 
