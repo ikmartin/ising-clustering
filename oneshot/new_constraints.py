@@ -46,7 +46,7 @@ def make_wrong_mask(num_fixed, num_free, radius):
     masks = possible_masks[torch.sum(possible_masks, dim=-1) <= radius]
     return torch.cat([torch.zeros(masks.shape[0], num_fixed, dtype = torch.int8), masks], dim = -1)
         
-def make_wrongs(correct, num_fixed, num_free, radius):
+def make_wrongs(correct, num_fixed, num_free, radius = None):
     wrong_mask = make_wrong_mask(num_fixed, num_free, radius)
     exp_correct = correct.unsqueeze(1).expand(-1, wrong_mask.shape[0], -1)
     exp_wrong_mask = wrong_mask.unsqueeze(0).expand(correct.shape[0], -1, -1)

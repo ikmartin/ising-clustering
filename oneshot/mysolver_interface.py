@@ -38,7 +38,8 @@ c_sparse_solver.argtypes = [
     c_int,
     c_double,
     c_double,
-    c_int
+    c_int,
+    ndpointer(c_double, flags = "C_CONTIGUOUS")
 ]
 c_sparse_solver.restype = POINTER(c_double)
 
@@ -78,19 +79,25 @@ c_imul_solver.restype = POINTER(c_double)
 c_free_ptr = lib.free_ptr
 
 
-def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=1000, fullreturn=False):
+def call_my_solver(CSC_constraints, tolerance=1e-8, max_iter=1000, fullreturn=False, RHS = None):
     """
     Calls my Mehrotra Predictor-Corrector implementation.
 
     This is more or less a general purpose LP solver, so it really just expects a constraint matrix. The RHS is locked as a vector of 1s for now.
     """
+
+
     num_rows, num_cols = CSC_constraints.size()
+
+    if RHS is None:
+        RHS = np.ones(num_rows)
+
     values = CSC_constraints.values().numpy().astype(np.int8)
     row_index = CSC_constraints.row_indices().numpy().astype(np.int32)
     col_ptr = CSC_constraints.ccol_indices().numpy().astype(np.int32)
     num_workers = 1
     result = c_sparse_solver(
-        num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter, 0.95, 0.15, int(fullreturn)
+        num_rows, num_cols, values, row_index, col_ptr, num_workers, tolerance, max_iter, 0.95, 0.15, int(fullreturn), RHS
     )
     result_array = as_array(result, shape=(num_rows + num_cols,))
     objective = sum(result_array[num_cols:])
